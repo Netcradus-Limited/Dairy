@@ -68,13 +68,19 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
 /// public pending orders).
 String get _currentAgentId => FirebaseAuth.instance.currentUser?.uid ?? '';
 
+String _resolveAgentId(Ref ref) {
+  final authUid = FirebaseAuth.instance.currentUser?.uid;
+  if (authUid != null && authUid.isNotEmpty) return authUid;
+  return ref.watch(userProvider).id;
+}
+
 /// Single source of truth for the delivery panel: a live Firestore stream of the
 /// orders relevant to THIS agent — pending orders awaiting acceptance plus any
 /// order already assigned to the agent — mapped into [DeliveryOrder]s. The
 /// Requests, Active and History tabs all derive their lists from this one
 /// stream.
 final deliveryOrdersStreamProvider = StreamProvider<List<DeliveryOrder>>((ref) {
-  final agentId = _currentAgentId;
+  final agentId = _resolveAgentId(ref);
   return ref
       .watch(orderServiceProvider)
       .streamDeliveryOrdersForAgent(agentId)
@@ -87,7 +93,7 @@ final deliveryOrdersStreamProvider = StreamProvider<List<DeliveryOrder>>((ref) {
 /// tracking map.
 final deliveryActiveOrdersStreamProvider =
     StreamProvider.autoDispose<List<DeliveryOrder>>((ref) {
-  final agentId = _currentAgentId;
+  final agentId = _resolveAgentId(ref);
   return ref
       .watch(orderServiceProvider)
       .streamDeliveryOrdersForAgent(agentId)
@@ -117,16 +123,14 @@ final deliveryRequestsStreamProvider =
 /// Completed / cancelled orders (History tab), derived from the unified agent
 /// stream.
 final deliveryHistoryStreamProvider =
-    Provider.autoDispose<List<DeliveryOrder>>((ref) {
+    Provider.autoDispose<AsyncValue<List<DeliveryOrder>>>((ref) {
   final asyncOrders = ref.watch(deliveryOrdersStreamProvider);
-  return asyncOrders.when(
-    data: (orders) => orders
+  return asyncOrders.whenData(
+    (orders) => orders
         .where((o) =>
             o.status == DeliveryOrderStatus.delivered ||
             o.status == DeliveryOrderStatus.cancelled)
         .toList(),
-    loading: () => const [],
-    error: (_, stackTrace) => const [],
   );
 });
 
@@ -799,53 +803,7 @@ final deliveryEarningsProvider =
 });
 
 class DeliveryHistoryNotifier extends StateNotifier<List<DeliveryHistoryItem>> {
-  DeliveryHistoryNotifier() : super(_getMockHistory());
-
-  static List<DeliveryHistoryItem> _getMockHistory() {
-    final now = DateTime.now();
-    return [
-      DeliveryHistoryItem(
-        orderId: 'SD-9840',
-        customerName: 'Rahul Singh',
-        status: 'Delivered',
-        earnings: 45.0,
-        date: now.subtract(const Duration(hours: 2)),
-        distance: '3.2 km',
-      ),
-      DeliveryHistoryItem(
-        orderId: 'SD-9839',
-        customerName: 'Meena Gupta',
-        status: 'Delivered',
-        earnings: 38.0,
-        date: now.subtract(const Duration(hours: 4)),
-        distance: '2.5 km',
-      ),
-      DeliveryHistoryItem(
-        orderId: 'SD-9838',
-        customerName: 'Vikash Kumar',
-        status: 'Delivered',
-        earnings: 52.0,
-        date: now.subtract(const Duration(hours: 6)),
-        distance: '4.1 km',
-      ),
-      DeliveryHistoryItem(
-        orderId: 'SD-9837',
-        customerName: 'Anita Devi',
-        status: 'Delivered',
-        earnings: 41.0,
-        date: now.subtract(const Duration(days: 1)),
-        distance: '3.8 km',
-      ),
-      DeliveryHistoryItem(
-        orderId: 'SD-9836',
-        customerName: 'Rohit Sharma',
-        status: 'Delivered',
-        earnings: 47.0,
-        date: now.subtract(const Duration(days: 1, hours: 2)),
-        distance: '2.9 km',
-      ),
-    ];
-  }
+  DeliveryHistoryNotifier() : super(const []);
 
   void addToHistory(DeliveryHistoryItem item) {
     state = [item, ...state];

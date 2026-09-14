@@ -14,35 +14,42 @@ class OrdersTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDesktop = ResponsiveLayout.isDesktop(context);
-    final history = ref.watch(deliveryHistoryStreamProvider);
+    final historyAsync = ref.watch(deliveryHistoryStreamProvider);
 
-    final textPrimary = AppColors.textPrimaryOf(context);
+    return historyAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => _buildErrorView(context),
+      data: (history) {
+        // History is derived from Firestore (single source of truth).
+        final allOrders =
+            history.map((o) => _HistoryOrderItem.fromOrder(o)).toList();
 
-    // History is derived from Firestore (single source of truth).
-    final allOrders =
-        history.map((o) => _HistoryOrderItem.fromOrder(o)).toList();
+        // Sort by date descending
+        allOrders.sort((a, b) => b.date.compareTo(a.date));
 
-    // Sort by date descending
-    allOrders.sort((a, b) => b.date.compareTo(a.date));
+        if (allOrders.isEmpty) {
+          return _buildEmptyView(context);
+        }
 
-    if (allOrders.isEmpty) {
-      return _buildEmptyView(context);
-    }
+        final textPrimary = AppColors.textPrimaryOf(context);
 
-    return ListView(
-      padding: EdgeInsets.all(isDesktop ? 24 : 16),
-      children: [
-        Text(
-          'Delivery History (${allOrders.length})',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: textPrimary,
-          ),
-        ),
-        const SizedBox(height: 12),
-        ...allOrders.map((order) => _buildOrderCard(context, order, isDesktop)),
-      ],
+        return ListView(
+          padding: EdgeInsets.all(isDesktop ? 24 : 16),
+          children: [
+            Text(
+              'Delivery History (${allOrders.length})',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...allOrders
+                .map((order) => _buildOrderCard(context, order, isDesktop)),
+          ],
+        );
+      },
     );
   }
 
@@ -92,6 +99,52 @@ class OrdersTab extends ConsumerWidget {
     );
   }
 
+  Widget _buildErrorView(BuildContext context) {
+    final textPrimary = AppColors.textPrimaryOf(context);
+    final textSecondary = AppColors.textSecondaryOf(context);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.cloud_off_rounded,
+                size: 64,
+                color: AppColors.error,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Could not load history',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Check your connection and try again.',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 16,
+                color: textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildOrderCard(
       BuildContext context, _HistoryOrderItem order, bool isDesktop) {
     final textPrimary = AppColors.textPrimaryOf(context);
@@ -99,6 +152,12 @@ class OrdersTab extends ConsumerWidget {
     final textMuted = AppColors.textMutedOf(context);
     final cardBg = AppColors.cardBgOf(context);
     final cardBorder = AppColors.cardBorderOf(context);
+
+    final isCancelled = order.status == DeliveryOrderStatus.cancelled;
+    final statusColor = isCancelled ? AppColors.error : AppColors.success;
+    final statusIcon =
+        isCancelled ? Icons.cancel_rounded : Icons.check_circle_rounded;
+    final statusLabel = isCancelled ? 'Cancelled' : 'Delivered';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -114,12 +173,12 @@ class OrdersTab extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.success.withValues(alpha: 0.1),
+              color: statusColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
-              Icons.check_circle_rounded,
-              color: AppColors.success,
+            child: Icon(
+              statusIcon,
+              color: statusColor,
               size: 24,
             ),
           ),
@@ -185,22 +244,22 @@ class OrdersTab extends ConsumerWidget {
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.success,
+                  color: statusColor,
                 ),
               ),
               const SizedBox(height: 4),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.1),
+                  color: statusColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  'Delivered',
+                  statusLabel,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.success,
+                    color: statusColor,
                   ),
                 ),
               ),
@@ -237,6 +296,7 @@ class _HistoryOrderItem {
   final double earnings;
   final DateTime date;
   final String distance;
+  final DeliveryOrderStatus status;
 
   _HistoryOrderItem({
     required this.orderId,
@@ -245,20 +305,10 @@ class _HistoryOrderItem {
     required this.earnings,
     required this.date,
     required this.distance,
+    this.status = DeliveryOrderStatus.delivered,
   });
 
   String get displayCode => orderCode.isNotEmpty ? orderCode : orderId;
-
-  factory _HistoryOrderItem.fromHistory(DeliveryHistoryItem item) {
-    return _HistoryOrderItem(
-      orderId: item.orderId,
-      orderCode: item.displayCode,
-      customerName: item.customerName,
-      earnings: item.earnings,
-      date: item.date,
-      distance: item.distance,
-    );
-  }
 
   factory _HistoryOrderItem.fromOrder(DeliveryOrder order) {
     return _HistoryOrderItem(
@@ -268,6 +318,7 @@ class _HistoryOrderItem {
       earnings: order.deliveryFee,
       date: order.deliveredTime ?? order.orderTime,
       distance: order.distance,
+      status: order.status,
     );
   }
 }
