@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/responsive/responsive_layout.dart';
+import '../../core/widgets/app_network_image.dart';
+import '../../models/delivery_staff_model.dart';
 import '../../models/order_model.dart';
 import '../../providers/admin_provider.dart';
 import '../../widgets/status_badge.dart';
@@ -45,6 +47,638 @@ class _OrdersScreenState extends State<OrdersScreen> {
     }
   }
 
+  Future<void> _showAssignAgentDialog(
+    BuildContext context,
+    AdminProvider provider,
+    DairyOrder order,
+  ) async {
+    final cardBg = AppColors.cardBgOf(context);
+    final cardBorder = AppColors.cardBorderOf(context);
+    final textPrimary = AppColors.textPrimaryOf(context);
+    final textSecondary = AppColors.textSecondaryOf(context);
+    final textMuted = AppColors.textMutedOf(context);
+
+    String? selectedAgentId = order.assignedAgentId;
+    String searchQuery = '';
+    bool isSubmitting = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final allRiders = provider.riders;
+            final filteredRiders = allRiders.where((r) {
+              if (searchQuery.trim().isEmpty) return true;
+              final q = searchQuery.toLowerCase().trim();
+              return r.name.toLowerCase().contains(q) ||
+                  r.phone.contains(q) ||
+                  r.assignedZone.toLowerCase().contains(q) ||
+                  r.id.toLowerCase().contains(q);
+            }).toList();
+
+            final selectedRider = allRiders.cast<DeliveryRider?>().firstWhere(
+                  (r) => r?.id == selectedAgentId,
+                  orElse: () => null,
+                );
+
+            return Dialog(
+              backgroundColor: cardBg,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: cardBorder),
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: 540,
+                  maxHeight: 620,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Dialog Header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.directions_bike_rounded,
+                                      color: AppColors.primary,
+                                      size: 22,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        order.isAssigned
+                                            ? 'Reassign Delivery Agent'
+                                            : 'Assign Delivery Agent',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w800,
+                                          color: textPrimary,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Order #${order.displayCode} • ${order.customerName}',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    color: textSecondary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 20),
+                            onPressed: () => Navigator.of(dialogContext).pop(),
+                            color: textMuted,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Search input
+                      TextField(
+                        onChanged: (val) =>
+                            setDialogState(() => searchQuery = val),
+                        style: TextStyle(color: textPrimary, fontSize: 13),
+                        decoration: InputDecoration(
+                          hintText: 'Search agent by name, phone, or zone...',
+                          hintStyle:
+                              TextStyle(color: textMuted, fontSize: 13),
+                          prefixIcon: Icon(Icons.search,
+                              size: 20, color: textSecondary),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          filled: true,
+                          fillColor: AppColors.bgOf(context),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: cardBorder),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: cardBorder),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide:
+                                const BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Agents List
+                      Expanded(
+                        child: filteredRiders.isEmpty
+                            ? Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24.0),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.person_off_outlined,
+                                          size: 40, color: textMuted),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        searchQuery.isNotEmpty
+                                            ? 'No matching delivery agents found.'
+                                            : 'No delivery agents registered yet.',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: textSecondary,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : ListView.separated(
+                                shrinkWrap: true,
+                                itemCount: filteredRiders.length,
+                                separatorBuilder: (ctx, i) =>
+                                    Divider(color: cardBorder, height: 1),
+                                itemBuilder: (ctx, i) {
+                                  final rider = filteredRiders[i];
+                                  final isSelected =
+                                      selectedAgentId == rider.id;
+                                  final isCurrentlyAssigned =
+                                      order.assignedAgentId == rider.id;
+
+                                  return InkWell(
+                                    borderRadius: BorderRadius.circular(8),
+                                    onTap: isSubmitting
+                                        ? null
+                                        : () {
+                                            setDialogState(() {
+                                              selectedAgentId = rider.id;
+                                            });
+                                          },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8.0, vertical: 10.0),
+                                      child: Row(
+                                        children: [
+                                          // Avatar
+                                          Container(
+                                            width: 38,
+                                            height: 38,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: AppColors.deliveriesPurpleBg,
+                                              border: Border.all(
+                                                color: isSelected
+                                                    ? AppColors.primary
+                                                    : cardBorder,
+                                                width: 1.5,
+                                              ),
+                                            ),
+                                            child: ClipOval(
+                                              child: rider.profileImageUrl !=
+                                                          null &&
+                                                      rider.profileImageUrl!
+                                                          .isNotEmpty
+                                                  ? AppNetworkImage(
+                                                      imageUrl: rider
+                                                          .profileImageUrl!,
+                                                      fit: BoxFit.cover,
+                                                    )
+                                                  : Center(
+                                                      child: Text(
+                                                        rider.name.isNotEmpty
+                                                            ? rider.name[0]
+                                                                .toUpperCase()
+                                                            : 'D',
+                                                        style: const TextStyle(
+                                                          fontSize: 14,
+                                                          fontWeight:
+                                                               FontWeight.bold,
+                                                          color: AppColors
+                                                              .deliveriesPurple,
+                                                        ),
+                                                      ),
+                                                    ),
+                                              ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          // Name & details
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  children: [
+                                                    Flexible(
+                                                      child: Text(
+                                                        rider.name,
+                                                        style: GoogleFonts
+                                                            .plusJakartaSans(
+                                                          fontSize: 13,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                          color: textPrimary,
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ),
+                                                    if (isCurrentlyAssigned) ...[
+                                                      const SizedBox(width: 6),
+                                                      Container(
+                                                        padding: const EdgeInsets
+                                                            .symmetric(
+                                                            horizontal: 6,
+                                                            vertical: 2),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: AppColors
+                                                              .revenueGreenBg,
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(4),
+                                                        ),
+                                                        child: const Text(
+                                                          'Assigned',
+                                                          style: TextStyle(
+                                                            fontSize: 10,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                            color: AppColors
+                                                                .revenueGreen,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  '${rider.phone.isNotEmpty ? rider.phone : "No Phone"} • ${rider.assignedZone.isNotEmpty ? rider.assignedZone : "All Zones"}',
+                                                  style: GoogleFonts
+                                                      .plusJakartaSans(
+                                                    fontSize: 11,
+                                                    color: textSecondary,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          // Online status indicator
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: rider.isOnline
+                                                  ? AppColors.revenueGreenBg
+                                                  : const Color(0xFFF1F5F9),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Container(
+                                                  width: 6,
+                                                  height: 6,
+                                                  decoration: BoxDecoration(
+                                                    shape: BoxShape.circle,
+                                                    color: rider.isOnline
+                                                        ? AppColors.revenueGreen
+                                                        : textMuted,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  rider.isOnline
+                                                      ? 'Online'
+                                                      : 'Offline',
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: rider.isOnline
+                                                        ? AppColors.revenueGreen
+                                                        : textSecondary,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          // Radio selection
+                                          Radio<String>(
+                                            value: rider.id,
+                                            groupValue: selectedAgentId,
+                                            activeColor: AppColors.primary,
+                                            onChanged: isSubmitting
+                                                ? null
+                                                : (val) {
+                                                    setDialogState(() {
+                                                      selectedAgentId = val;
+                                                    });
+                                                  },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                      ),
+                      const SizedBox(height: 16),
+                      Divider(color: cardBorder, height: 1),
+                      const SizedBox(height: 16),
+
+                      // Footer Actions
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        runSpacing: 8,
+                        spacing: 8,
+                        children: [
+                          if (order.isAssigned)
+                            TextButton.icon(
+                              onPressed: isSubmitting
+                                  ? null
+                                  : () async {
+                                      setDialogState(
+                                          () => isSubmitting = true);
+                                      try {
+                                        await provider.assignDeliveryAgent(
+                                          order.id,
+                                          null,
+                                        );
+                                        if (dialogContext.mounted) {
+                                          Navigator.of(dialogContext).pop();
+                                        }
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                  'Delivery agent unassigned successfully.'),
+                                              backgroundColor:
+                                                  AppColors.revenueGreen,
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        setDialogState(
+                                            () => isSubmitting = false);
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                  'Failed to unassign agent: $e'),
+                                              backgroundColor:
+                                                  AppColors.statusCancelled,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                              icon: const Icon(Icons.person_remove_outlined,
+                                  size: 16, color: AppColors.statusCancelled),
+                              label: const Text(
+                                'Unassign',
+                                style: TextStyle(
+                                  color: AppColors.statusCancelled,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            )
+                          else
+                            const SizedBox.shrink(),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextButton(
+                                onPressed: isSubmitting
+                                    ? null
+                                    : () => Navigator.of(dialogContext).pop(),
+                                child: Text(
+                                  'Cancel',
+                                  style: TextStyle(
+                                    color: textSecondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: (isSubmitting ||
+                                        selectedAgentId == null ||
+                                        selectedAgentId ==
+                                            order.assignedAgentId)
+                                    ? null
+                                    : () async {
+                                        setDialogState(
+                                            () => isSubmitting = true);
+                                        try {
+                                          await provider.assignDeliveryAgent(
+                                            order.id,
+                                            selectedAgentId,
+                                            agentName: selectedRider?.name,
+                                          );
+                                          if (dialogContext.mounted) {
+                                            Navigator.of(dialogContext).pop();
+                                          }
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  order.isAssigned
+                                                      ? 'Order reassigned to ${selectedRider?.name ?? "agent"}.'
+                                                      : 'Order assigned to ${selectedRider?.name ?? "agent"}.',
+                                                ),
+                                                backgroundColor:
+                                                    AppColors.revenueGreen,
+                                              ),
+                                            );
+                                          }
+                                        } catch (e) {
+                                          setDialogState(
+                                              () => isSubmitting = false);
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context)
+                                              ..showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                      'Failed to assign agent: $e'),
+                                                  backgroundColor:
+                                                      AppColors.statusCancelled,
+                                                ),
+                                              );
+                                          }
+                                        }
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 10),
+                                ),
+                                child: isSubmitting
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : Text(
+                                        order.isAssigned
+                                            ? 'Confirm Reassignment'
+                                            : 'Assign Agent',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildAgentAssignmentCell(
+    BuildContext context,
+    AdminProvider provider,
+    DairyOrder order,
+    Color textPrimary,
+    Color textSecondary,
+    Color textMuted,
+    Color cardBorder,
+  ) {
+    if (order.isAssigned) {
+      final assignedName = order.assignedAgentName != null &&
+              order.assignedAgentName!.isNotEmpty
+          ? order.assignedAgentName!
+          : (provider.riders
+                  .cast<DeliveryRider?>()
+                  .firstWhere((r) => r?.id == order.assignedAgentId,
+                      orElse: () => null)
+                  ?.name ??
+              'Agent (${order.assignedAgentId})');
+
+      return InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => _showAssignAgentDialog(context, provider, order),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.deliveriesPurpleBg,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: AppColors.deliveriesPurple.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.directions_bike_rounded,
+                size: 15,
+                color: AppColors.deliveriesPurple,
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      assignedName,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'Tap to reassign',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        color: AppColors.deliveriesPurple,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.swap_horiz_rounded,
+                size: 16,
+                color: AppColors.deliveriesPurple,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return OutlinedButton.icon(
+      onPressed: () => _showAssignAgentDialog(context, provider, order),
+      icon: const Icon(Icons.person_add_alt_1_outlined, size: 14),
+      label: const Text(
+        'Assign Agent',
+        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+      ),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.primary,
+        side: const BorderSide(color: AppColors.primary),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        visualDensity: VisualDensity.compact,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AdminProvider>();
@@ -70,25 +704,28 @@ class _OrdersScreenState extends State<OrdersScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Orders & Dispatch Management',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: textPrimary,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Orders & Dispatch Management',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: textPrimary,
+                      ),
                     ),
-                  ),
-                  Text(
-                    'Track live morning & evening delivery orders and update statuses.',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      color: textSecondary,
+                    const SizedBox(height: 2),
+                    Text(
+                      'Track live morning & evening delivery orders, assign delivery fleet, and update statuses.',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        color: textSecondary,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -134,7 +771,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          // Orders Table
+          // Orders List/Table Container
           Container(
             decoration: BoxDecoration(
               color: cardBg,
@@ -142,10 +779,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
               border: Border.all(color: cardBorder),
               boxShadow: AppColors.cardShadow,
             ),
-            child: _buildOrdersTable(
+            child: _buildOrdersContent(
               context,
               provider,
               cardBg,
+              cardBorder,
               textPrimary,
               textSecondary,
               textMuted,
@@ -159,10 +797,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
-  Widget _buildOrdersTable(
+  Widget _buildOrdersContent(
     BuildContext context,
     AdminProvider provider,
     Color cardBg,
+    Color cardBorder,
     Color textPrimary,
     Color textSecondary,
     Color textMuted,
@@ -211,7 +850,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
           order.displayCode.toLowerCase().contains(q) ||
           order.customerName.toLowerCase().contains(q) ||
           order.address.toLowerCase().contains(q) ||
-          order.itemsSummary.toLowerCase().contains(q);
+          order.itemsSummary.toLowerCase().contains(q) ||
+          (order.assignedAgentName != null &&
+              order.assignedAgentName!.toLowerCase().contains(q)) ||
+          (order.assignedAgentId != null &&
+              order.assignedAgentId!.toLowerCase().contains(q));
     }).toList();
 
     if (filteredOrders.isEmpty) {
@@ -245,77 +888,69 @@ class _OrdersScreenState extends State<OrdersScreen> {
       separatorBuilder: (ctx, idx) => Divider(color: dividerColor),
       itemBuilder: (ctx, idx) {
         final order = filteredOrders[idx];
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              // Order ID & Time
-              Expanded(
-                flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Order #${order.displayCode}',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
+
+        if (isDesktop) {
+          // Desktop Table Row
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Order ID & Time
+                Expanded(
+                  flex: 2,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Order #${order.displayCode}',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      order.time,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        color: textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Customer & Items
-              Expanded(
-                flex: 4,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      order.customerName,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      order.itemsSummary,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        color: textSecondary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (!isDesktop) ...[
                       const SizedBox(height: 2),
                       Text(
-                        order.address,
+                        order.time,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           color: textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Customer & Items
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        order.customerName,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        order.itemsSummary,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          color: textSecondary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              if (isDesktop)
+                // Delivery Slot & Payment Mode
                 Expanded(
-                  flex: 3,
+                  flex: 2,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -337,24 +972,111 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ],
                   ),
                 ),
-              // Amount
-              Expanded(
-                flex: 2,
-                child: Text(
-                  currencyFormatter.format(order.amount),
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: textPrimary,
+                // Delivery Agent Column
+                Expanded(
+                  flex: 3,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _buildAgentAssignmentCell(
+                      context,
+                      provider,
+                      order,
+                      textPrimary,
+                      textSecondary,
+                      textMuted,
+                      cardBorder,
+                    ),
                   ),
                 ),
-              ),
-              // Status Action Dropdown
-              Expanded(
-                flex: 3,
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: PopupMenuButton<OrderStatus>(
+                // Amount
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    currencyFormatter.format(order.amount),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: textPrimary,
+                    ),
+                  ),
+                ),
+                // Status Action Dropdown
+                Expanded(
+                  flex: 2,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: PopupMenuButton<OrderStatus>(
+                      initialValue: order.status,
+                      color: cardBg,
+                      onSelected: (newStatus) => _updateStatus(
+                        context,
+                        provider,
+                        order.id,
+                        newStatus,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          StatusBadge.fromOrderStatus(order.status),
+                          const SizedBox(width: 4),
+                          Icon(Icons.arrow_drop_down,
+                              size: 18, color: textSecondary),
+                        ],
+                      ),
+                      itemBuilder: (ctx) => OrderStatus.values.map((s) {
+                        return PopupMenuItem(
+                          value: s,
+                          child: Text(
+                            s.displayName,
+                            style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13, color: textPrimary),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Mobile / Compact Card View
+        return Padding(
+          padding: const EdgeInsets.all(14.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Row: Order ID & Status Dropdown
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Order #${order.displayCode}',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          order.time,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            color: textMuted,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  PopupMenuButton<OrderStatus>(
                     initialValue: order.status,
                     color: cardBg,
                     onSelected: (newStatus) => _updateStatus(
@@ -367,9 +1089,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         StatusBadge.fromOrderStatus(order.status),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 2),
                         Icon(Icons.arrow_drop_down,
-                            size: 18, color: textSecondary),
+                            size: 16, color: textSecondary),
                       ],
                     ),
                     itemBuilder: (ctx) => OrderStatus.values.map((s) {
@@ -383,7 +1105,74 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       );
                     }).toList(),
                   ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // Customer & Items & Amount
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          order.customerName,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          order.itemsSummary,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            color: textSecondary,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    currencyFormatter.format(order.amount),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+
+              // Address
+              if (order.address.isNotEmpty)
+                Text(
+                  order.address,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    color: textMuted,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
+              const SizedBox(height: 10),
+
+              // Delivery Agent Assignment
+              _buildAgentAssignmentCell(
+                context,
+                provider,
+                order,
+                textPrimary,
+                textSecondary,
+                textMuted,
+                cardBorder,
               ),
             ],
           ),

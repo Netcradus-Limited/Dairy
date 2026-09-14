@@ -36,6 +36,8 @@ class DairyOrder {
   final String address;
   final String time;
   final String paymentMode;
+  final String? assignedAgentId;
+  final String? assignedAgentName;
 
   const DairyOrder({
     required this.id,
@@ -49,10 +51,18 @@ class DairyOrder {
     required this.address,
     required this.time,
     required this.paymentMode,
+    this.assignedAgentId,
+    this.assignedAgentName,
   });
 
   /// The customer-facing 6-character order code (e.g. "KRT482").
   String get displayCode => orderCode.isNotEmpty ? orderCode : id;
+
+  /// Whether this order currently has a delivery agent assigned.
+  bool get isAssigned =>
+      assignedAgentId != null && assignedAgentId!.trim().isNotEmpty;
+
+  static const Object _sentinel = Object();
 
   DairyOrder copyWith({
     String? id,
@@ -66,6 +76,8 @@ class DairyOrder {
     String? address,
     String? time,
     String? paymentMode,
+    Object? assignedAgentId = _sentinel,
+    Object? assignedAgentName = _sentinel,
   }) {
     return DairyOrder(
       id: id ?? this.id,
@@ -79,6 +91,12 @@ class DairyOrder {
       address: address ?? this.address,
       time: time ?? this.time,
       paymentMode: paymentMode ?? this.paymentMode,
+      assignedAgentId: identical(assignedAgentId, _sentinel)
+          ? this.assignedAgentId
+          : assignedAgentId as String?,
+      assignedAgentName: identical(assignedAgentName, _sentinel)
+          ? this.assignedAgentName
+          : assignedAgentName as String?,
     );
   }
 }

@@ -182,6 +182,16 @@ class AdminProvider extends ChangeNotifier {
         .where((s) => s.isNotEmpty)
         .join(', ');
 
+    final agentId = o.assignedAgentId?.trim();
+    String? agentName;
+    if (agentId != null && agentId.isNotEmpty) {
+      final match = _riders.cast<DeliveryRider?>().firstWhere(
+            (r) => r?.id == agentId,
+            orElse: () => null,
+          );
+      agentName = match?.name;
+    }
+
     return DairyOrder(
       id: o.id,
       orderCode: o.displayOrderCode,
@@ -196,6 +206,8 @@ class AdminProvider extends ChangeNotifier {
       address: o.deliveryAddress.fullAddressText,
       time: DateFormat('hh:mm a').format(o.orderDate),
       paymentMode: o.paymentMethod,
+      assignedAgentId: agentId,
+      assignedAgentName: agentName,
     );
   }
 
