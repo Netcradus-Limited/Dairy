@@ -17,6 +17,7 @@ import 'notifications/notifications_screen.dart';
 import 'orders/orders_screen.dart';
 import 'payments/payments_screen.dart';
 import 'products/products_screen.dart';
+import 'profile/admin_profile_screen.dart';
 import 'staff/staff_roles_screen.dart';
 import 'support/support_screen.dart';
 
@@ -116,6 +117,8 @@ class AdminMainShell extends ConsumerWidget {
           return const SupportScreen();
         case 10:
           return const StaffRolesScreen();
+        case 11:
+          return const AdminProfileScreen();
         default:
           return const DashboardScreen();
       }

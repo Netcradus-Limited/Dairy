@@ -16,7 +16,7 @@ class NavItemData {
   const NavItemData({required this.title, required this.icon});
 }
 
-class SidebarNavigation extends StatelessWidget {
+class SidebarNavigation extends ConsumerWidget {
   final bool isDrawer;
 
   const SidebarNavigation({super.key, this.isDrawer = false});
@@ -35,11 +35,13 @@ class SidebarNavigation extends StatelessWidget {
     NavItemData(
         title: 'Support / Complaints', icon: Icons.chat_bubble_outline_rounded),
     NavItemData(title: 'Staff & Roles', icon: Icons.manage_accounts_outlined),
+    NavItemData(title: 'Admin Profile', icon: Icons.account_circle_outlined),
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final provider = context.watch<AdminProvider>();
+    final user = ref.watch(userProvider);
 
     return Container(
       width: 260,
@@ -218,88 +220,115 @@ class SidebarNavigation extends StatelessWidget {
           ),
           // User Profile Card Footer
           const Divider(color: AppColors.sidebarBorder, height: 1),
-          Container(
-            padding: const EdgeInsets.all(14),
-            color: AppColors.sidebarBgDarker,
-            child: Row(
-              children: [
-                const CircleAvatar(
-                  radius: 16,
-                  backgroundColor: AppColors.sidebarHover,
-                  child: Icon(
-                    Icons.person_rounded,
-                    color: Colors.white70,
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Admin User',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textWhite,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+          Material(
+            color: provider.selectedNavIndex == 11
+                ? AppColors.sidebarHover
+                : AppColors.sidebarBgDarker,
+            child: InkWell(
+              onTap: () {
+                provider.setNavIndex(11);
+                if (isDrawer) {
+                  Navigator.of(context).pop();
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: AppColors.sidebarHover,
+                      child: ClipOval(
+                        child: (user.profileImageUrl != null &&
+                                user.profileImageUrl!.isNotEmpty)
+                            ? Image.network(
+                                user.profileImageUrl!,
+                                width: 32,
+                                height: 32,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.person_rounded,
+                                  color: Colors.white70,
+                                  size: 18,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.person_rounded,
+                                color: Colors.white70,
+                                size: 18,
+                              ),
                       ),
-                      Text(
-                        'Super Admin',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.sidebarText,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.logout_rounded,
-                    size: 18,
-                    color: AppColors.sidebarText,
-                  ),
-                  tooltip: 'Sign Out',
-                  padding: EdgeInsets.zero,
-                  constraints:
-                      const BoxConstraints(minWidth: 28, minHeight: 28),
-                  onPressed: () async {
-                    final container = ProviderScope.containerOf(context);
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Sign Out'),
-                        content: const Text(
-                          'Are you sure you want to log out of the admin panel?',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            user.name.isNotEmpty ? user.name : 'Admin User',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textWhite,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text(
-                              'Sign Out',
-                              style: TextStyle(color: Colors.redAccent),
+                          Text(
+                            user.isAdmin ? 'Super Admin' : 'Admin User',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.sidebarText,
                             ),
                           ),
                         ],
                       ),
-                    );
-                    if (confirm == true) {
-                      container.read(cartProvider.notifier).clearLocalCart();
-                      container.read(userProvider.notifier).clearSession();
-                    }
-                  },
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.logout_rounded,
+                        size: 18,
+                        color: AppColors.sidebarText,
+                      ),
+                      tooltip: 'Sign Out',
+                      padding: EdgeInsets.zero,
+                      constraints:
+                          const BoxConstraints(minWidth: 28, minHeight: 28),
+                      onPressed: () async {
+                        final container = ProviderScope.containerOf(context);
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Sign Out'),
+                            content: const Text(
+                              'Are you sure you want to log out of the admin panel?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, true),
+                                child: const Text(
+                                  'Sign Out',
+                                  style: TextStyle(color: Colors.redAccent),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirm == true) {
+                          container.read(cartProvider.notifier).clearLocalCart();
+                          container.read(userProvider.notifier).clearSession();
+                        }
+                      },
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ],
