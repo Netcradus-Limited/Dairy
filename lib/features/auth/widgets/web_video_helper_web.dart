@@ -15,8 +15,8 @@ void configureWebVideoAutoplay([int? playerId]) {
       final elements = web.document.querySelectorAll(selector);
       for (int i = 0; i < elements.length; i++) {
         final el = elements.item(i);
-        if (el is web.HTMLVideoElement) {
-          _configureVideoElement(el);
+        if (el != null && el.isA<web.HTMLVideoElement>()) {
+          _configureVideoElement(el as web.HTMLVideoElement);
         }
       }
 
@@ -25,8 +25,8 @@ void configureWebVideoAutoplay([int? playerId]) {
         final allVideos = web.document.querySelectorAll('video');
         for (int i = 0; i < allVideos.length; i++) {
           final el = allVideos.item(i);
-          if (el is web.HTMLVideoElement) {
-            _configureVideoElement(el);
+          if (el != null && el.isA<web.HTMLVideoElement>()) {
+            _configureVideoElement(el as web.HTMLVideoElement);
           }
         }
       }

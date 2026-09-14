@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/responsive/responsive_layout.dart';
+import '../../core/widgets/app_network_image.dart';
 import '../../models/delivery_staff_model.dart';
 import '../../providers/admin_provider.dart';
 import '../../widgets/status_badge.dart';
@@ -207,17 +208,43 @@ class DeliveryStaffScreen extends StatelessWidget {
                                       radius: 22,
                                       backgroundColor: AppColors.primaryLight
                                           .withValues(alpha: 0.2),
-                                      child: Text(
-                                        rider.name.isNotEmpty
-                                            ? rider.name
-                                                .substring(0, 1)
-                                                .toUpperCase()
-                                            : 'D',
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontWeight: FontWeight.w800,
-                                          color: AppColors.primary,
-                                        ),
-                                      ),
+                                      child: rider.profileImageUrl != null &&
+                                              rider.profileImageUrl!.isNotEmpty
+                                          ? ClipOval(
+                                              child: AppNetworkImage(
+                                                imageUrl:
+                                                    rider.profileImageUrl!,
+                                                width: 44,
+                                                height: 44,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (_, __, ___) =>
+                                                    Text(
+                                                  rider.name.isNotEmpty
+                                                      ? rider.name
+                                                          .substring(0, 1)
+                                                          .toUpperCase()
+                                                      : 'D',
+                                                  style: GoogleFonts
+                                                      .plusJakartaSans(
+                                                    fontWeight:
+                                                        FontWeight.w800,
+                                                    color: AppColors.primary,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                          : Text(
+                                              rider.name.isNotEmpty
+                                                  ? rider.name
+                                                      .substring(0, 1)
+                                                      .toUpperCase()
+                                                  : 'D',
+                                              style:
+                                                  GoogleFonts.plusJakartaSans(
+                                                fontWeight: FontWeight.w800,
+                                                color: AppColors.primary,
+                                              ),
+                                            ),
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
@@ -259,7 +286,11 @@ class DeliveryStaffScreen extends StatelessWidget {
                                     const SizedBox(width: 6),
                                     Expanded(
                                       child: Text(
-                                        rider.vehicle,
+                                        rider.vehicle.isNotEmpty
+                                            ? '${rider.vehicle}${rider.vehicleNumber.isNotEmpty ? ' (${rider.vehicleNumber})' : ''}'
+                                            : (rider.vehicleNumber.isNotEmpty
+                                                ? rider.vehicleNumber
+                                                : 'Vehicle not set'),
                                         style: GoogleFonts.plusJakartaSans(
                                           fontSize: 12,
                                           color: textSecondary,
@@ -289,7 +320,9 @@ class DeliveryStaffScreen extends StatelessWidget {
                                             size: 16, color: Colors.amber),
                                         const SizedBox(width: 4),
                                         Text(
-                                          '${rider.rating.toStringAsFixed(1)} Rating',
+                                          rider.rating != null
+                                              ? '${rider.rating!.toStringAsFixed(1)} Rating'
+                                              : '— Rating',
                                           style: GoogleFonts.plusJakartaSans(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w700,
@@ -347,15 +380,34 @@ class DeliveryStaffScreen extends StatelessWidget {
             CircleAvatar(
               radius: 20,
               backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
-              child: Text(
-                rider.name.isNotEmpty
-                    ? rider.name.substring(0, 1).toUpperCase()
-                    : 'D',
-                style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
-                ),
-              ),
+              child: rider.profileImageUrl != null &&
+                      rider.profileImageUrl!.isNotEmpty
+                  ? ClipOval(
+                      child: AppNetworkImage(
+                        imageUrl: rider.profileImageUrl!,
+                        width: 40,
+                        height: 40,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Text(
+                          rider.name.isNotEmpty
+                              ? rider.name.substring(0, 1).toUpperCase()
+                              : 'D',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Text(
+                      rider.name.isNotEmpty
+                          ? rider.name.substring(0, 1).toUpperCase()
+                          : 'D',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primary,
+                      ),
+                    ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -388,16 +440,23 @@ class DeliveryStaffScreen extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildDetailRow(
-                    context, Icons.phone_outlined, 'Phone', rider.phone),
+                    context, Icons.phone_outlined, 'Phone', rider.phone.isNotEmpty ? rider.phone : '—'),
                 const SizedBox(height: 10),
                 _buildDetailRow(context, Icons.email_outlined, 'Email',
                     rider.email.isNotEmpty ? rider.email : '—'),
                 const SizedBox(height: 10),
                 _buildDetailRow(context, Icons.map_outlined, 'Assigned Zone',
-                    rider.assignedZone),
+                    rider.assignedZone.isNotEmpty ? rider.assignedZone : '—'),
                 const SizedBox(height: 10),
-                _buildDetailRow(context, Icons.electric_rickshaw_outlined,
-                    'Vehicle / Mode', rider.vehicle),
+                _buildDetailRow(
+                    context,
+                    Icons.electric_rickshaw_outlined,
+                    'Vehicle / Mode',
+                    rider.vehicle.isNotEmpty
+                        ? '${rider.vehicle}${rider.vehicleNumber.isNotEmpty ? ' (${rider.vehicleNumber})' : ''}'
+                        : (rider.vehicleNumber.isNotEmpty
+                            ? rider.vehicleNumber
+                            : '—')),
                 const Divider(height: 24),
                 _buildDetailRow(
                   context,
@@ -415,14 +474,19 @@ class DeliveryStaffScreen extends StatelessWidget {
                     'Deliveries Today',
                     '${rider.totalDeliveriesToday} Completed'),
                 const SizedBox(height: 10),
-                _buildDetailRow(context, Icons.pending_actions_rounded,
-                    'Pending Deliveries', '${rider.pendingDeliveries} Active'),
-                const SizedBox(height: 10),
-                _buildDetailRow(context, Icons.star_rounded, 'Customer Rating',
-                    '${rider.rating.toStringAsFixed(1)} / 5.0'),
-                const SizedBox(height: 10),
-                _buildDetailRow(context, Icons.calendar_today_outlined,
-                    'Joined Date', rider.joinedDate),
+            _buildDetailRow(
+    context,
+    Icons.star_rounded,
+    'Customer Rating',
+    rider.rating != null
+        ? '${rider.rating!.toStringAsFixed(1)} / 5.0'
+        : '—'),
+const SizedBox(height: 10),
+_buildDetailRow(
+    context,
+    Icons.calendar_today_outlined,
+    'Joined Date',
+    rider.joinedDate),
               ],
             ),
           ),
@@ -503,12 +567,13 @@ class DeliveryStaffScreen extends StatelessWidget {
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
     final phoneCtrl = TextEditingController(text: existing?.phone ?? '');
     final emailCtrl = TextEditingController(text: existing?.email ?? '');
-    final vehicleCtrl = TextEditingController(
-        text: existing?.vehicle ?? 'Hero Electric Nyx (UP-16-DE-4412)');
-    final zoneCtrl = TextEditingController(
-        text: existing?.assignedZone ?? 'Noida Express Zone');
+    final vehicleCtrl = TextEditingController(text: existing?.vehicle ?? '');
+    final vehicleNumCtrl =
+        TextEditingController(text: existing?.vehicleNumber ?? '');
+    final zoneCtrl =
+        TextEditingController(text: existing?.assignedZone ?? '');
     final ratingCtrl = TextEditingController(
-        text: existing != null ? existing.rating.toString() : '4.9');
+        text: existing?.rating != null ? existing!.rating!.toString() : '');
     String selectedStatus = existing?.status ?? 'Active';
 
     showDialog(
@@ -553,10 +618,24 @@ class DeliveryStaffScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  TextField(
-                    controller: vehicleCtrl,
-                    decoration: const InputDecoration(
-                        labelText: 'Vehicle Model & Registration No.'),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: vehicleCtrl,
+                          decoration: const InputDecoration(
+                              labelText: 'Vehicle Model / Type'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: vehicleNumCtrl,
+                          decoration: const InputDecoration(
+                              labelText: 'Registration No.'),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -575,7 +654,7 @@ class DeliveryStaffScreen extends StatelessWidget {
                           keyboardType: const TextInputType.numberWithOptions(
                               decimal: true),
                           decoration: const InputDecoration(
-                              labelText: 'Rating (e.g. 4.9)'),
+                              labelText: 'Rating (optional)'),
                         ),
                       ),
                     ],
@@ -610,24 +689,20 @@ class DeliveryStaffScreen extends StatelessWidget {
               onPressed: () async {
                 if (nameCtrl.text.trim().isNotEmpty) {
                   final isOnline = selectedStatus.toLowerCase() == 'active';
-                  final rating = double.tryParse(ratingCtrl.text) ?? 4.9;
+                  final ratingText = ratingCtrl.text.trim();
+                  final rating = ratingText.isNotEmpty
+                      ? double.tryParse(ratingText)
+                      : null;
 
                   if (isEdit) {
                     await provider.updateRider(
                       existing.copyWith(
                         name: nameCtrl.text.trim(),
-                        phone: phoneCtrl.text.trim().isEmpty
-                            ? existing.phone
-                            : phoneCtrl.text.trim(),
-                        email: emailCtrl.text.trim().isEmpty
-                            ? existing.email
-                            : emailCtrl.text.trim(),
-                        vehicle: vehicleCtrl.text.trim().isEmpty
-                            ? existing.vehicle
-                            : vehicleCtrl.text.trim(),
-                        assignedZone: zoneCtrl.text.trim().isEmpty
-                            ? existing.assignedZone
-                            : zoneCtrl.text.trim(),
+                        phone: phoneCtrl.text.trim(),
+                        email: emailCtrl.text.trim(),
+                        vehicle: vehicleCtrl.text.trim(),
+                        vehicleNumber: vehicleNumCtrl.text.trim().toUpperCase(),
+                        assignedZone: zoneCtrl.text.trim(),
                         status: selectedStatus,
                         rating: rating,
                         isOnline: isOnline,
@@ -642,23 +717,18 @@ class DeliveryStaffScreen extends StatelessWidget {
                     }
                   } else {
                     final riderId =
-                        'RDR-${DateTime.now().millisecondsSinceEpoch % 10000}';
+                        'RDR-${DateTime.now().millisecondsSinceEpoch}';
                     await provider.addRider(
                       DeliveryRider(
                         id: riderId,
                         name: nameCtrl.text.trim(),
-                        phone: phoneCtrl.text.trim().isEmpty
-                            ? '+91 98765 00000'
-                            : phoneCtrl.text.trim(),
+                        phone: phoneCtrl.text.trim(),
                         email: emailCtrl.text.trim().isEmpty
                             ? '${nameCtrl.text.toLowerCase().replaceAll(' ', '')}@sawariyadairy.com'
                             : emailCtrl.text.trim(),
-                        vehicle: vehicleCtrl.text.trim().isEmpty
-                            ? 'Hero Electric Nyx (EV)'
-                            : vehicleCtrl.text.trim(),
-                        assignedZone: zoneCtrl.text.trim().isEmpty
-                            ? 'Noida Express Zone'
-                            : zoneCtrl.text.trim(),
+                        vehicle: vehicleCtrl.text.trim(),
+                        vehicleNumber: vehicleNumCtrl.text.trim().toUpperCase(),
+                        assignedZone: zoneCtrl.text.trim(),
                         totalDeliveriesToday: 0,
                         pendingDeliveries: 0,
                         rating: rating,

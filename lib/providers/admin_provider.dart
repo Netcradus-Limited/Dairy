@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:dairy_app/models/complaint_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -770,22 +769,44 @@ class AdminProvider extends ChangeNotifier {
     try {
       await FirebaseFirestore.instance.collection('users').doc(rider.id).set({
         'id': rider.id,
+        'uid': rider.id,
         'name': rider.name,
         'phone': rider.phone,
         'email': rider.email,
         'role': 'delivery',
         'vehicle': rider.vehicle,
+        'vehicleNumber': rider.vehicleNumber,
         'assignedZone': rider.assignedZone,
         'status': rider.status,
-        'rating': rider.rating,
+        if (rider.rating != null) 'rating': rider.rating,
+        if (rider.profileImageUrl != null) ...{
+          'profileImageUrl': rider.profileImageUrl,
+          'photoUrl': rider.profileImageUrl,
+        },
         'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
       await FirebaseFirestore.instance
           .collection('delivery_agents')
           .doc(rider.id)
           .set({
+        'id': rider.id,
+        'uid': rider.id,
+        'name': rider.name,
+        'phone': rider.phone,
+        'email': rider.email,
+        'vehicle': rider.vehicle,
+        'vehicleNumber': rider.vehicleNumber,
+        'assignedZone': rider.assignedZone,
         'isOnline': rider.status.toLowerCase() == 'active' || rider.isOnline,
+        'isOnDuty': rider.status.toLowerCase() == 'active' || rider.isOnline,
+        'status': rider.status,
+        if (rider.rating != null) 'rating': rider.rating,
+        if (rider.profileImageUrl != null) ...{
+          'profileImageUrl': rider.profileImageUrl,
+          'photoUrl': rider.profileImageUrl,
+        },
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
@@ -804,9 +825,14 @@ class AdminProvider extends ChangeNotifier {
         'phone': rider.phone,
         'email': rider.email,
         'vehicle': rider.vehicle,
+        'vehicleNumber': rider.vehicleNumber,
         'assignedZone': rider.assignedZone,
         'status': rider.status,
-        'rating': rider.rating,
+        if (rider.rating != null) 'rating': rider.rating,
+        if (rider.profileImageUrl != null) ...{
+          'profileImageUrl': rider.profileImageUrl,
+          'photoUrl': rider.profileImageUrl,
+        },
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
@@ -814,7 +840,21 @@ class AdminProvider extends ChangeNotifier {
           .collection('delivery_agents')
           .doc(rider.id)
           .set({
+        'uid': rider.id,
+        'name': rider.name,
+        'phone': rider.phone,
+        'email': rider.email,
+        'vehicle': rider.vehicle,
+        'vehicleNumber': rider.vehicleNumber,
+        'assignedZone': rider.assignedZone,
         'isOnline': rider.status.toLowerCase() == 'active' || rider.isOnline,
+        'isOnDuty': rider.status.toLowerCase() == 'active' || rider.isOnline,
+        'status': rider.status,
+        if (rider.rating != null) 'rating': rider.rating,
+        if (rider.profileImageUrl != null) ...{
+          'profileImageUrl': rider.profileImageUrl,
+          'photoUrl': rider.profileImageUrl,
+        },
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
@@ -1000,36 +1040,152 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _rebuildRiders(
-      List<QueryDocumentSnapshot<Map<String, dynamic>>> deliveryDocs) {
+  List<QueryDocumentSnapshot<Map<String, dynamic>>> _lastDeliveryDocs = [];
+
+  static bool _isLegacyMockName(String? val) {
+    if (val == null) return false;
+    final s = val.trim().toLowerCase();
+    return s == 'rajesh kumar' ||
+        s == 'delivery agent mock';
+  }
+
+  static bool _isLegacyMockPhone(String? val) {
+    if (val == null) return false;
+    final digits = val.replaceAll(RegExp(r'\D'), '');
+    return digits == '917777777777' ||
+        digits == '7777777777' ||
+        digits == '919876543210' ||
+        digits == '9876543210' ||
+        digits == '919876500000' ||
+        digits == '9876500000' ||
+        digits == '1234567890' ||
+        digits == '911234567890';
+  }
+
+  static bool _isLegacyMockVehicle(String? val) {
+    if (val == null) return false;
+    final s = val.trim().toLowerCase();
+    return s == 'electric delivery vehicle';
+  }
+
+  static bool _isLegacyMockVehicleNumber(String? val) {
+    if (val == null) return false;
+    final s = val.replaceAll(RegExp(r'\s'), '').toLowerCase();
+    return s == 'up16de4412';
+  }
+
+  static bool _isLegacyMockZone(String? val) {
+    if (val == null) return false;
+    final s = val.trim().toLowerCase();
+    return s == 'delivery zone' ||
+        s == 'noida express zone';
+  }
+
+  void _rebuildRidersCombined() {
+    final Map<String, Map<String, dynamic>> agentMap = {};
+
+    // 1. Gather all docs from delivery_agents
+    for (final doc in _lastDeliveryDocs) {
+      final data = doc.data();
+      final uid = (data['uid'] as String? ?? doc.id).trim();
+      if (uid.isNotEmpty) {
+        agentMap[uid] = Map<String, dynamic>.from(data);
+      }
+    }
+
+    // 2. Merge all delivery users from users collection
+    for (final doc in _lastUserDocs) {
+      final data = doc.data();
+      final role = (data['role'] as String? ?? '').trim().toLowerCase();
+      if (role == 'delivery') {
+        final uid =
+            (data['id'] as String? ?? data['uid'] as String? ?? doc.id).trim();
+        if (uid.isNotEmpty) {
+          if (!agentMap.containsKey(uid)) {
+            agentMap[uid] = Map<String, dynamic>.from(data);
+          } else {
+            final existing = agentMap[uid]!;
+            data.forEach((key, value) {
+              if (value != null &&
+                  (!existing.containsKey(key) ||
+                      existing[key] == null ||
+                      existing[key] == '')) {
+                existing[key] = value;
+              }
+            });
+
+            // Prioritize real user fields if delivery_agents had empty or mock values
+            final curName = (existing['name'] as String?)?.trim() ?? '';
+            final uName = (data['name'] as String?)?.trim() ?? '';
+            if ((curName.isEmpty || _isLegacyMockName(curName)) &&
+                uName.isNotEmpty &&
+                !_isLegacyMockName(uName) &&
+                uName != 'Guest Customer') {
+              existing['name'] = uName;
+            }
+
+            final curPhone = (existing['phone'] as String?)?.trim() ?? '';
+            final uPhone = (data['phone'] as String?)?.trim() ?? '';
+            if ((curPhone.isEmpty || _isLegacyMockPhone(curPhone)) &&
+                uPhone.isNotEmpty &&
+                !_isLegacyMockPhone(uPhone)) {
+              existing['phone'] = uPhone;
+            }
+
+            final curImg = (existing['profileImageUrl'] ??
+                existing['photoUrl'] ??
+                existing['photoURL']) as String?;
+            final uImg = (data['profileImageUrl'] ??
+                data['photoUrl'] ??
+                data['photoURL']) as String?;
+            if ((curImg == null || curImg.trim().isEmpty) &&
+                uImg != null &&
+                uImg.trim().isNotEmpty) {
+              existing['profileImageUrl'] = uImg.trim();
+            }
+          }
+        }
+      }
+    }
+
     final List<DeliveryRider> ridersList = [];
 
-    for (final doc in deliveryDocs) {
-      final data = doc.data();
-      final uid = (data['uid'] as String? ?? doc.id);
-      final name = (data['name'] as String? ?? '').trim();
-      final phone = (data['phone'] as String? ?? '').trim();
+    for (final entry in agentMap.entries) {
+      final uid = entry.key;
+      final data = entry.value;
+
+      final rawName = (data['name'] as String?)?.trim() ?? '';
+      final name =
+          _isLegacyMockName(rawName) || rawName == 'Guest Customer' ? '' : rawName;
+
+      final rawPhone = (data['phone'] as String?)?.trim() ?? '';
+      final phone = _isLegacyMockPhone(rawPhone) ? '' : rawPhone;
+
       final email = (data['email'] as String? ?? '').trim();
-      final rating = (data['rating'] as num?)?.toDouble() ?? 5.0;
 
-      final vehicleParts = [
-        data['vehicle'] as String?,
-        data['vehicleNumber'] as String?,
-        data['vehicleType'] as String?,
-      ]
-          .where((s) => s != null && s.trim().isNotEmpty)
-          .map((s) => s!.trim())
-          .toList();
+      final rawVehicle =
+          ((data['vehicle'] ?? data['vehicleType']) as String?)?.trim() ?? '';
+      final vehicle = _isLegacyMockVehicle(rawVehicle) ? '' : rawVehicle;
 
-      final vehicle = vehicleParts.isNotEmpty
-          ? vehicleParts.join(' • ')
-          : 'Electric Delivery Vehicle';
+      final rawVehicleNum = (data['vehicleNumber'] as String?)?.trim() ?? '';
+      final vehicleNumber =
+          _isLegacyMockVehicleNumber(rawVehicleNum) ? '' : rawVehicleNum;
 
-      final assignedZone = (data['assignedZone'] as String? ??
-          data['zone'] as String? ??
-          'Delivery Zone');
+      final rawZone =
+          ((data['assignedZone'] ?? data['zone']) as String?)?.trim() ?? '';
+      final assignedZone = _isLegacyMockZone(rawZone) ? '' : rawZone;
+
+      final rawImage = ((data['profileImageUrl'] ??
+              data['photoUrl'] ??
+              data['photoURL']) as String?)
+          ?.trim();
+      final profileImageUrl =
+          (rawImage != null && rawImage.isNotEmpty) ? rawImage : null;
+
+      final rating = (data['rating'] as num?)?.toDouble();
 
       final isOnline = (data['isOnline'] as bool?) ??
+          (data['isOnDuty'] as bool?) ??
           (data['status']?.toString().toLowerCase() == 'active');
       final status =
           isOnline ? 'Active' : (data['status'] as String? ?? 'Offline');
@@ -1057,14 +1213,16 @@ class AdminProvider extends ChangeNotifier {
       ridersList.add(
         DeliveryRider(
           id: uid,
-          name: name.isNotEmpty ? name : 'Delivery Agent',
-          phone: phone.isNotEmpty ? phone : '+91 98765 00000',
+          name: name.isNotEmpty ? name : 'Delivery Partner',
+          phone: phone,
           email: email,
           vehicle: vehicle,
+          vehicleNumber: vehicleNumber,
           assignedZone: assignedZone,
           totalDeliveriesToday: totalDeliveriesToday,
           pendingDeliveries: pendingDeliveries,
           rating: rating,
+          profileImageUrl: profileImageUrl,
           status: status,
           isOnline: isOnline,
           joinedDate: joinedDate,
@@ -1083,6 +1241,7 @@ class AdminProvider extends ChangeNotifier {
       (snap) {
         _lastUserDocs = snap.docs;
         _rebuildCustomers();
+        _rebuildRidersCombined();
       },
       onError: (e) {
         _usersError = 'Failed to load users: $e';
@@ -1098,7 +1257,8 @@ class AdminProvider extends ChangeNotifier {
         .snapshots()
         .listen(
       (snap) {
-        _rebuildRiders(snap.docs);
+        _lastDeliveryDocs = snap.docs;
+        _rebuildRidersCombined();
       },
       onError: (e) {
         debugPrint('AdminProvider: delivery_agents stream error: $e');

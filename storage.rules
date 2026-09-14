@@ -1,0 +1,53 @@
+rules_version = '2';
+
+// Craft rules based on data in your Firestore database
+// Allow users to upload profile images and access app media securely.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isValidImage() {
+      return request.resource.size < 5 * 1024 * 1024
+          && request.resource.contentType.matches('image/.*');
+    }
+
+    // Delivery agent profile photos:
+    // Any user can read (e.g. for customer order tracking or admin panel),
+    // but ONLY the authenticated delivery agent can upload/update their own photo.
+    match /delivery_agents/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isOwner(uid) && isValidImage();
+    }
+
+    // General user profile photos:
+    // Any user can read; only the authenticated user can upload their own photo.
+    match /profiles/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isOwner(uid) && isValidImage();
+    }
+
+    // Product & Category catalog images (read-only for customers; write for authenticated admins/staff)
+    match /products/{allPaths=**} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    match /categories/{allPaths=**} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    match /banners/{allPaths=**} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+  }
+}

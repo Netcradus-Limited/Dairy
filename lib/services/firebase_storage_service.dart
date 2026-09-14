@@ -111,6 +111,24 @@ class FirebaseStorageService {
     );
   }
 
+  /// Uploads a delivery agent profile image to dedicated path `delivery_agents/{uid}/profile_photo`.
+  Future<String> uploadDeliveryAgentProfileImage({
+    required String uid,
+    required Uint8List bytes,
+    String? contentType,
+  }) async {
+    final sanitizedUid = uid.trim();
+    if (sanitizedUid.isEmpty) {
+      throw ArgumentError(
+          'Delivery Agent UID cannot be empty when uploading profile image.');
+    }
+    return uploadBytes(
+      path: 'delivery_agents/$sanitizedUid/profile_photo',
+      bytes: bytes,
+      contentType: contentType,
+    );
+  }
+
   /// Uploads a banner image to `banners/{bannerId}/image`.
   Future<String> uploadBannerImage({
     required String bannerId,

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
 
 import '../core/auth/app_role.dart';
 import '../core/router/auth_refresh.dart';
@@ -71,16 +72,21 @@ class UserNotifier extends StateNotifier<User> {
 
           final trustedRole = UserRole.sanitize(data['role'] as String?);
 
+          final cleanName = (data['name'] as String?)?.trim().isNotEmpty == true
+              ? (data['name'] as String).trim()
+              : (state.name.trim() != 'Guest Customer' &&
+                      state.name.trim() != 'Sawariya Customer'
+                  ? state.name.trim()
+                  : '');
+
           final updatedUser = User(
             id: uid,
-            name: (data['name'] as String?)?.isNotEmpty == true
-                ? data['name']
-                : state.name,
-            phone: (data['phone'] as String?)?.isNotEmpty == true
-                ? data['phone']
+            name: cleanName,
+            phone: (data['phone'] as String?)?.trim().isNotEmpty == true
+                ? (data['phone'] as String).trim()
                 : state.phone,
-            email: (data['email'] as String?)?.isNotEmpty == true
-                ? data['email']
+            email: (data['email'] as String?)?.trim().isNotEmpty == true
+                ? (data['email'] as String).trim()
                 : state.email,
             profileImageUrl: effectiveImageUrl,
             role: trustedRole,
@@ -170,11 +176,22 @@ class UserNotifier extends StateNotifier<User> {
           debugPrint(
               '[PROFILE DEBUG] _syncFromFirestore: uid=$uid, extracted imageUrl=$imageUrl, current=$currentImageUrl, resolved=$effectiveImageUrl');
 
+          final cleanName = (data['name'] as String?)?.trim().isNotEmpty == true
+              ? (data['name'] as String).trim()
+              : (state.name.trim() != 'Guest Customer' &&
+                      state.name.trim() != 'Sawariya Customer'
+                  ? state.name.trim()
+                  : '');
+
           final updatedUser = User(
             id: uid,
-            name: data['name'] ?? state.name,
-            phone: data['phone'] ?? state.phone,
-            email: data['email'] ?? state.email,
+            name: cleanName,
+            phone: (data['phone'] as String?)?.trim().isNotEmpty == true
+                ? (data['phone'] as String).trim()
+                : state.phone,
+            email: (data['email'] as String?)?.trim().isNotEmpty == true
+                ? (data['email'] as String).trim()
+                : state.email,
             profileImageUrl: effectiveImageUrl,
             role: trustedRole,
           );
@@ -230,16 +247,22 @@ class UserNotifier extends StateNotifier<User> {
             final trustedRole = UserRole.sanitize(data['role'] as String?);
             final imageUrl = _extractProfileImageUrl(data);
 
+            final cleanName = (data['name'] as String?)?.trim().isNotEmpty == true
+                ? (data['name'] as String).trim()
+                : (user.name.trim().isNotEmpty &&
+                        user.name.trim() != 'Guest Customer' &&
+                        user.name.trim() != 'Sawariya Customer'
+                    ? user.name.trim()
+                    : '');
+
             user = User(
               id: user.id,
-              name: (data['name'] as String?)?.isNotEmpty == true
-                  ? data['name']
-                  : (user.name.isNotEmpty ? user.name : 'Sawariya Customer'),
-              phone: (data['phone'] as String?)?.isNotEmpty == true
-                  ? data['phone']
+              name: cleanName,
+              phone: (data['phone'] as String?)?.trim().isNotEmpty == true
+                  ? (data['phone'] as String).trim()
                   : user.phone,
-              email: (data['email'] as String?)?.isNotEmpty == true
-                  ? data['email']
+              email: (data['email'] as String?)?.trim().isNotEmpty == true
+                  ? (data['email'] as String).trim()
                   : user.email,
               profileImageUrl: (imageUrl != null && imageUrl.isNotEmpty)
                   ? imageUrl
@@ -254,9 +277,14 @@ class UserNotifier extends StateNotifier<User> {
           // Self-registration: ALWAYS creates a standard Customer profile.
           // Elevated roles (admin / delivery) must be assigned in Firestore.
           const safeRole = UserRole.customerValue;
+          final cleanName = (user.name.trim().isNotEmpty &&
+                  user.name.trim() != 'Guest Customer' &&
+                  user.name.trim() != 'Sawariya Customer')
+              ? user.name.trim()
+              : '';
           user = User(
             id: user.id,
-            name: user.name.isNotEmpty ? user.name : 'Sawariya Customer',
+            name: cleanName,
             phone: user.phone,
             email: user.email,
             profileImageUrl: user.profileImageUrl,
@@ -264,7 +292,7 @@ class UserNotifier extends StateNotifier<User> {
           );
           await docRef.set({
             'uid': user.id,
-            'name': user.name,
+            if (cleanName.isNotEmpty) 'name': cleanName,
             'phone': user.phone,
             'email': user.email,
             'profileImageUrl': user.profileImageUrl,
@@ -279,7 +307,10 @@ class UserNotifier extends StateNotifier<User> {
         // Fallback for offline - ensure user never gets elevated offline
         user = User(
           id: user.id,
-          name: user.name,
+          name: (user.name.trim() != 'Guest Customer' &&
+                  user.name.trim() != 'Sawariya Customer')
+              ? user.name.trim()
+              : '',
           phone: user.phone,
           email: user.email,
           profileImageUrl: user.profileImageUrl,
@@ -310,6 +341,9 @@ class UserNotifier extends StateNotifier<User> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_sessionKey);
     } catch (_) {}
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (_) {}
   }
 
   /// Developer-only helper (used by debug toggles) to switch the current
@@ -334,42 +368,68 @@ class UserNotifier extends StateNotifier<User> {
     String? phone,
     String? email,
     String? profileImageUrl,
+    String? vehicle,
+    String? vehicleType,
+    String? vehicleNumber,
+    String? assignedZone,
   }) async {
-    if (state.id.isEmpty) {
+    final authUid = FirebaseAuth.instance.currentUser?.uid;
+    final targetUid = (authUid != null && authUid.isNotEmpty)
+        ? authUid
+        : (state.id.isNotEmpty ? state.id : '');
+    if (targetUid.isEmpty) {
       throw Exception('No authenticated user session found.');
     }
 
     debugPrint(
         '[PROFILE DEBUG T2] updateProfile: starting, state.profileImageUrl before=${state.profileImageUrl}, incoming profileImageUrl=$profileImageUrl');
 
+    final trimmedName = name?.trim();
+    final trimmedPhone = phone?.trim();
+    final trimmedEmail = email?.trim();
+    final trimmedImage = profileImageUrl?.trim();
+    final trimmedVehicle = vehicle?.trim();
+    final trimmedVehicleType = vehicleType?.trim();
+    final trimmedVehicleNum = vehicleNumber?.trim();
+    final trimmedZone = assignedZone?.trim();
+
     final updatedUser = User(
-      id: state.id,
-      name: name ?? state.name,
-      phone: phone ?? state.phone,
-      email: email ?? state.email,
-      profileImageUrl: profileImageUrl ?? state.profileImageUrl,
+      id: targetUid,
+      name: (trimmedName != null && trimmedName.isNotEmpty) ? trimmedName : state.name,
+      phone: (trimmedPhone != null && trimmedPhone.isNotEmpty) ? trimmedPhone : state.phone,
+      email: (trimmedEmail != null && trimmedEmail.isNotEmpty) ? trimmedEmail : state.email,
+      profileImageUrl: (trimmedImage != null && trimmedImage.isNotEmpty)
+          ? trimmedImage
+          : state.profileImageUrl,
       role: state.role, // role is strictly preserved and never mutated here
     );
 
-    // Update in Firestore first using set with merge so it succeeds whether the document exists or not
+    // Update in Firestore first using set with merge so it succeeds whether the document exists or not.
+    // Strictly omit 'role' so non-admin users cannot mutate role and comply with firestore.rules.
     final firestore = _firestore;
     if (firestore != null) {
-      final docRef = firestore.collection('users').doc(state.id);
-      await docRef.set({
-        'uid': state.id,
-        'role': UserRole.sanitize(state.role),
-        if (name != null) 'name': name,
-        if (phone != null) 'phone': phone,
-        if (email != null) 'email': email,
-        if (profileImageUrl != null) ...{
-          'profileImageUrl': profileImageUrl,
-          'photoUrl': profileImageUrl,
+      final docRef = firestore.collection('users').doc(targetUid);
+      final fieldsToUpdate = <String, dynamic>{
+        'uid': targetUid,
+        if (trimmedName != null && trimmedName.isNotEmpty) 'name': trimmedName,
+        if (trimmedPhone != null && trimmedPhone.isNotEmpty) 'phone': trimmedPhone,
+        if (trimmedEmail != null && trimmedEmail.isNotEmpty) 'email': trimmedEmail,
+        if (trimmedVehicle != null && trimmedVehicle.isNotEmpty) 'vehicle': trimmedVehicle,
+        if (trimmedVehicleType != null && trimmedVehicleType.isNotEmpty) 'vehicleType': trimmedVehicleType,
+        if (trimmedVehicleNum != null && trimmedVehicleNum.isNotEmpty) 'vehicleNumber': trimmedVehicleNum,
+        if (trimmedZone != null && trimmedZone.isNotEmpty) 'assignedZone': trimmedZone,
+        if (trimmedImage != null && trimmedImage.isNotEmpty) ...{
+          'profileImageUrl': trimmedImage,
+          'photoUrl': trimmedImage,
         },
         'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      };
+      debugPrint(
+          'UserNotifier: Writing to users/$targetUid with fields: ${fieldsToUpdate.keys.toList()}');
+      await docRef.set(fieldsToUpdate, SetOptions(merge: true));
 
       debugPrint(
-          '[PROFILE DEBUG T2] updateProfile: Firestore write succeeded on users/${state.id}');
+          '[PROFILE DEBUG T2] updateProfile: Firestore write succeeded on users/$targetUid');
     }
 
     // Update local state

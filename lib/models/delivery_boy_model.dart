@@ -65,6 +65,7 @@ class DeliveryAgent {
   final String id;
   final String name;
   final String phone;
+  final String? email;
   final String vehicle;
   final String vehicleNumber;
   final String assignedZone;
@@ -72,13 +73,15 @@ class DeliveryAgent {
   final int totalDeliveriesToday;
   final int completedDeliveriesToday;
   final double earningsToday;
-  final double rating;
+  final double? rating;
   final String? profileImageUrl;
+  final bool isLoaded;
 
   const DeliveryAgent({
     required this.id,
     required this.name,
     required this.phone,
+    this.email,
     required this.vehicle,
     required this.vehicleNumber,
     required this.assignedZone,
@@ -86,14 +89,75 @@ class DeliveryAgent {
     required this.totalDeliveriesToday,
     required this.completedDeliveriesToday,
     required this.earningsToday,
-    required this.rating,
+    this.rating,
     this.profileImageUrl,
+    this.isLoaded = true,
   });
+
+  /// Factory for an uninitialized / empty profile without any fake mock data.
+  factory DeliveryAgent.empty([String id = '']) => DeliveryAgent(
+        id: id,
+        name: '',
+        phone: '',
+        email: null,
+        vehicle: '',
+        vehicleNumber: '',
+        assignedZone: '',
+        status: DeliveryStatus.offDuty,
+        totalDeliveriesToday: 0,
+        completedDeliveriesToday: 0,
+        earningsToday: 0.0,
+        rating: null,
+        profileImageUrl: null,
+        isLoaded: false,
+      );
+
+  /// Creates a DeliveryAgent directly from a Firestore document map.
+  factory DeliveryAgent.fromMap(Map<String, dynamic> map, String id) {
+    final rawName = (map['name'] as String?)?.trim() ?? '';
+    final rawPhone = (map['phone'] as String?)?.trim() ?? '';
+    final rawVehicle =
+        ((map['vehicle'] ?? map['vehicleType']) as String?)?.trim() ?? '';
+    final rawVehicleNumber = (map['vehicleNumber'] as String?)?.trim() ?? '';
+    final rawZone =
+        ((map['assignedZone'] ?? map['zone']) as String?)?.trim() ?? '';
+    final rawImage = ((map['profileImageUrl'] ??
+            map['photoUrl'] ??
+            map['photoURL']) as String?)
+        ?.trim();
+    final rawEmail = (map['email'] as String?)?.trim();
+
+    final isOnline = map['isOnline'] == true || map['isOnDuty'] == true;
+
+    return DeliveryAgent(
+      id: id,
+      name: rawName,
+      phone: rawPhone,
+      email: rawEmail?.isNotEmpty == true ? rawEmail : null,
+      vehicle: rawVehicle,
+      vehicleNumber: rawVehicleNumber,
+      assignedZone: rawZone,
+      status: isOnline ? DeliveryStatus.onDuty : DeliveryStatus.offDuty,
+      totalDeliveriesToday:
+          ((map['totalDeliveriesToday'] ?? 0) as num).toInt(),
+      completedDeliveriesToday:
+          ((map['completedDeliveriesToday'] ?? 0) as num).toInt(),
+      earningsToday: ((map['earningsToday'] ?? 0.0) as num).toDouble(),
+      rating: (map['rating'] as num?)?.toDouble(),
+      profileImageUrl:
+          (rawImage != null && rawImage.isNotEmpty) ? rawImage : null,
+      isLoaded: true,
+    );
+  }
+
+  bool get isProfileComplete =>
+      name.trim().isNotEmpty && phone.trim().isNotEmpty;
 
   DeliveryAgent copyWith({
     String? id,
     String? name,
     String? phone,
+    String? email,
     String? vehicle,
     String? vehicleNumber,
     String? assignedZone,
@@ -103,11 +167,13 @@ class DeliveryAgent {
     double? earningsToday,
     double? rating,
     String? profileImageUrl,
+    bool? isLoaded,
   }) {
     return DeliveryAgent(
       id: id ?? this.id,
       name: name ?? this.name,
       phone: phone ?? this.phone,
+      email: email ?? this.email,
       vehicle: vehicle ?? this.vehicle,
       vehicleNumber: vehicleNumber ?? this.vehicleNumber,
       assignedZone: assignedZone ?? this.assignedZone,
@@ -118,6 +184,7 @@ class DeliveryAgent {
       earningsToday: earningsToday ?? this.earningsToday,
       rating: rating ?? this.rating,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      isLoaded: isLoaded ?? this.isLoaded,
     );
   }
 }
