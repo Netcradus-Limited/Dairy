@@ -12,6 +12,7 @@ import '../services/delivery_tracking_service.dart';
 import '../services/earnings_service.dart';
 import '../services/firebase_storage_service.dart';
 import '../services/order_service.dart';
+import 'package:latlong2/latlong.dart';
 import 'user_provider.dart';
 
 /// Maps a Firestore [Order] into the delivery panel's [DeliveryOrder] view
@@ -58,8 +59,18 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
     estimatedTime: order.estimatedDeliveryTime.isNotEmpty
         ? order.estimatedDeliveryTime
         : '—',
-    latitude: order.deliveryAddress.latitude,
-    longitude: order.deliveryAddress.longitude,
+    latitude: (order.deliveryAddress.hasCoordinates &&
+            DeliveryTrackingService.isValidCoordinates(
+                order.deliveryAddress.latitude,
+                order.deliveryAddress.longitude))
+        ? order.deliveryAddress.latitude
+        : null,
+    longitude: (order.deliveryAddress.hasCoordinates &&
+            DeliveryTrackingService.isValidCoordinates(
+                order.deliveryAddress.latitude,
+                order.deliveryAddress.longitude))
+        ? order.deliveryAddress.longitude
+        : null,
   );
 }
 
@@ -73,6 +84,19 @@ String _resolveAgentId(Ref ref) {
   if (authUid != null && authUid.isNotEmpty) return authUid;
   return ref.watch(userProvider).id;
 }
+
+/// Streams the authenticated delivery agent's real-time geographic position from Firestore.
+/// Emits `null` if the agent has not reported a location, or if unauthenticated.
+final deliveryAgentLocationStreamProvider =
+    StreamProvider.autoDispose<LatLng?>((ref) {
+  final agentId = _resolveAgentId(ref);
+  if (agentId.isEmpty) {
+    return Stream.value(null);
+  }
+  return ref
+      .watch(deliveryTrackingServiceProvider)
+      .agentLocationStream(agentId);
+});
 
 /// Single source of truth for the delivery panel: a live Firestore stream of the
 /// orders relevant to THIS agent — pending orders awaiting acceptance plus any
