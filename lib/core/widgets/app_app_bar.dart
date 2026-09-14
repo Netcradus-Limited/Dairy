@@ -232,7 +232,7 @@ class _AppTopAppBarState extends ConsumerState<AppTopAppBar> {
                           ),
                           const SizedBox(width: 6),
                           ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 160),
+                            constraints: const BoxConstraints(maxWidth: 140),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
@@ -338,71 +338,74 @@ class _AppTopAppBarState extends ConsumerState<AppTopAppBar> {
               // Search Field
               if (showSearch) ...[
                 if (isDesktop)
-                  ConstrainedBox(
-                    constraints:
-                        const BoxConstraints(maxWidth: 200, minWidth: 100),
-                    child: SizedBox(
-                      height: 38,
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: _onSearchChanged,
-                        textAlignVertical: TextAlignVertical.center,
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          color: AppColors.textPrimary,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: tr('Search milk, curd, paneer, ghee...'),
-                          hintStyle: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textMuted,
+                  Flexible(
+                    fit: FlexFit.loose,
+                    child: ConstrainedBox(
+                      constraints:
+                          const BoxConstraints(maxWidth: 200, minWidth: 80),
+                      child: SizedBox(
+                        height: 38,
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: _onSearchChanged,
+                          textAlignVertical: TextAlignVertical.center,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: AppColors.textPrimary,
                           ),
-                          prefixIcon: const Icon(
-                            Icons.search_rounded,
-                            size: 18,
-                            color: AppColors.textSecondary,
-                          ),
-                          suffixIcon: _searchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(
-                                    Icons.clear_rounded,
-                                    size: 16,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(
-                                    minWidth: 32,
-                                    minHeight: 32,
-                                  ),
-                                  splashRadius: 16,
-                                  onPressed: _clearSearch,
-                                )
-                              : null,
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 0,
-                            horizontal: 10,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: Color(0xFFCBD5E1),
-                              width: 0.8,
+                          decoration: InputDecoration(
+                            hintText: tr('Search milk, curd, paneer, ghee...'),
+                            hintStyle: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textMuted,
                             ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: Color(0xFFCBD5E1),
-                              width: 0.8,
+                            prefixIcon: const Icon(
+                              Icons.search_rounded,
+                              size: 18,
+                              color: AppColors.textSecondary,
                             ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: Color(0xFF005F38),
-                              width: 1.2,
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(
+                                      Icons.clear_rounded,
+                                      size: 16,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(
+                                      minWidth: 32,
+                                      minHeight: 32,
+                                    ),
+                                    splashRadius: 16,
+                                    onPressed: _clearSearch,
+                                  )
+                                : null,
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 0,
+                              horizontal: 10,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFCBD5E1),
+                                width: 0.8,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFCBD5E1),
+                                width: 0.8,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF005F38),
+                                width: 1.2,
+                              ),
                             ),
                           ),
                         ),
@@ -623,7 +626,7 @@ class _TopNavButtonState extends State<_TopNavButton> {
             onTap: widget.onTap,
             borderRadius: BorderRadius.circular(12),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -634,13 +637,13 @@ class _TopNavButtonState extends State<_TopNavButton> {
                         : (_isHovered
                             ? const Color(0xFF063A24)
                             : AppColors.textSecondary),
-                    size: 19,
+                    size: 18,
                   ),
-                  const SizedBox(width: 7),
+                  const SizedBox(width: 6),
                   Text(
                     widget.label,
                     style: TextStyle(
-                      fontSize: 14.5,
+                      fontSize: 14.0,
                       fontWeight: active ? FontWeight.w800 : FontWeight.w600,
                       color: active
                           ? Colors.white

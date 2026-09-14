@@ -11,6 +11,10 @@ class DairyCategory {
   final Color color;
   final String emoji;
   final String imageUrl;
+  final bool isActive;
+  final int sortOrder;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   const DairyCategory({
     required this.id,
@@ -21,6 +25,10 @@ class DairyCategory {
     required this.color,
     required this.emoji,
     this.imageUrl = '',
+    this.isActive = true,
+    this.sortOrder = 0,
+    this.createdAt,
+    this.updatedAt,
   });
 
   String get resolvedImageUrl =>
@@ -35,6 +43,10 @@ class DairyCategory {
     Color? color,
     String? emoji,
     String? imageUrl,
+    bool? isActive,
+    int? sortOrder,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return DairyCategory(
       id: id ?? this.id,
@@ -45,6 +57,10 @@ class DairyCategory {
       color: color ?? this.color,
       emoji: emoji ?? this.emoji,
       imageUrl: imageUrl ?? this.imageUrl,
+      isActive: isActive ?? this.isActive,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

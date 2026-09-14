@@ -29,6 +29,14 @@ class UserNotifier extends StateNotifier<User> {
     }
   }
 
+  FirebaseAuth? get _auth {
+    try {
+      return FirebaseAuth.instance;
+    } catch (_) {
+      return null;
+    }
+  }
+
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSubscription;
 
   UserNotifier() : super(guestUser) {
@@ -342,7 +350,7 @@ class UserNotifier extends StateNotifier<User> {
       await prefs.remove(_sessionKey);
     } catch (_) {}
     try {
-      await FirebaseAuth.instance.signOut();
+      await _auth?.signOut();
     } catch (_) {}
   }
 
@@ -373,7 +381,7 @@ class UserNotifier extends StateNotifier<User> {
     String? vehicleNumber,
     String? assignedZone,
   }) async {
-    final authUid = FirebaseAuth.instance.currentUser?.uid;
+    final authUid = _auth?.currentUser?.uid;
     final targetUid = (authUid != null && authUid.isNotEmpty)
         ? authUid
         : (state.id.isNotEmpty ? state.id : '');

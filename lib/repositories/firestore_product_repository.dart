@@ -12,23 +12,34 @@ import '../models/category.dart';
 ///   products/{productId}   -> Product.toFirestore()
 ///   categories/{categoryId} -> Category.toFirestore()
 class FirestoreProductRepository {
-  final FirebaseFirestore _firestore;
+  final FirebaseFirestore? _firestore;
 
   static bool _hasSeededDefaults = false;
 
-  FirestoreProductRepository([FirebaseFirestore? firestore])
-      : _firestore = firestore ?? FirebaseFirestore.instance {
-    if (!_hasSeededDefaults) {
+  FirestoreProductRepository([FirebaseFirestore? firestore, bool autoSeed = true])
+      : _firestore = firestore {
+    if (autoSeed && !_hasSeededDefaults && _canAccessFirestore()) {
       _hasSeededDefaults = true;
       unawaited(seedDefaultsIfNeeded());
     }
   }
 
+  static bool _canAccessFirestore() {
+    try {
+      FirebaseFirestore.instance;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  FirebaseFirestore get _db => _firestore ?? FirebaseFirestore.instance;
+
   CollectionReference<Map<String, dynamic>> get _products =>
-      _firestore.collection('products');
+      _db.collection('products');
 
   CollectionReference<Map<String, dynamic>> get _categories =>
-      _firestore.collection('categories');
+      _db.collection('categories');
 
   // ─── Merging Helpers for Missing Defaults ─────────────────────────────────
 
@@ -86,10 +97,17 @@ class FirestoreProductRepository {
         snap.docs.map((d) => Product.fromFirestore(d.data(), d.id)).toList()));
   }
 
-  /// Real-time stream of all categories (with missing default categories safely merged).
+  /// Real-time stream of active categories for customers, sorted by sortOrder
+  /// (with missing default categories safely merged).
   Stream<List<Category>> streamCategories() {
-    return _categories.snapshots().map((snap) => _mergeMissingDefaultCategories(
-        snap.docs.map((d) => Category.fromFirestore(d.data(), d.id)).toList()));
+    return _categories.snapshots().map((snap) {
+      final list =
+          snap.docs.map((d) => Category.fromFirestore(d.data(), d.id)).toList();
+      final merged = _mergeMissingDefaultCategories(list);
+      final active = merged.where((c) => c.isActive).toList();
+      active.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+      return active;
+    });
   }
 
   /// Real-time stream of raw product documents.
@@ -103,11 +121,19 @@ class FirestoreProductRepository {
         snap.docs.map((d) => {...d.data(), 'id': d.id}).toList()));
   }
 
-  /// Real-time stream of raw category documents (with `'id'` key).
+  /// Real-time stream of raw category documents (with `'id'` key), sorted by sortOrder.
   Stream<List<Map<String, dynamic>>> streamRawCategories() {
-    return _categories.snapshots().map((snap) =>
-        _mergeMissingDefaultRawCategories(
-            snap.docs.map((d) => {...d.data(), 'id': d.id}).toList()));
+    return _categories.snapshots().map((snap) {
+      final list =
+          snap.docs.map((d) => {...d.data(), 'id': d.id}).toList();
+      final merged = _mergeMissingDefaultRawCategories(list);
+      merged.sort((a, b) {
+        final sortA = (a['sortOrder'] as num?)?.toInt() ?? 0;
+        final sortB = (b['sortOrder'] as num?)?.toInt() ?? 0;
+        return sortA.compareTo(sortB);
+      });
+      return merged;
+    });
   }
 
   // ─── One-time fetches ────────────────────────────────────────────────────
@@ -120,12 +146,15 @@ class FirestoreProductRepository {
     return _mergeMissingDefaultProducts(list);
   }
 
-  /// One-time fetch of all categories (useful with a [FutureBuilder]).
+  /// One-time fetch of active categories (useful with a [FutureBuilder]), sorted by sortOrder.
   Future<List<Category>> fetchCategories() async {
     final snap = await _categories.get();
     final list =
         snap.docs.map((d) => Category.fromFirestore(d.data(), d.id)).toList();
-    return _mergeMissingDefaultCategories(list);
+    final merged = _mergeMissingDefaultCategories(list);
+    final active = merged.where((c) => c.isActive).toList();
+    active.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return active;
   }
 
   // ─── Writes ──────────────────────────────────────────────────────────────
@@ -164,7 +193,7 @@ class FirestoreProductRepository {
   /// never overwrites existing modified data or duplicates records.
   Future<void> seedDefaultsIfNeeded() async {
     try {
-      final batch = _firestore.batch();
+      final batch = _db.batch();
       bool hasWrites = false;
 
       for (final entry in _defaultCategories.entries) {
@@ -226,6 +255,8 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'description': '100% Pure & Fresh',
     'productCount': 1,
     'emoji': '🥛',
+    'isActive': true,
+    'sortOrder': 0,
   },
   'cat_paneer': {
     'title': 'Paneer',
@@ -238,6 +269,8 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'description': 'Soft & Delicious',
     'productCount': 1,
     'emoji': '🧀',
+    'isActive': true,
+    'sortOrder': 1,
   },
   'cat_ghee': {
     'title': 'Pure Ghee',
@@ -250,6 +283,8 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'description': 'Premium Quality',
     'productCount': 1,
     'emoji': '🍯',
+    'isActive': true,
+    'sortOrder': 2,
   },
   'cat_lassi': {
     'title': 'Lassi',
@@ -262,6 +297,8 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'description': 'Refreshing & Tasty',
     'productCount': 1,
     'emoji': '🥛',
+    'isActive': true,
+    'sortOrder': 3,
   },
   'cat_makhan': {
     'title': 'Makhan',
@@ -274,6 +311,8 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'description': 'Thick & Healthy',
     'productCount': 1,
     'emoji': '🧈',
+    'isActive': true,
+    'sortOrder': 4,
   },
   'cat_uple': {
     'title': 'Uple',
@@ -286,6 +325,8 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'description': 'Organic Uple',
     'productCount': 1,
     'emoji': '🟤',
+    'isActive': true,
+    'sortOrder': 5,
   },
   'cat_water': {
     'title': 'Water',
@@ -298,6 +339,8 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'description': 'Pure 20L Water Bottle',
     'productCount': 1,
     'emoji': '💧',
+    'isActive': true,
+    'sortOrder': 6,
   },
 };
 

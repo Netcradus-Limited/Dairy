@@ -84,7 +84,44 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     final selectedCategoryId = ref.watch(selectedCategoryProvider);
     final searchQuery = ref.watch(productSearchQueryProvider);
 
+    final categoriesAsync = ref.watch(categoriesProvider);
+    final firestoreCategories = categoriesAsync.valueOrNull ?? [];
+
+    // Dynamically build category options starting with "All"
+    final categoryOptions = <Map<String, String>>[
+      {
+        'id': 'cat_all',
+        'title': 'All',
+        'image': 'assets/images/all.png',
+        'description':
+            'Browse our entire range of premium, farm-fresh dairy products.'
+      },
+      ...firestoreCategories.map((c) => {
+            'id': c.id,
+            'title': c.title,
+            'image': c.resolvedImageUrl.isNotEmpty
+                ? c.resolvedImageUrl
+                : (c.imageUrl.isNotEmpty ? c.imageUrl : 'assets/images/doodh.png'),
+            'description': c.subtitle.isNotEmpty
+                ? c.subtitle
+                : 'Fresh and premium ${c.title} products delivered daily.',
+          }),
+    ];
+
+    // Find the currently selected category title for dynamic headers
+    final selectedCat = categoryOptions.firstWhere(
+      (cat) => cat['id'] == selectedCategoryId,
+      orElse: () => {
+        'id': 'cat_all',
+        'title': 'All',
+        'image': 'assets/images/all.png',
+        'description':
+            'Browse our entire range of premium, farm-fresh dairy products.'
+      },
+    );
+
     // Filter products by category and search query
+    final selectedTitle = (selectedCat['title'] ?? '').toLowerCase();
     final filteredProducts = allProducts.where((product) {
       bool matchesCategory = false;
       if (selectedCategoryId == 'cat_all') {
@@ -115,7 +152,9 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
         matchesCategory = product.categoryId == 'cat_water' ||
             product.title.toLowerCase().contains('water');
       } else {
-        matchesCategory = product.categoryId == selectedCategoryId;
+        matchesCategory = product.categoryId == selectedCategoryId ||
+            (selectedTitle.isNotEmpty &&
+                product.categoryName.toLowerCase() == selectedTitle);
       }
 
       final matchesSearch = searchQuery.isEmpty ||
@@ -125,72 +164,6 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
               .contains(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     }).toList();
-
-    // Defined Categories to match the user's requested options and logo palette
-    final categoryOptions = [
-      {
-        'id': 'cat_all',
-        'title': 'All',
-        'image': 'assets/images/all.png',
-        'description':
-            'Browse our entire range of premium, farm-fresh dairy products.'
-      },
-      {
-        'id': 'cat_milk',
-        'title': 'Milk',
-        'image': 'assets/images/doodh.png',
-        'description': '100% pure A2 milk sourced daily from healthy cows.'
-      },
-      {
-        'id': 'cat_paneer',
-        'title': 'Paneer',
-        'image': 'assets/images/pan.png',
-        'description':
-            'Ultra-soft, protein-rich fresh cottage cheese prepared daily.'
-      },
-      {
-        'id': 'cat_ghee',
-        'title': 'Pure Ghee',
-        'image': 'assets/images/gh.png',
-        'description': 'Traditional bilona method pure cow ghee.'
-      },
-      {
-        'id': 'cat_lassi',
-        'title': 'Lassi',
-        'image': 'assets/images/las.png',
-        'description': 'Thick, creamy, and refreshing probiotic sweet lassi.'
-      },
-      {
-        'id': 'cat_makhan',
-        'title': 'Makhan',
-        'image': 'assets/images/mak.png',
-        'description': 'Freshly churned creamy unsalted white table butter.'
-      },
-      {
-        'id': 'cat_uple',
-        'title': 'Uple',
-        'image': 'assets/images/u3.png',
-        'description': 'Premium organic cow dung cakes for pooja and rituals.'
-      },
-      {
-        'id': 'cat_water',
-        'title': 'Water',
-        'image': 'assets/images/w3.png',
-        'description': 'Pure 20L Water Bottle delivered to your doorstep.'
-      },
-    ];
-
-    // Find the currently selected category title for dynamic headers
-    final selectedCat = categoryOptions.firstWhere(
-      (cat) => cat['id'] == selectedCategoryId,
-      orElse: () => {
-        'id': 'cat_all',
-        'title': 'All',
-        'image': '',
-        'description':
-            'Browse our entire range of premium, farm-fresh dairy products.'
-      },
-    );
 
     final isMobile = context.isMobile;
 
@@ -290,7 +263,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                       final isSelected = cat['id'] == selectedCategoryId;
 
                       // Color mapping matching mockups
-                      Color getBorderColor(String id) {
+                      Color getBorderColor(String? id) {
                         switch (id) {
                           case 'cat_milk':
                             return const Color(0xFF5B9BD5);
@@ -307,7 +280,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                         }
                       }
 
-                      Color getBgColor(String id) {
+                      Color getBgColor(String? id) {
                         switch (id) {
                           case 'cat_milk':
                             return const Color(0xFFEAF5FF);
@@ -327,7 +300,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                       return GestureDetector(
                         onTap: () {
                           ref.read(selectedCategoryProvider.notifier).state =
-                              (cat['id'] as String?) ?? 'cat_all';
+                              cat['id'] ?? 'cat_all';
                           _showCategoryPopup(context, cat);
                         },
                         child: AnimatedScale(
@@ -343,17 +316,17 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                                   width: 76,
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(20),
-                                    color: getBgColor(cat['id'] as String),
+                                    color: getBgColor(cat['id']),
                                     border: Border.all(
                                       color:
-                                          getBorderColor(cat['id'] as String),
+                                          getBorderColor(cat['id']),
                                       width: isSelected ? 3.0 : 1.5,
                                     ),
                                     boxShadow: [
                                       if (isSelected)
                                         BoxShadow(
                                           color: getBorderColor(
-                                                  cat['id'] as String)
+                                                  cat['id'])
                                               .withOpacity(0.25),
                                           blurRadius: 8,
                                           offset: const Offset(0, 3),
@@ -371,20 +344,32 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                                       padding: const EdgeInsets.all(2),
                                       child: ClipRRect(
                                         borderRadius: BorderRadius.circular(16),
-                                        child: Image.asset(
-                                          (cat['image'] as String?) ?? '',
-                                          fit: cat['id'] == 'cat_all'
-                                              ? BoxFit.cover
-                                              : BoxFit.contain,
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
-                                            return Icon(
-                                              Icons.grid_view_rounded,
-                                              color: AppColors.primary,
-                                              size: 32,
-                                            );
-                                          },
-                                        ),
+                                        child: (cat['image'] ?? '').startsWith('http')
+                                            ? Image.network(
+                                                cat['image'] ?? '',
+                                                fit: BoxFit.contain,
+                                                errorBuilder: (context, error, stackTrace) {
+                                                  return const Icon(
+                                                    Icons.grid_view_rounded,
+                                                    color: AppColors.primary,
+                                                    size: 32,
+                                                  );
+                                                },
+                                              )
+                                            : Image.asset(
+                                                cat['image'] ?? '',
+                                                fit: cat['id'] == 'cat_all'
+                                                    ? BoxFit.cover
+                                                    : BoxFit.contain,
+                                                errorBuilder:
+                                                    (context, error, stackTrace) {
+                                                  return const Icon(
+                                                    Icons.grid_view_rounded,
+                                                    color: AppColors.primary,
+                                                    size: 32,
+                                                  );
+                                                },
+                                              ),
                                       ),
                                     ),
                                   ),
@@ -393,7 +378,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                                 Text(
                                   cat['id'] == 'cat_all'
                                       ? 'ALL'
-                                      : (cat['title'] as String?) ?? '',
+                                      : (cat['title'] ?? ''),
                                   style: TextStyle(
                                     fontSize: 12.5,
                                     fontWeight: isSelected
@@ -717,10 +702,25 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                         ),
                       ],
                     ),
-                    child: Image.asset(
-                      cat['image'] ?? '',
-                      fit: BoxFit.contain,
-                    ),
+                    child: (cat['image'] ?? '').startsWith('http')
+                        ? Image.network(
+                            cat['image'] ?? '',
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.grid_view_rounded,
+                              color: AppColors.primary,
+                              size: 44,
+                            ),
+                          )
+                        : Image.asset(
+                            cat['image'] ?? '',
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.grid_view_rounded,
+                              color: AppColors.primary,
+                              size: 44,
+                            ),
+                          ),
                   )
                 else
                   Container(

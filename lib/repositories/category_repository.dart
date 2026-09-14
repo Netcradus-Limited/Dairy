@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/category.dart';
-import '../core/constants/app_assets.dart';
 
 class CategoryRepository {
   List<Category> getCategories() {
@@ -15,6 +14,8 @@ class CategoryRepository {
         borderColor: Color(0xFF5B9BD5),
         titleColor: Color(0xFF0C1A30),
         itemCount: 8,
+        isActive: true,
+        sortOrder: 0,
       ),
       Category(
         id: 'cat_paneer',
@@ -26,6 +27,8 @@ class CategoryRepository {
         borderColor: Color(0xFF70AD47),
         titleColor: Color(0xFF0C1A30),
         itemCount: 5,
+        isActive: true,
+        sortOrder: 1,
       ),
       Category(
         id: 'cat_ghee',
@@ -37,6 +40,8 @@ class CategoryRepository {
         borderColor: Color(0xFFEDC240),
         titleColor: Color(0xFF0C1A30),
         itemCount: 4,
+        isActive: true,
+        sortOrder: 2,
       ),
       Category(
         id: 'cat_lassi',
@@ -48,6 +53,8 @@ class CategoryRepository {
         borderColor: Color(0xFFD38B27),
         titleColor: Color(0xFF0C1A30),
         itemCount: 4,
+        isActive: true,
+        sortOrder: 3,
       ),
       Category(
         id: 'cat_makhan',
@@ -59,6 +66,8 @@ class CategoryRepository {
         borderColor: Color(0xFFF2D16D),
         titleColor: Color(0xFF005F38),
         itemCount: 6,
+        isActive: true,
+        sortOrder: 4,
       ),
       Category(
         id: 'cat_uple',
@@ -70,6 +79,8 @@ class CategoryRepository {
         borderColor: Color(0xFF70AD47),
         titleColor: Color(0xFF0C1A30),
         itemCount: 1,
+        isActive: true,
+        sortOrder: 5,
       ),
       Category(
         id: 'cat_water',
@@ -81,6 +92,8 @@ class CategoryRepository {
         borderColor: Color(0xFF5B9BD5),
         titleColor: Color(0xFF0C1A30),
         itemCount: 1,
+        isActive: true,
+        sortOrder: 6,
       ),
     ];
   }

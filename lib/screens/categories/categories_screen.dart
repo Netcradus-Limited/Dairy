@@ -142,18 +142,20 @@ class CategoriesScreen extends StatelessWidget {
                     crossAxisCount: isDesktop
                         ? 3
                         : (ResponsiveLayout.isTablet(context) ? 2 : 1),
-                    mainAxisExtent: 200,
+                    mainAxisExtent: 220,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
                   ),
                   itemBuilder: (ctx, idx) {
                     final cat = provider.categories[idx];
                     return Container(
-                      padding: const EdgeInsets.all(18),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: cardBg,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: cardBorder),
+                        border: Border.all(
+                          color: cat.isActive ? cardBorder : cardBorder.withValues(alpha: 0.5),
+                        ),
                         boxShadow: AppColors.cardShadow,
                       ),
                       child: Column(
@@ -204,31 +206,68 @@ class CategoriesScreen extends StatelessWidget {
                                       ),
                               ),
                               const SizedBox(width: 10),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: bgColor,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: cardBorder),
-                                ),
-                                child: Text(
-                                  '${cat.productCount} Products',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: textSecondary,
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: bgColor,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: cardBorder),
+                                    ),
+                                    child: Text(
+                                      '${cat.productCount} Products',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: textSecondary,
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(height: 3),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: cat.isActive
+                                          ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                                          : Colors.grey.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      cat.isActive ? 'Active' : 'Inactive',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: cat.isActive
+                                            ? const Color(0xFF059669)
+                                            : Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                               const Spacer(),
+                              // Quick active toggle
+                              Transform.scale(
+                                scale: 0.75,
+                                child: Switch(
+                                  value: cat.isActive,
+                                  activeColor: AppColors.primary,
+                                  onChanged: (val) async {
+                                    await provider.toggleCategoryActive(cat.id);
+                                  },
+                                ),
+                              ),
                               IconButton(
                                 icon: const Icon(Icons.edit_outlined,
                                     size: 18, color: AppColors.primary),
                                 tooltip: 'Edit Category',
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(
-                                    minWidth: 32, minHeight: 32),
+                                    minWidth: 28, minHeight: 28),
                                 onPressed: () =>
                                     _showCategoryDialog(context, provider, cat),
                               ),
@@ -238,22 +277,47 @@ class CategoriesScreen extends StatelessWidget {
                                 tooltip: 'Delete Category',
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(
-                                    minWidth: 32, minHeight: 32),
+                                    minWidth: 28, minHeight: 28),
                                 onPressed: () => _showDeleteConfirmation(
                                     context, provider, cat),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            cat.name,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: textPrimary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  cat.name,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: textPrimary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (cat.sortOrder > 0) ...[
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 5, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '#${cat.sortOrder}',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                           const SizedBox(height: 4),
                           Expanded(
@@ -285,12 +349,16 @@ class CategoriesScreen extends StatelessWidget {
     final emojiCtrl = TextEditingController(text: existing?.emoji ?? '🥛');
     final countCtrl =
         TextEditingController(text: '${existing?.productCount ?? 0}');
+    final sortOrderCtrl =
+        TextEditingController(text: '${existing?.sortOrder ?? 0}');
 
     showDialog(
       context: context,
       builder: (ctx) {
         String selectedImageUrl = existing?.imageUrl ?? '';
         bool isUploadingImage = false;
+        bool isActive = existing?.isActive ?? true;
+        String? errorMessage;
 
         return StatefulBuilder(
           builder: (ctx, setDialogState) => AlertDialog(
@@ -307,6 +375,36 @@ class CategoriesScreen extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (errorMessage != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline,
+                                size: 16, color: Color(0xFFEF4444)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                errorMessage!,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  color: const Color(0xFFEF4444),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
                     // ── Category Image Selector ──
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -545,7 +643,7 @@ class CategoriesScreen extends StatelessWidget {
                     TextField(
                       controller: nameCtrl,
                       decoration: const InputDecoration(
-                          labelText: 'Category Name',
+                          labelText: 'Category Name *',
                           hintText: 'e.g. Milk & Creams'),
                     ),
                     const SizedBox(height: 12),
@@ -578,6 +676,49 @@ class CategoriesScreen extends StatelessWidget {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: sortOrderCtrl,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                                labelText: 'Display Sort Order',
+                                hintText: '0, 1, 2...'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: AppColors.cardBorder),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Active Status',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Switch(
+                                  value: isActive,
+                                  activeColor: AppColors.primary,
+                                  onChanged: (val) {
+                                    setDialogState(() => isActive = val);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -589,12 +730,27 @@ class CategoriesScreen extends StatelessWidget {
               ),
               ElevatedButton(
                 onPressed: () async {
-                  if (nameCtrl.text.trim().isNotEmpty) {
-                    Navigator.pop(ctx);
+                  final trimmedName = nameCtrl.text.trim();
+                  if (trimmedName.isEmpty) {
+                    setDialogState(() => errorMessage = 'Please enter a category name');
+                    return;
+                  }
+
+                  // Check duplicate name
+                  final duplicate = provider.categories.any((c) =>
+                      (isEdit ? c.id != existing.id : true) &&
+                      c.name.trim().toLowerCase() == trimmedName.toLowerCase());
+                  if (duplicate) {
+                    setDialogState(() => errorMessage =
+                        'A category named "$trimmedName" already exists.');
+                    return;
+                  }
+
+                  try {
                     if (isEdit) {
                       await provider.updateCategory(
                         existing.copyWith(
-                          name: nameCtrl.text.trim(),
+                          name: trimmedName,
                           description: descCtrl.text.trim(),
                           emoji: emojiCtrl.text.trim().isEmpty
                               ? '🥛'
@@ -602,20 +758,26 @@ class CategoriesScreen extends StatelessWidget {
                           productCount: int.tryParse(countCtrl.text) ??
                               existing.productCount,
                           imageUrl: selectedImageUrl,
+                          isActive: isActive,
+                          sortOrder: int.tryParse(sortOrderCtrl.text) ?? 0,
+                          updatedAt: DateTime.now(),
                         ),
                       );
                       if (context.mounted) {
+                        Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                               content: Text(
-                                  'Category "${nameCtrl.text}" updated successfully!')),
+                                  'Category "$trimmedName" updated successfully!')),
                         );
                       }
                     } else {
+                      final generatedId =
+                          'cat_${trimmedName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_')}';
                       await provider.addCategory(
                         DairyCategory(
-                          id: 'CAT-${DateTime.now().millisecondsSinceEpoch % 10000}',
-                          name: nameCtrl.text.trim(),
+                          id: generatedId,
+                          name: trimmedName,
                           description: descCtrl.text.trim(),
                           productCount: int.tryParse(countCtrl.text) ?? 0,
                           icon: Icons.category_rounded,
@@ -624,16 +786,26 @@ class CategoriesScreen extends StatelessWidget {
                               ? '🥛'
                               : emojiCtrl.text.trim(),
                           imageUrl: selectedImageUrl,
+                          isActive: isActive,
+                          sortOrder: int.tryParse(sortOrderCtrl.text) ?? 0,
+                          createdAt: DateTime.now(),
+                          updatedAt: DateTime.now(),
                         ),
                       );
                       if (context.mounted) {
+                        Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                               content: Text(
-                                  'Category "${nameCtrl.text}" added successfully!')),
+                                  'Category "$trimmedName" added successfully!')),
                         );
                       }
                     }
+                  } catch (e) {
+                    setDialogState(() => errorMessage = e
+                        .toString()
+                        .replaceAll('Exception: ', '')
+                        .replaceAll('Error: ', ''));
                   }
                 },
                 style: ElevatedButton.styleFrom(
@@ -655,6 +827,82 @@ class CategoriesScreen extends StatelessWidget {
 
   void _showDeleteConfirmation(
       BuildContext context, AdminProvider provider, DairyCategory category) {
+    final hasProducts = provider.hasLinkedProducts(category.id);
+    final linkedCount = provider.countLinkedProducts(category.id);
+
+    if (hasProducts) {
+      // Deletion is blocked because products reference this category
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.shield_outlined, color: Color(0xFFF59E0B)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Cannot Delete Category',
+                  style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.w700, fontSize: 16),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Category "${category.name}" cannot be deleted because $linkedCount product(s) are currently assigned to it.',
+                style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13, color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'To prevent orphaned products in your store, please deactivate this category instead or reassign its products to another category.',
+                style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12, color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Close'),
+            ),
+            if (category.isActive)
+              ElevatedButton.icon(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  await provider.toggleCategoryActive(category.id);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                            'Category "${category.name}" has been deactivated.'),
+                        backgroundColor: AppColors.primary,
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.visibility_off_outlined,
+                    size: 16, color: Colors.white),
+                label: const Text('Deactivate Instead',
+                    style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // Standard deletion confirmation when no products are linked
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -682,13 +930,24 @@ class CategoriesScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await provider.deleteCategory(category.id);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text(
-                          'Category "${category.name}" deleted successfully.')),
-                );
+              try {
+                await provider.deleteCategory(category.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text(
+                            'Category "${category.name}" deleted successfully.')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(e.toString().replaceAll('Exception: ', '')),
+                      backgroundColor: const Color(0xFFEF4444),
+                    ),
+                  );
+                }
               }
             },
             style: ElevatedButton.styleFrom(

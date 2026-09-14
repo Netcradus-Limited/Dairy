@@ -332,6 +332,23 @@ class AdminProvider extends ChangeNotifier {
 
   DairyCategory _rawToDairyCategory(Map<String, dynamic> raw) {
     final colorValue = raw['colorValue'] as int?;
+    final createdAtRaw = raw['createdAt'];
+    final updatedAtRaw = raw['updatedAt'];
+
+    DateTime? createdAt;
+    if (createdAtRaw is Timestamp) {
+      createdAt = createdAtRaw.toDate();
+    } else if (createdAtRaw is String) {
+      createdAt = DateTime.tryParse(createdAtRaw);
+    }
+
+    DateTime? updatedAt;
+    if (updatedAtRaw is Timestamp) {
+      updatedAt = updatedAtRaw.toDate();
+    } else if (updatedAtRaw is String) {
+      updatedAt = DateTime.tryParse(updatedAtRaw);
+    }
+
     return DairyCategory(
       id: raw['id'] as String? ?? '',
       name: (raw['name'] as String?) ?? (raw['title'] as String?) ?? '',
@@ -344,21 +361,29 @@ class AdminProvider extends ChangeNotifier {
       color: colorValue != null ? Color(colorValue) : AppColors.primary,
       emoji: (raw['emoji'] as String?) ?? '🥛',
       imageUrl: (raw['imageUrl'] as String?) ?? '',
+      isActive: (raw['isActive'] as bool?) ?? true,
+      sortOrder: (raw['sortOrder'] as num?)?.toInt() ?? 0,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
 
   Map<String, dynamic> _dairyCategoryToFirestore(DairyCategory c) {
     return {
       'title': c.name,
+      'name': c.name,
       'subtitle': c.description,
+      'description': c.description,
       'imageUrl': c.imageUrl,
       'iconName': null,
       'colorValue': c.color.toARGB32(),
       'itemCount': c.productCount,
-      'name': c.name,
-      'description': c.description,
       'productCount': c.productCount,
       'emoji': c.emoji,
+      'isActive': c.isActive,
+      'sortOrder': c.sortOrder,
+      'updatedAt': FieldValue.serverTimestamp(),
+      if (c.createdAt == null) 'createdAt': FieldValue.serverTimestamp(),
     };
   }
 
@@ -423,32 +448,114 @@ class AdminProvider extends ChangeNotifier {
 
   // ─── Category CRUD (Firestore) ────────────────────────────────────────
 
+  /// Checks whether any existing products are linked to the given category ID or name.
+  bool hasLinkedProducts(String categoryId) {
+    final catIndex = _categories.indexWhere((c) => c.id == categoryId);
+    final catName = catIndex != -1 ? _categories[catIndex].name.trim().toLowerCase() : '';
+    return _products.any((p) {
+      final pCatId = _categoryIdForName(p.category);
+      return pCatId == categoryId ||
+          (catName.isNotEmpty && p.category.trim().toLowerCase() == catName);
+    });
+  }
+
+  /// Counts the number of active/existing products belonging to a category.
+  int countLinkedProducts(String categoryId) {
+    final catIndex = _categories.indexWhere((c) => c.id == categoryId);
+    final catName = catIndex != -1 ? _categories[catIndex].name.trim().toLowerCase() : '';
+    return _products.where((p) {
+      final pCatId = _categoryIdForName(p.category);
+      return pCatId == categoryId ||
+          (catName.isNotEmpty && p.category.trim().toLowerCase() == catName);
+    }).length;
+  }
+
+  /// Toggles the active status of a category.
+  Future<void> toggleCategoryActive(String id) async {
+    final index = _categories.indexWhere((c) => c.id == id);
+    if (index == -1) return;
+    final cat = _categories[index];
+    final updated = cat.copyWith(isActive: !cat.isActive);
+    await updateCategory(updated);
+  }
+
   Future<void> addCategory(DairyCategory category) async {
+    final trimmedName = category.name.trim();
+    if (trimmedName.isEmpty) {
+      _error = 'Category name cannot be empty';
+      notifyListeners();
+      throw Exception('Category name cannot be empty');
+    }
+
+    final isDuplicate = _categories.any(
+      (c) => c.name.trim().toLowerCase() == trimmedName.toLowerCase(),
+    );
+    if (isDuplicate) {
+      _error = 'A category with the name "$trimmedName" already exists.';
+      notifyListeners();
+      throw Exception('A category with the name "$trimmedName" already exists.');
+    }
+
     try {
       final data = _dairyCategoryToFirestore(category);
       await _repo.setCategoryRaw(category.id, data);
+      _error = null;
     } catch (e) {
       _error = 'Failed to add category: $e';
       notifyListeners();
+      rethrow;
     }
   }
 
   Future<void> updateCategory(DairyCategory category) async {
+    final trimmedName = category.name.trim();
+    if (trimmedName.isEmpty) {
+      _error = 'Category name cannot be empty';
+      notifyListeners();
+      throw Exception('Category name cannot be empty');
+    }
+
+    final isDuplicate = _categories.any(
+      (c) =>
+          c.id != category.id &&
+          c.name.trim().toLowerCase() == trimmedName.toLowerCase(),
+    );
+    if (isDuplicate) {
+      _error = 'A category with the name "$trimmedName" already exists.';
+      notifyListeners();
+      throw Exception('A category with the name "$trimmedName" already exists.');
+    }
+
     try {
       final data = _dairyCategoryToFirestore(category);
       await _repo.setCategoryRaw(category.id, data);
+      _error = null;
     } catch (e) {
       _error = 'Failed to update category: $e';
       notifyListeners();
+      rethrow;
     }
   }
 
   Future<void> deleteCategory(String id) async {
+    final catIndex = _categories.indexWhere((c) => c.id == id);
+    final catName = catIndex != -1 ? _categories[catIndex].name : id;
+
+    if (hasLinkedProducts(id)) {
+      final count = countLinkedProducts(id);
+      _error =
+          'Cannot delete category "$catName" because $count product(s) reference it. Please deactivate the category or reassign the products instead.';
+      notifyListeners();
+      throw Exception(_error);
+    }
+
     try {
       await _repo.deleteCategory(id);
+      _error = null;
     } catch (e) {
       _error = 'Failed to delete category: $e';
       notifyListeners();
+      rethrow;
     }
   }
 
