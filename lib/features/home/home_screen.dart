@@ -8,7 +8,6 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/localization/app_language.dart';
 import '../../core/responsive/responsive.dart';
-import '../../core/responsive/responsive_layout.dart';
 import '../../core/widgets/category_card.dart';
 import '../../core/widgets/section_header.dart';
 import '../../providers/product_provider.dart';
@@ -39,139 +38,135 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SingleChildScrollView(
-        child: ResponsiveContainer(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: AppSizes.p16),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 12),
 
-              // ─── 2. Hero Banner (banner1v.mp4 Video Banner) ───
-              _HeroPromotionalBanner(
-                onTap: () => ref.read(navigationProvider.notifier).setIndex(1),
+            // ─── 2. Hero Banner (banner1v.mp4 Video Banner) ───
+            _HeroPromotionalBanner(
+              onTap: () => ref.read(navigationProvider.notifier).setIndex(1),
+            ),
+
+            const SizedBox(height: AppSizes.p24),
+
+            // ─── 3. Categories Section ──────────────────────────────────────────
+            categoriesAsync.when(
+              loading: () => const SizedBox(
+                height: 205,
+                child: Center(child: CircularProgressIndicator()),
               ),
-
-              const SizedBox(height: AppSizes.p24),
-
-              // ─── 3. Categories Section ──────────────────────────────────────────
-              categoriesAsync.when(
-                loading: () => const SizedBox(
-                  height: 205,
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-                error: (_, __) => const SizedBox.shrink(),
-                data: (categories) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SectionHeader(
-                      title: tr('Categories'),
-                      subtitle:
-                          tr('Farm fresh dairy essentials delivered daily'),
-                    ),
-                    const SizedBox(height: AppSizes.p14),
-                    SizedBox(
-                      height: 205,
-                      child: ScrollConfiguration(
-                        behavior: ScrollConfiguration.of(context).copyWith(
-                          dragDevices: {
-                            PointerDeviceKind.touch,
-                            PointerDeviceKind.mouse,
-                            PointerDeviceKind.trackpad,
-                            PointerDeviceKind.stylus,
-                          },
-                        ),
-                        child: ListView.separated(
-                          physics: const BouncingScrollPhysics(
-                              parent: AlwaysScrollableScrollPhysics()),
-                          scrollDirection: Axis.horizontal,
-                          clipBehavior: Clip.none,
-                          padding: EdgeInsets.zero,
-                          itemCount: categories.length,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(width: AppSizes.p14),
-                          itemBuilder: (context, index) {
-                            final cat = categories[index];
-                            return CategoryCard(
-                              category: cat,
-                              width: isDesktop ? 195 : 170,
-                              height: 205,
-                              onTap: () {
-                                ref
-                                    .read(selectedCategoryProvider.notifier)
-                                    .state = cat.id;
-                                ref
-                                    .read(navigationProvider.notifier)
-                                    .setIndex(1);
-                              },
-                            );
-                          },
-                        ),
+              error: (_, __) => const SizedBox.shrink(),
+              data: (categories) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SectionHeader(
+                    title: tr('Categories'),
+                    subtitle: tr('Farm fresh dairy essentials delivered daily'),
+                  ),
+                  const SizedBox(height: AppSizes.p14),
+                  SizedBox(
+                    height: 205,
+                    child: ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context).copyWith(
+                        dragDevices: {
+                          PointerDeviceKind.touch,
+                          PointerDeviceKind.mouse,
+                          PointerDeviceKind.trackpad,
+                          PointerDeviceKind.stylus,
+                        },
                       ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: AppSizes.p24),
-
-              // ─── 3.5. Middle Promotional Banner (banner4 & banner5) ───────────────────
-              const _CategoryPromotionalBanner(),
-
-              const SizedBox(height: AppSizes.p24),
-
-              // ─── 4. Bottom Split Row: Track Order & Freshness Banner ─────────────
-              if (isDesktop)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Left: Track Your Order Card
-                    Expanded(
-                      flex: 5,
-                      child: _TrackOrderCard(
-                        controller: _orderIdController,
-                        onTrackTap: () {
-                          ref.read(navigationProvider.notifier).setIndex(2);
+                      child: ListView.separated(
+                        physics: const BouncingScrollPhysics(
+                            parent: AlwaysScrollableScrollPhysics()),
+                        scrollDirection: Axis.horizontal,
+                        clipBehavior: Clip.none,
+                        padding: EdgeInsets.zero,
+                        itemCount: categories.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(width: AppSizes.p14),
+                        itemBuilder: (context, index) {
+                          final cat = categories[index];
+                          return CategoryCard(
+                            category: cat,
+                            width: isDesktop ? 195 : 170,
+                            height: 205,
+                            onTap: () {
+                              ref
+                                  .read(selectedCategoryProvider.notifier)
+                                  .state = cat.id;
+                              ref.read(navigationProvider.notifier).setIndex(1);
+                            },
+                          );
                         },
                       ),
                     ),
-                    const SizedBox(width: AppSizes.p20),
+                  ),
+                ],
+              ),
+            ),
 
-                    // Right: Freshness You Can Trust Blue Banner
-                    Expanded(
-                      flex: 5,
-                      child: _FreshnessBanner(
-                        onExploreTap: () {
-                          ref.read(navigationProvider.notifier).setIndex(1);
-                        },
-                      ),
-                    ),
-                  ],
-                )
-              else
-                Column(
-                  children: [
-                    _TrackOrderCard(
+            const SizedBox(height: AppSizes.p24),
+
+            // ─── 3.5. Middle Promotional Banner (banner4 & banner5) ───────────────────
+            const _CategoryPromotionalBanner(),
+
+            const SizedBox(height: AppSizes.p24),
+
+            // ─── 4. Bottom Split Row: Track Order & Freshness Banner ─────────────
+            if (isDesktop)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left: Track Your Order Card
+                  Expanded(
+                    flex: 5,
+                    child: _TrackOrderCard(
                       controller: _orderIdController,
                       onTrackTap: () {
                         ref.read(navigationProvider.notifier).setIndex(2);
                       },
                     ),
-                    const SizedBox(height: AppSizes.p16),
-                    _FreshnessBanner(
+                  ),
+                  const SizedBox(width: AppSizes.p20),
+
+                  // Right: Freshness You Can Trust Blue Banner
+                  Expanded(
+                    flex: 5,
+                    child: _FreshnessBanner(
                       onExploreTap: () {
                         ref.read(navigationProvider.notifier).setIndex(1);
                       },
                     ),
-                  ],
-                ),
+                  ),
+                ],
+              )
+            else
+              Column(
+                children: [
+                  _TrackOrderCard(
+                    controller: _orderIdController,
+                    onTrackTap: () {
+                      ref.read(navigationProvider.notifier).setIndex(2);
+                    },
+                  ),
+                  const SizedBox(height: AppSizes.p16),
+                  _FreshnessBanner(
+                    onExploreTap: () {
+                      ref.read(navigationProvider.notifier).setIndex(1);
+                    },
+                  ),
+                ],
+              ),
 
-              const SizedBox(height: AppSizes.p24),
+            const SizedBox(height: AppSizes.p24),
 
-              // ─── Why Choose Us Banner ───
-              const _WhyChooseUsVideo(),
+            // ─── Why Choose Us Banner ───
+            const _WhyChooseUsVideo(),
 
-              const SizedBox(height: 36),
-            ],
-          ),
+            const SizedBox(height: 36),
+          ],
         ),
       ),
     );
@@ -237,53 +232,58 @@ class _HeroPromotionalBannerState extends State<_HeroPromotionalBanner> {
 
   @override
   Widget build(BuildContext context) {
-    final double horizontalPadding =
-        MediaQuery.of(context).size.width >= 800 ? 24.0 : 12.0;
-
-    return Center(
-      child: Container(
-        margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
-        constraints: const BoxConstraints(maxWidth: 1100),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: AspectRatio(
-            aspectRatio: 16 / 9,
-            child: GestureDetector(
-              onTap: widget.onTap,
-              child: (_controller.value.hasError || _hasError)
-                  ? Container(
-                      color: Colors.grey[200],
-                      padding: const EdgeInsets.all(8),
-                      child: Image.asset(
-                        'assets/images/banner1.png',
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Center(
-                          child: Icon(Icons.play_circle_outline,
-                              size: 48, color: Color(0xFF005F38)),
-                        ),
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: AspectRatio(
+          aspectRatio: 2.0,
+          child: GestureDetector(
+            onTap: widget.onTap,
+            child: (_controller.value.hasError || _hasError)
+                ? Container(
+                    color: Colors.grey[200],
+                    padding: const EdgeInsets.all(8),
+                    child: Image.asset(
+                      'assets/images/banner1.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Center(
+                        child: Icon(Icons.play_circle_outline,
+                            size: 48, color: Color(0xFF005F38)),
                       ),
-                    )
-                  : (!_isInitialized
-                      ? Container(
-                          color: Colors.grey[200],
-                          child: const Center(
-                            child: CircularProgressIndicator(
-                              color: Color(0xFF005F38),
-                            ),
+                    ),
+                  )
+                : (!_isInitialized
+                    ? Container(
+                        color: Colors.grey[200],
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF005F38),
                           ),
-                        )
-                      : VideoPlayer(_controller)),
-            ),
+                        ),
+                      )
+                    : FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: _controller.value.size.width > 0
+                              ? _controller.value.size.width
+                              : 16,
+                          height: _controller.value.size.height > 0
+                              ? _controller.value.size.height
+                              : 9,
+                          child: VideoPlayer(_controller),
+                        ),
+                      )),
           ),
         ),
       ),

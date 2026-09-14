@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/widgets/app_app_bar.dart';
 import '../../core/widgets/app_bottom_navigation.dart';
-import '../../core/widgets/app_desktop_sidebar.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/navigation_provider.dart';
@@ -43,45 +42,33 @@ class MainLayoutScreen extends ConsumerWidget {
 
     if (isDesktop) {
       return Scaffold(
-        body: Row(
+        body: Column(
           children: [
-            AppDesktopSidebar(
-              currentIndex: currentIndex,
-              onTap: (index) {
-                ref.read(navigationProvider.notifier).setIndex(index);
+            AppTopAppBar(
+              cartItemCount: cartCount,
+              deliveryLocation: deliveryLocation,
+              onLocationTap: handleLocationTap,
+              onSearchTap: () {
+                ref.read(navigationProvider.notifier).setIndex(1);
+              },
+              onNotificationTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const NotificationsScreen()),
+                );
+              },
+              onCartTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CartScreen()),
+                );
               },
             ),
             Expanded(
-              child: Column(
-                children: [
-                  AppTopAppBar(
-                    cartItemCount: cartCount,
-                    deliveryLocation: deliveryLocation,
-                    onLocationTap: handleLocationTap,
-                    onSearchTap: () {
-                      ref.read(navigationProvider.notifier).setIndex(1);
-                    },
-                    onNotificationTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const NotificationsScreen()),
-                      );
-                    },
-                    onCartTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const CartScreen()),
-                      );
-                    },
-                  ),
-                  Expanded(
-                    child: IndexedStack(
-                      index: currentIndex,
-                      children: pages,
-                    ),
-                  ),
-                ],
+              child: IndexedStack(
+                index: currentIndex,
+                children: pages,
               ),
             ),
           ],

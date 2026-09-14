@@ -107,8 +107,65 @@ class _AppTopAppBarState extends ConsumerState<AppTopAppBar> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Left: Greeting and Headline (hidden on mobile if search field expanded)
-              if (!_isMobileSearchOpen || isDesktop) ...[
+              // Left: Brand Logo & Title on Desktop / Greeting on Mobile
+              if (isDesktop) ...[
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: () {
+                      ref.read(navigationProvider.notifier).setIndex(0);
+                    },
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          height: 38,
+                          width: 38,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Image.asset(
+                            'assets/images/newlogo.png',
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.eco_rounded,
+                              color: Color(0xFF063A24),
+                              size: 28,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'SAWARIYA DAIRY',
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF063A24),
+                                letterSpacing: 0.6,
+                                height: 1.1,
+                              ),
+                            ),
+                            Text(
+                              tr('Pure Milk. Pure Trust.'),
+                              style: const TextStyle(
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textSecondary,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+              ] else if (!_isMobileSearchOpen) ...[
                 Flexible(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -152,7 +209,7 @@ class _AppTopAppBarState extends ConsumerState<AppTopAppBar> {
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
+                          horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: AppColors.surface,
                         borderRadius: BorderRadius.circular(12),
@@ -174,31 +231,34 @@ class _AppTopAppBarState extends ConsumerState<AppTopAppBar> {
                             color: AppColors.primaryBlue,
                           ),
                           const SizedBox(width: 6),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                tr('Deliver to'),
-                                style: const TextStyle(
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.textSecondary,
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 160),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  tr('Deliver to'),
+                                  style: const TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.textSecondary,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                widget.deliveryLocation,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textPrimary,
+                                Text(
+                                  widget.deliveryLocation,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textPrimary,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 4),
                           const Icon(
                             Icons.keyboard_arrow_down_rounded,
                             size: 16,
@@ -209,7 +269,70 @@ class _AppTopAppBarState extends ConsumerState<AppTopAppBar> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
+              ],
+
+              // Top Navigation Options (Home, Shop, Orders, Profile)
+              if (isDesktop) ...[
+                const SizedBox(width: 8),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F7F4),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.border,
+                      width: 1.0,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _TopNavButton(
+                        icon: Icons.home_outlined,
+                        activeIcon: Icons.home_rounded,
+                        label: tr('Home'),
+                        isSelected: currentIndex == 0,
+                        onTap: () {
+                          ref.read(navigationProvider.notifier).setIndex(0);
+                        },
+                      ),
+                      const SizedBox(width: 4),
+                      _TopNavButton(
+                        icon: Icons.grid_view_outlined,
+                        activeIcon: Icons.grid_view_rounded,
+                        label: tr('Shop'),
+                        isSelected: currentIndex == 1,
+                        onTap: () {
+                          ref.read(navigationProvider.notifier).setIndex(1);
+                        },
+                      ),
+                      const SizedBox(width: 4),
+                      _TopNavButton(
+                        icon: Icons.local_shipping_outlined,
+                        activeIcon: Icons.local_shipping_rounded,
+                        label: tr('Orders'),
+                        isSelected: currentIndex == 2,
+                        onTap: () {
+                          ref.read(navigationProvider.notifier).setIndex(2);
+                        },
+                      ),
+                      const SizedBox(width: 4),
+                      _TopNavButton(
+                        icon: Icons.person_outline_rounded,
+                        activeIcon: Icons.person_rounded,
+                        label: tr('Profile'),
+                        isSelected: currentIndex == 3,
+                        onTap: () {
+                          ref.read(navigationProvider.notifier).setIndex(3);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                const SizedBox(width: 8),
               ],
 
               // Search Field
@@ -217,9 +340,9 @@ class _AppTopAppBarState extends ConsumerState<AppTopAppBar> {
                 if (isDesktop)
                   ConstrainedBox(
                     constraints:
-                        const BoxConstraints(maxWidth: 280, minWidth: 160),
+                        const BoxConstraints(maxWidth: 200, minWidth: 100),
                     child: SizedBox(
-                      height: 40,
+                      height: 38,
                       child: TextField(
                         controller: _searchController,
                         onChanged: _onSearchChanged,
@@ -438,6 +561,98 @@ class _AppTopAppBarState extends ConsumerState<AppTopAppBar> {
                 ],
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TopNavButton extends StatefulWidget {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _TopNavButton({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  State<_TopNavButton> createState() => _TopNavButtonState();
+}
+
+class _TopNavButtonState extends State<_TopNavButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = widget.isSelected;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          color: active
+              ? const Color(0xFF063A24)
+              : (_isHovered ? const Color(0xFFE2EBE5) : Colors.transparent),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: active
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF063A24).withValues(alpha: 0.25),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    active ? widget.activeIcon : widget.icon,
+                    color: active
+                        ? Colors.white
+                        : (_isHovered
+                            ? const Color(0xFF063A24)
+                            : AppColors.textSecondary),
+                    size: 19,
+                  ),
+                  const SizedBox(width: 7),
+                  Text(
+                    widget.label,
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                      color: active
+                          ? Colors.white
+                          : (_isHovered
+                              ? const Color(0xFF063A24)
+                              : AppColors.textSecondary),
+                      letterSpacing: 0.15,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

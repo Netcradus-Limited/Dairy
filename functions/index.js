@@ -34,15 +34,24 @@ async function processOrderDeliveredEarning(db, beforeData, afterData, orderId) 
     return { status: "skipped", reason: "not_delivered_transition" };
   }
 
-  const agentId = afterData.assignedAgentId;
-  if (!agentId || typeof agentId !== "string" || agentId.trim() === "") {
+  console.log(
+    `[Debug] processOrderDeliveredEarning - orderId: ${orderId}, keys: [${Object.keys(afterData).join(", ")}], assignedAgentId: "${afterData.assignedAgentId}", status: "${afterData.status}"`
+  );
+
+  const rawAgentId =
+    afterData.assignedAgentId ||
+    afterData.assigned_agent_id ||
+    afterData.agentId ||
+    afterData.deliveryAgentId;
+
+  if (rawAgentId == null || String(rawAgentId).trim() === "") {
     console.log(
       `Order ${orderId} delivered with no valid assignedAgentId; skipping earnings.`
     );
     return { status: "skipped", reason: "missing_assigned_agent" };
   }
 
-  const cleanAgentId = agentId.trim();
+  const cleanAgentId = String(rawAgentId).trim();
 
   // Verify the agent exists and has delivery privileges (in users or delivery_agents)
   const userSnap = await db.collection("users").doc(cleanAgentId).get();
@@ -50,8 +59,8 @@ async function processOrderDeliveredEarning(db, beforeData, afterData, orderId) 
 
   if (userSnap.exists) {
     const userData = userSnap.data();
-    const userRole = userData ? userData.role : null;
-    if (userRole === "delivery" || userRole === "admin") {
+    const userRole = userData && userData.role ? String(userData.role).toLowerCase().trim() : "";
+    if (["delivery", "admin", "delivery_agent", "driver"].includes(userRole)) {
       isAuthorizedAgent = true;
     }
   } else {
@@ -127,7 +136,10 @@ async function processOrderDeliveredEarning(db, beforeData, afterData, orderId) 
  * When status transitions to "delivered", creates a secure, idempotent earning.
  */
 exports.logEarningOnDelivered = onDocumentUpdated(
-  { document: "orders/{orderId}" },
+  {
+    region: "asia-south2",
+    document: "orders/{orderId}",
+  },
   async (event) => {
     if (!event.data || !event.data.after) {
       console.warn("No document data found in event; skipping.");
