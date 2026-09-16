@@ -124,47 +124,61 @@ class AdminProvider extends ChangeNotifier {
   // ─── Firestore listeners ───────────────────────────────────────────────
 
   void _listenToProducts() {
-    _productsSub = _repo.streamRawProducts().listen(
-      (docs) {
-        _products = docs.map(_rawToDairyProduct).toList();
-        _isLoading = false;
-        _error = null;
-        notifyListeners();
-      },
-      onError: (e) {
-        _error = 'Failed to load products: $e';
-        _isLoading = false;
-        notifyListeners();
-      },
-    );
+    try {
+      _productsSub = _repo.streamRawProducts().listen(
+        (docs) {
+          _products = docs.map(_rawToDairyProduct).toList();
+          _isLoading = false;
+          _error = null;
+          notifyListeners();
+        },
+        onError: (e) {
+          _error = 'Failed to load products: $e';
+          _isLoading = false;
+          notifyListeners();
+        },
+      );
+    } catch (e) {
+      _isLoading = false;
+      _error = 'Failed to load products: $e';
+    }
   }
 
   void _listenToCategories() {
-    _categoriesSub = _repo.streamRawCategories().listen(
-      (docs) {
-        _categories = docs.map(_rawToDairyCategory).toList();
-        notifyListeners();
-      },
-      onError: (e) {
-        debugPrint('AdminProvider: category stream error: $e');
-      },
-    );
+    try {
+      _categoriesSub = _repo.streamRawCategories().listen(
+        (docs) {
+          _categories = docs.map(_rawToDairyCategory).toList();
+          notifyListeners();
+        },
+        onError: (e) {
+          debugPrint('AdminProvider: category stream error: $e');
+        },
+      );
+    } catch (e) {
+      debugPrint('AdminProvider: category stream error: $e');
+    }
   }
 
   void _listenToOrders() {
-    _ordersSub = _orderService.streamAllDeliveryOrders().listen(
-      (orders) {
-        _orders = orders.map(_dairyOrderFromOrder).toList();
-        _ordersLoading = false;
-        _ordersError = null;
-        notifyListeners();
-      },
-      onError: (e) {
-        _ordersError = 'Failed to load orders: $e';
-        _ordersLoading = false;
-        notifyListeners();
-      },
-    );
+    try {
+      _ordersSub = _orderService.streamAllDeliveryOrders().listen(
+        (orders) {
+          _orders = orders.map(_dairyOrderFromOrder).toList();
+          _ordersLoading = false;
+          _ordersError = null;
+          notifyListeners();
+        },
+        onError: (e) {
+          _ordersError = 'Failed to load orders: $e';
+          _ordersLoading = false;
+          notifyListeners();
+        },
+      );
+    } catch (e) {
+      _ordersLoading = false;
+      _ordersError = 'Failed to load orders: $e';
+    }
   }
 
   /// Maps a Firestore-backed [order.Order] onto the admin-facing
@@ -244,6 +258,52 @@ class AdminProvider extends ChangeNotifier {
         return order.OrderStatus.delivered;
       case OrderStatus.cancelled:
         return order.OrderStatus.cancelled;
+    }
+  }
+
+  /// Assigns or reassigns a delivery agent to an order in Firestore.
+  /// If [agentId] is null or empty, unassigns the delivery agent.
+  Future<void> assignDeliveryAgent(
+    String orderId,
+    String? agentId, {
+    String? agentName,
+  }) async {
+    final cleanOrderId = orderId.trim();
+    final cleanAgentId = agentId?.trim();
+    final effectiveAgentId =
+        (cleanAgentId != null && cleanAgentId.isNotEmpty) ? cleanAgentId : null;
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('orders')
+          .doc(cleanOrderId)
+          .update({
+        'assignedAgentId': effectiveAgentId,
+        if (agentName != null && agentName.trim().isNotEmpty)
+          'assignedAgentName': agentName.trim()
+        else if (effectiveAgentId == null)
+          'assignedAgentName': null,
+      });
+
+      // Optimistically update in-memory order for immediate UI responsiveness
+      final idx = _orders.indexWhere((o) => o.id == cleanOrderId);
+      if (idx != -1) {
+        _orders[idx] = _orders[idx].copyWith(
+          assignedAgentId: effectiveAgentId,
+          assignedAgentName: agentName ??
+              (effectiveAgentId != null
+                  ? _riders
+                      .cast<DeliveryRider?>()
+                      .firstWhere((r) => r?.id == effectiveAgentId,
+                          orElse: () => null)
+                      ?.name
+                  : null),
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('AdminProvider: Failed to assign delivery agent: $e');
+      rethrow;
     }
   }
 
@@ -1045,19 +1105,24 @@ class AdminProvider extends ChangeNotifier {
   // ─── Support Complaints (Firestore-backed) ───────────────────────────
 
   void _listenToComplaints() {
-    _complaintsSub = _complaintService.streamAllComplaints().listen(
-      (list) {
-        _complaints = list;
-        _complaintsLoading = false;
-        _complaintsError = null;
-        notifyListeners();
-      },
-      onError: (e) {
-        _complaintsError = 'Failed to load complaints: $e';
-        _complaintsLoading = false;
-        notifyListeners();
-      },
-    );
+    try {
+      _complaintsSub = _complaintService.streamAllComplaints().listen(
+        (list) {
+          _complaints = list;
+          _complaintsLoading = false;
+          _complaintsError = null;
+          notifyListeners();
+        },
+        onError: (e) {
+          _complaintsError = 'Failed to load complaints: $e';
+          _complaintsLoading = false;
+          notifyListeners();
+        },
+      );
+    } catch (e) {
+      _complaintsLoading = false;
+      _complaintsError = 'Failed to load complaints: $e';
+    }
   }
 
   /// Update complaint status and optional admin reply in Firestore.
@@ -1355,34 +1420,43 @@ class AdminProvider extends ChangeNotifier {
   }
 
   void _listenToUsers() {
-    _usersSub =
-        FirebaseFirestore.instance.collection('users').snapshots().listen(
-      (snap) {
-        _lastUserDocs = snap.docs;
-        _rebuildCustomers();
-        _rebuildRidersCombined();
-      },
-      onError: (e) {
-        _usersError = 'Failed to load users: $e';
-        _usersLoading = false;
-        notifyListeners();
-      },
-    );
+    try {
+      _usersSub =
+          FirebaseFirestore.instance.collection('users').snapshots().listen(
+        (snap) {
+          _lastUserDocs = snap.docs;
+          _rebuildCustomers();
+          _rebuildRidersCombined();
+        },
+        onError: (e) {
+          _usersError = 'Failed to load users: $e';
+          _usersLoading = false;
+          notifyListeners();
+        },
+      );
+    } catch (e) {
+      _usersError = 'Failed to load users: $e';
+      _usersLoading = false;
+    }
   }
 
   void _listenToDeliveryAgents() {
-    _deliveryAgentsSub = FirebaseFirestore.instance
-        .collection('delivery_agents')
-        .snapshots()
-        .listen(
-      (snap) {
-        _lastDeliveryDocs = snap.docs;
-        _rebuildRidersCombined();
-      },
-      onError: (e) {
-        debugPrint('AdminProvider: delivery_agents stream error: $e');
-      },
-    );
+    try {
+      _deliveryAgentsSub = FirebaseFirestore.instance
+          .collection('delivery_agents')
+          .snapshots()
+          .listen(
+        (snap) {
+          _lastDeliveryDocs = snap.docs;
+          _rebuildRidersCombined();
+        },
+        onError: (e) {
+          debugPrint('AdminProvider: delivery_agents stream error: $e');
+        },
+      );
+    } catch (e) {
+      debugPrint('AdminProvider: delivery_agents stream error: $e');
+    }
   }
 
   // ─── Cleanup ──────────────────────────────────────────────────────────

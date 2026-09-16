@@ -214,7 +214,7 @@ class Order {
     }).toList();
 
     final addr = data['deliveryAddress'] as Map<String, dynamic>?;
-    final deliveryAddress = addr == null
+    Address deliveryAddress = addr == null
         ? const Address(
             id: '',
             label: 'Home',
@@ -227,6 +227,37 @@ class Order {
             pinCode: '',
           )
         : Address.fromMap(addr, (addr['id'] as String?) ?? '');
+
+    // If deliveryAddress did not carry coordinates, check top-level order doc fields
+    if (!deliveryAddress.hasCoordinates) {
+      final topLoc = data['location'];
+      double? topLat;
+      double? topLng;
+      if (topLoc is List && topLoc.length >= 2) {
+        topLat = (topLoc[0] as num?)?.toDouble();
+        topLng = (topLoc[1] as num?)?.toDouble();
+      } else if (topLoc is GeoPoint) {
+        topLat = topLoc.latitude;
+        topLng = topLoc.longitude;
+      } else if (topLoc is Map) {
+        topLat = ((topLoc['latitude'] ?? topLoc['lat']) as num?)?.toDouble();
+        topLng = ((topLoc['longitude'] ?? topLoc['lng'] ?? topLoc['lon']) as num?)?.toDouble();
+      } else {
+        topLat = ((data['latitude'] ?? data['lat'] ?? data['customerLatitude']) as num?)?.toDouble();
+        topLng = ((data['longitude'] ?? data['lng'] ?? data['customerLongitude']) as num?)?.toDouble();
+      }
+      if (topLat != null &&
+          topLng != null &&
+          !topLat.isNaN &&
+          !topLng.isNaN &&
+          topLat >= -90.0 &&
+          topLat <= 90.0 &&
+          topLng >= -180.0 &&
+          topLng <= 180.0 &&
+          !(topLat == 0.0 && topLng == 0.0)) {
+        deliveryAddress = deliveryAddress.copyWith(latitude: topLat, longitude: topLng);
+      }
+    }
 
     final created = data['createdAt'];
     final orderDate = created is Timestamp

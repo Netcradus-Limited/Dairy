@@ -93,21 +93,32 @@ class FirestoreProductRepository {
 
   /// Real-time stream of all products (with missing default products safely merged).
   Stream<List<Product>> streamProducts() {
-    return _products.snapshots().map((snap) => _mergeMissingDefaultProducts(
-        snap.docs.map((d) => Product.fromFirestore(d.data(), d.id)).toList()));
+    try {
+      return _products.snapshots().map((snap) => _mergeMissingDefaultProducts(
+          snap.docs.map((d) => Product.fromFirestore(d.data(), d.id)).toList()));
+    } catch (_) {
+      return Stream.value(_mergeMissingDefaultProducts([]));
+    }
   }
 
   /// Real-time stream of active categories for customers, sorted by sortOrder
   /// (with missing default categories safely merged).
   Stream<List<Category>> streamCategories() {
-    return _categories.snapshots().map((snap) {
-      final list =
-          snap.docs.map((d) => Category.fromFirestore(d.data(), d.id)).toList();
-      final merged = _mergeMissingDefaultCategories(list);
+    try {
+      return _categories.snapshots().map((snap) {
+        final list =
+            snap.docs.map((d) => Category.fromFirestore(d.data(), d.id)).toList();
+        final merged = _mergeMissingDefaultCategories(list);
+        final active = merged.where((c) => c.isActive).toList();
+        active.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+        return active;
+      });
+    } catch (_) {
+      final merged = _mergeMissingDefaultCategories([]);
       final active = merged.where((c) => c.isActive).toList();
       active.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-      return active;
-    });
+      return Stream.value(active);
+    }
   }
 
   /// Real-time stream of raw product documents.
@@ -117,23 +128,31 @@ class FirestoreProductRepository {
   /// packaging, emoji, stockQuantity, etc.) that are not part of the
   /// customer-facing [Product] model.
   Stream<List<Map<String, dynamic>>> streamRawProducts() {
-    return _products.snapshots().map((snap) => _mergeMissingDefaultRawProducts(
-        snap.docs.map((d) => {...d.data(), 'id': d.id}).toList()));
+    try {
+      return _products.snapshots().map((snap) => _mergeMissingDefaultRawProducts(
+          snap.docs.map((d) => {...d.data(), 'id': d.id}).toList()));
+    } catch (_) {
+      return Stream.value(_mergeMissingDefaultRawProducts([]));
+    }
   }
 
   /// Real-time stream of raw category documents (with `'id'` key), sorted by sortOrder.
   Stream<List<Map<String, dynamic>>> streamRawCategories() {
-    return _categories.snapshots().map((snap) {
-      final list =
-          snap.docs.map((d) => {...d.data(), 'id': d.id}).toList();
-      final merged = _mergeMissingDefaultRawCategories(list);
-      merged.sort((a, b) {
-        final sortA = (a['sortOrder'] as num?)?.toInt() ?? 0;
-        final sortB = (b['sortOrder'] as num?)?.toInt() ?? 0;
-        return sortA.compareTo(sortB);
+    try {
+      return _categories.snapshots().map((snap) {
+        final list =
+            snap.docs.map((d) => {...d.data(), 'id': d.id}).toList();
+        final merged = _mergeMissingDefaultRawCategories(list);
+        merged.sort((a, b) {
+          final sortA = (a['sortOrder'] as num?)?.toInt() ?? 0;
+          final sortB = (b['sortOrder'] as num?)?.toInt() ?? 0;
+          return sortA.compareTo(sortB);
+        });
+        return merged;
       });
-      return merged;
-    });
+    } catch (_) {
+      return Stream.value(_mergeMissingDefaultRawCategories([]));
+    }
   }
 
   // ─── One-time fetches ────────────────────────────────────────────────────

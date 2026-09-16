@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -85,7 +86,12 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
   }
 
   void _write(double latitude, double longitude) {
-    final agentId = _ref.read(deliveryAgentProvider).id;
+    String agentId = _ref.read(deliveryAgentProvider).id;
+    if (agentId.isEmpty) {
+      agentId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    }
+    if (agentId.isEmpty) return;
+
     final activeOrders =
         _ref.read(deliveryActiveOrdersStreamProvider).value ?? [];
     final activeOrderId =

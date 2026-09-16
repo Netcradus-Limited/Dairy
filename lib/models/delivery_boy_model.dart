@@ -237,6 +237,16 @@ class DeliveryOrder {
   /// The customer-facing 6-character order code (e.g. "KRT482").
   String get displayCode => orderCode.isNotEmpty ? orderCode : orderId;
 
+  /// Returns true if valid, non-zero geographic coordinates are present.
+  bool get hasValidCoordinates {
+    if (latitude == null || longitude == null) return false;
+    if (latitude!.isNaN || longitude!.isNaN || latitude!.isInfinite || longitude!.isInfinite) return false;
+    if (latitude! < -90.0 || latitude! > 90.0) return false;
+    if (longitude! < -180.0 || longitude! > 180.0) return false;
+    if (latitude! == 0.0 && longitude! == 0.0) return false;
+    return true;
+  }
+
   DeliveryOrder copyWith({
     String? id,
     String? orderId,

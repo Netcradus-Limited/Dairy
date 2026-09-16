@@ -13,7 +13,10 @@ import 'earnings_service.dart';
 /// id, the delivery address, the cart line items, the computed totals, and a
 /// status of 'Pending'.
 class OrderService {
-  final FirebaseFirestore _firestore;
+  final FirebaseFirestore? _customFirestore;
+
+  FirebaseFirestore get _firestore =>
+      _customFirestore ?? FirebaseFirestore.instance;
 
   /// Commission credited to the agent, as a fraction of the order subtotal,
   /// when an order is delivered. Tuned to 10% on the backend Cloud Function.
@@ -22,7 +25,7 @@ class OrderService {
   OrderService({
     FirebaseFirestore? firestore,
     EarningsService? earningsService,
-  }) : _firestore = firestore ?? FirebaseFirestore.instance;
+  }) : _customFirestore = firestore;
 
   /// Pricing rules (mirror the cart provider so the service is self-contained).
   static const double freeDeliveryThreshold = 500.0;
@@ -160,15 +163,47 @@ class OrderService {
     return order;
   }
 
+  /// Fetches a single order by its document ID or [orderCode].
+  /// Returns `null` if the document does not exist or if an error occurs.
+  Future<Order?> getOrderById(String orderId) async {
+    final cleanId = orderId.trim();
+    if (cleanId.isEmpty) return null;
+    try {
+      final doc = await _firestore.collection('orders').doc(cleanId).get();
+      if (doc.exists && doc.data() != null) {
+        return Order.fromFirestore(doc.data()!, doc.id);
+      }
+
+      // Fallback: check if the identifier passed was an orderCode
+      final query = await _firestore
+          .collection('orders')
+          .where('orderCode', isEqualTo: cleanId)
+          .limit(1)
+          .get();
+      if (query.docs.isNotEmpty) {
+        final match = query.docs.first;
+        return Order.fromFirestore(match.data(), match.id);
+      }
+
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Live stream of a user's orders, newest first.
   Stream<List<Order>> streamOrdersForUser(String userId) {
-    return _firestore
-        .collection('orders')
-        .where('userId', isEqualTo: userId)
-        .snapshots()
-        .map((snap) =>
-            snap.docs.map((d) => Order.fromFirestore(d.data(), d.id)).toList()
-              ..sort((a, b) => b.orderDate.compareTo(a.orderDate)));
+    try {
+      return _firestore
+          .collection('orders')
+          .where('userId', isEqualTo: userId)
+          .snapshots()
+          .map((snap) =>
+              snap.docs.map((d) => Order.fromFirestore(d.data(), d.id)).toList()
+                ..sort((a, b) => b.orderDate.compareTo(a.orderDate)));
+    } catch (_) {
+      return const Stream.empty();
+    }
   }
 
   /// Updates an order's status in Firestore. When the status becomes
@@ -196,43 +231,55 @@ class OrderService {
   ///
   /// Status filtering is done client-side to avoid requiring a composite index.
   Stream<List<Order>> streamActiveOrders() {
-    const activeStatuses = {'confirmed', 'preparing', 'outForDelivery'};
-    return _firestore.collection('orders').snapshots().map((snap) => snap.docs
-        .map((d) => Order.fromFirestore(d.data(), d.id))
-        .where((o) => activeStatuses.contains(orderStatusToString(o.status)))
-        .toList()
-      ..sort((a, b) => b.orderDate.compareTo(a.orderDate)));
+    try {
+      const activeStatuses = {'confirmed', 'preparing', 'outForDelivery'};
+      return _firestore.collection('orders').snapshots().map((snap) => snap.docs
+          .map((d) => Order.fromFirestore(d.data(), d.id))
+          .where((o) => activeStatuses.contains(orderStatusToString(o.status)))
+          .toList()
+        ..sort((a, b) => b.orderDate.compareTo(a.orderDate)));
+    } catch (_) {
+      return const Stream.empty();
+    }
   }
 
   /// Live stream of ALL orders in the `orders` collection (every status),
   /// newest first. This is the single source of truth for the delivery panel:
   /// the Requests, Active and History tabs all derive their lists from it.
   Stream<List<Order>> streamAllDeliveryOrders() {
-    return _firestore.collection('orders').snapshots().map((snap) =>
-        snap.docs.map((d) => Order.fromFirestore(d.data(), d.id)).toList()
-          ..sort((a, b) => b.orderDate.compareTo(a.orderDate)));
+    try {
+      return _firestore.collection('orders').snapshots().map((snap) =>
+          snap.docs.map((d) => Order.fromFirestore(d.data(), d.id)).toList()
+            ..sort((a, b) => b.orderDate.compareTo(a.orderDate)));
+    } catch (_) {
+      return const Stream.empty();
+    }
   }
 
   /// Live stream of the orders relevant to a delivery agent: any order that is
   /// still `Pending` (awaiting acceptance) OR already assigned to [agentId].
   /// Uses a Firestore query filter to ensure compliance with Security Rules.
   Stream<List<Order>> streamDeliveryOrdersForAgent(String agentId) {
-    final Query<Map<String, dynamic>> query;
-    if (agentId.isEmpty) {
-      query =
-          _firestore.collection('orders').where('status', isEqualTo: 'Pending');
-    } else {
-      query = _firestore.collection('orders').where(
-            Filter.or(
-              Filter('status', isEqualTo: 'Pending'),
-              Filter('assignedAgentId', isEqualTo: agentId),
-            ),
-          );
-    }
+    try {
+      final Query<Map<String, dynamic>> query;
+      if (agentId.isEmpty) {
+        query =
+            _firestore.collection('orders').where('status', isEqualTo: 'Pending');
+      } else {
+        query = _firestore.collection('orders').where(
+              Filter.or(
+                Filter('status', isEqualTo: 'Pending'),
+                Filter('assignedAgentId', isEqualTo: agentId),
+              ),
+            );
+      }
 
-    return query.snapshots().map((snap) =>
-        snap.docs.map((d) => Order.fromFirestore(d.data(), d.id)).toList()
-          ..sort((a, b) => b.orderDate.compareTo(a.orderDate)));
+      return query.snapshots().map((snap) =>
+          snap.docs.map((d) => Order.fromFirestore(d.data(), d.id)).toList()
+            ..sort((a, b) => b.orderDate.compareTo(a.orderDate)));
+    } catch (_) {
+      return const Stream.empty();
+    }
   }
 
   /// Accepts an order on behalf of a delivery agent. Persists the acceptance to

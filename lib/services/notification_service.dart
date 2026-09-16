@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/router/app_router.dart';
 import '../providers/user_provider.dart';
+import 'fcm_service.dart';
 
 /// Represents an incoming order-related push alert.
 class OrderAlert {
@@ -27,28 +28,30 @@ class OrderAlert {
   final Map<String, dynamic> data;
 }
 
-/// Holds the most recent order alert so the UI can react (e.g. show a banner
-/// or refresh the orders list) when a notification arrives.
 final orderAlertProvider = StateProvider<OrderAlert?>((ref) => null);
 
-/// Background message handler. Must be a top-level function (not a closure) and
-/// must be annotated so it survives tree-shaking. It is invoked when a message
-/// arrives while the app is in the background or terminated.
+/// Background message handler – must be top-level and @pragma('vm:entry-point').
+/// This handler runs while the app is in the background or terminated. It does NOT
+/// update Riverpod state (UI updates are handled by the foreground listener in
+/// [NotificationService]). It only ensures the local notification is displayed.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
-    await Firebase.initializeApp();
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp();
+    }
   } catch (_) {}
   debugPrint(
       '[FCM BACKGROUND] Message ID: ${message.messageId}, data: ${message.data}');
 }
 
 /// Wraps Firebase Cloud Messaging and local notifications:
-/// - Requests runtime permission on Android 13+ and iOS.
+/// - Requests runtime permission on Android 13+, iOS, and Web.
 /// - Configures high-importance Android notification channel.
 /// - Manages FCM token registration and Firestore synchronization.
 /// - Handles foreground, background, and terminated cold-start messages.
-/// - Safely parses notification payloads and executes deep-link navigation.
+/// - Safely parses notification payloads and executes deep-link routing.
+/// - Integrates with [fcmServiceProvider] and [lastTappedOrderIdProvider].
 class NotificationService {
   NotificationService(
     this._ref, {
@@ -87,6 +90,12 @@ class NotificationService {
   /// and wire up foreground, background, and cold-start listeners.
   Future<void> init() async {
     try {
+      if (Firebase.apps.isEmpty) {
+        debugPrint(
+            '[NOTIF] Firebase not initialized; skipping NotificationService.init().');
+        return;
+      }
+
       if (!kIsWeb) {
         await _localNotifications
             .resolvePlatformSpecificImplementation<
@@ -236,6 +245,7 @@ class NotificationService {
     }
   }
 
+  /// Handles incoming foreground message: displays local notification and updates orderAlertProvider.
   void _onForegroundMessage(RemoteMessage message) {
     debugPrint(
         '[FCM FOREGROUND] Received message ID: ${message.messageId}, title: ${message.notification?.title}');
@@ -243,12 +253,14 @@ class NotificationService {
     _pushOrderAlert(message.data, message.notification);
   }
 
+  /// Handles notification tap when app is in background.
   void _onOpenedApp(RemoteMessage message) {
     debugPrint(
         '[FCM OPENED APP] Background notification tapped: ${message.data}');
     _handleIncomingPayload(message.data, message.notification);
   }
 
+  /// Handles local notification response tap.
   void _onLocalNotificationTap(NotificationResponse response) {
     debugPrint('[LOCAL NOTIFICATION TAP] Payload: ${response.payload}');
     if (response.payload != null && response.payload!.isNotEmpty) {
@@ -263,6 +275,12 @@ class NotificationService {
     _navigateToRoute('/notifications');
   }
 
+  /// Extract orderId from message data, supporting both camelCase and snake_case.
+  String? _extractOrderId(Map<String, dynamic> data) {
+    return data['orderId']?.toString() ?? data['order_id']?.toString();
+  }
+
+  /// Displays high-importance local notification for incoming message.
   Future<void> _showLocalNotification(RemoteMessage message) async {
     final notification = message.notification;
     final title = notification?.title ??
@@ -303,13 +321,14 @@ class NotificationService {
     }
   }
 
+  /// Pushes alert into [orderAlertProvider] for UI listeners.
   void _pushOrderAlert(
       Map<String, dynamic> data, RemoteNotification? notification) {
-    final orderId = data['orderId'] ?? data['order_id'];
-    if (orderId == null) return;
+    final orderId = _extractOrderId(data);
+    if (orderId == null || orderId.isEmpty) return;
 
     _ref.read(orderAlertProvider.notifier).state = OrderAlert(
-      orderId: orderId.toString(),
+      orderId: orderId,
       title: notification?.title ?? data['title']?.toString(),
       body: notification?.body ?? data['body']?.toString(),
       data: data,
@@ -322,8 +341,19 @@ class NotificationService {
     _pushOrderAlert(data, notification);
 
     final explicitRoute = data['route']?.toString().trim();
-    final rawOrderId = (data['orderId'] ?? data['order_id'])?.toString().trim();
+    final rawOrderId = _extractOrderId(data)?.trim();
     final type = data['type']?.toString().trim();
+
+    if (rawOrderId != null && rawOrderId.isNotEmpty) {
+      try {
+        _ref.read(lastTappedOrderIdProvider.notifier).state = rawOrderId;
+        debugPrint(
+            '[NOTIFICATION ROUTE] Set lastTappedOrderIdProvider to: $rawOrderId');
+      } catch (e) {
+        debugPrint(
+            '[NOTIFICATION ROUTE] Could not set lastTappedOrderIdProvider: $e');
+      }
+    }
 
     debugPrint(
         '[NOTIFICATION ROUTE] explicitRoute: $explicitRoute, orderId: $rawOrderId, type: $type');
@@ -375,6 +405,15 @@ final notificationServiceProvider =
 /// Triggers one-time initialization of notifications (permission + listeners).
 /// Watch this from the app root (see [MyApp]) so it runs exactly once.
 final notificationInitProvider = FutureProvider<void>((ref) async {
-  final service = ref.watch(notificationServiceProvider);
-  await service.init();
+  try {
+    if (Firebase.apps.isEmpty) {
+      debugPrint(
+          '[NOTIF] Firebase not initialized; skipping notificationInitProvider.');
+      return;
+    }
+    final service = ref.watch(notificationServiceProvider);
+    await service.init();
+  } catch (e) {
+    debugPrint('[NOTIF] Error in notificationInitProvider: $e');
+  }
 });

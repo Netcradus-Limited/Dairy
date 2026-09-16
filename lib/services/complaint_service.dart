@@ -4,10 +4,13 @@ import '../models/complaint_model.dart';
 
 /// Service for managing customer complaints and support tickets in Cloud Firestore.
 class ComplaintService {
-  final FirebaseFirestore _firestore;
+  final FirebaseFirestore? _customFirestore;
+
+  FirebaseFirestore get _firestore =>
+      _customFirestore ?? FirebaseFirestore.instance;
 
   ComplaintService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+      : _customFirestore = firestore;
 
   CollectionReference<Map<String, dynamic>> get _complaintsRef =>
       _firestore.collection('complaints');
@@ -92,37 +95,45 @@ class ComplaintService {
   /// Result is sorted client-side by date descending.
   Stream<List<CustomerComplaint>> streamComplaintsForCustomer(
       String customerId) {
-    final authUid = FirebaseAuth.instance.currentUser?.uid;
-    final effectiveUid =
-        (authUid != null && authUid.isNotEmpty) ? authUid : customerId;
+    try {
+      final authUid = FirebaseAuth.instance.currentUser?.uid;
+      final effectiveUid =
+          (authUid != null && authUid.isNotEmpty) ? authUid : customerId;
 
-    if (effectiveUid.isEmpty) {
+      if (effectiveUid.isEmpty) {
+        return Stream.value(<CustomerComplaint>[]);
+      }
+
+      return _complaintsRef
+          .where('customerId', isEqualTo: effectiveUid)
+          .snapshots()
+          .map((snapshot) {
+        final list = snapshot.docs
+            .map((doc) => CustomerComplaint.fromFirestore(doc))
+            .toList();
+        // Sort newest first
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return list;
+      });
+    } catch (_) {
       return Stream.value(<CustomerComplaint>[]);
     }
-
-    return _complaintsRef
-        .where('customerId', isEqualTo: effectiveUid)
-        .snapshots()
-        .map((snapshot) {
-      final list = snapshot.docs
-          .map((doc) => CustomerComplaint.fromFirestore(doc))
-          .toList();
-      // Sort newest first
-      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      return list;
-    });
   }
 
   /// Real-time stream of all complaints across the system for the Admin panel.
   Stream<List<CustomerComplaint>> streamAllComplaints() {
-    return _complaintsRef.snapshots().map((snapshot) {
-      final list = snapshot.docs
-          .map((doc) => CustomerComplaint.fromFirestore(doc))
-          .toList();
-      // Sort newest first
-      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      return list;
-    });
+    try {
+      return _complaintsRef.snapshots().map((snapshot) {
+        final list = snapshot.docs
+            .map((doc) => CustomerComplaint.fromFirestore(doc))
+            .toList();
+        // Sort newest first
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return list;
+      });
+    } catch (_) {
+      return const Stream.empty();
+    }
   }
 
   /// Updates complaint status and optionally attaches admin response / resolution notes.

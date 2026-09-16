@@ -1,14 +1,15 @@
 rules_version = '2';
 
-// Sawariya Dairy — Complete Cloud Firestore Security Rules (Task 5)
-// ---------------------------------------------------------------------------
-// Architecture:
-//   * Deny-by-default on all root documents.
-//   * Authentication required for all private & operational data.
-//   * Strict Role-Based Access Control (RBAC) backed by /users/{uid}.
-//   * Roles: 'admin', 'delivery', 'customer'.
-//   * Defense-in-depth: Field-level privilege escalation guards.
-// ---------------------------------------------------------------------------
+/// Sawariya Dairy — Complete Cloud Firestore Security Rules (Task 5)
+/// ---------------------------------------------------------------------------
+/// Architecture:
+///   * Deny-by-default on all root documents.
+///   * Authentication required for all private & operational data.
+///   * Strict Role-Based Access Control (RBAC) backed by /users/{uid}.
+///   * Roles: 'admin', 'delivery', 'customer'.
+///   * Defense-in-depth: Field-level privilege escalation guards.
+///   * fcmToken: Delivery agents may update their own token; admins have full access.
+/// ---------------------------------------------------------------------------
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -224,6 +225,7 @@ service cloud.firestore {
       // Update duty status, live GPS coordinates, vehicle information.
       // Agents can ONLY update their own profile and allowed fields.
       // Protected fields (rating, role, uid) CANNOT be mutated by agents.
+      // Delivery agents may also update their fcmToken for push notification targeting.
       allow update: if isAdmin()
           || (isDelivery()
               && isOwnDoc(agentId)
@@ -255,7 +257,8 @@ service cloud.firestore {
         'isOnDuty',
         'location',
         'orderId',
-        'updatedAt'
+        'updatedAt',
+        'fcmToken'
       ];
       let changed = request.resource.data.diff(resource.data).affectedKeys();
       let keepsUid = !('uid' in request.resource.data)
@@ -275,7 +278,7 @@ service cloud.firestore {
           || (isDelivery() && resource.data.agentId == request.auth.uid);
 
       // Strictly written by Cloud Functions / Admin SDK only.
-      // Delivery agents and customers CANNOT:
+      // Delivery agents and customers cannot:
       //   - create arbitrary earnings
       //   - modify earning amount or tip
       //   - alter agentId or orderId
