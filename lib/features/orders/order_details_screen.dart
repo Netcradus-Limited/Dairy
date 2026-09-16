@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
@@ -624,3 +625,76 @@ class _PriceRow extends StatelessWidget {
     );
   }
 }
+
+/// Screen wrapper for deep-link navigation directly by [orderId].
+class OrderDetailsRouteScreen extends ConsumerWidget {
+  final String orderId;
+
+  const OrderDetailsRouteScreen({super.key, required this.orderId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FutureBuilder<Order?>(
+      future: ref.read(orderServiceProvider).getOrderById(orderId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: AppColors.background,
+            body: Center(
+              child: CircularProgressIndicator(color: AppColors.primaryBlue),
+            ),
+          );
+        }
+        final order = snapshot.data;
+        if (order == null) {
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            appBar: AppBar(
+              title: const Text('Order Details'),
+              backgroundColor: AppColors.surface,
+              foregroundColor: AppColors.textPrimary,
+            ),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSizes.p24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.receipt_long_outlined,
+                        size: 60, color: AppColors.textSecondary),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Order #$orderId not found',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (Navigator.of(context).canPop()) {
+                          Navigator.of(context).pop();
+                        } else {
+                          context.go('/home');
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryBlue,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Back to Home'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+        return OrderDetailsScreen(order: order);
+      },
+    );
+  }
+}
+

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../core/auth/app_role.dart';
 import '../core/router/auth_refresh.dart';
@@ -154,6 +155,7 @@ class UserNotifier extends StateNotifier<User> {
         if (state.id.isNotEmpty) {
           _syncFromFirestore(state.id);
           _startUserDocListener(state.id);
+          _syncFcmToken(state.id);
         }
       }
     } catch (e) {
@@ -331,6 +333,7 @@ class UserNotifier extends StateNotifier<User> {
     notifyAuthStateChanged();
     if (user.id.isNotEmpty) {
       _startUserDocListener(user.id);
+      _syncFcmToken(user.id);
     }
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -339,12 +342,58 @@ class UserNotifier extends StateNotifier<User> {
     } catch (_) {}
   }
 
+  /// Synchronizes FCM token with user profile in Firestore
+  Future<void> _syncFcmToken(String uid) async {
+    if (uid.isEmpty) return;
+    try {
+      final messaging = FirebaseMessaging.instance;
+      final token = await messaging.getToken();
+      final firestore = _firestore;
+      if (token != null && token.isNotEmpty && firestore != null) {
+        await firestore.collection('users').doc(uid).set({
+          'fcmToken': token,
+          'fcmTokens': FieldValue.arrayUnion([token]),
+          'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        debugPrint('[FCM TOKEN] Successfully registered token for user $uid');
+      }
+    } catch (e) {
+      debugPrint('[FCM TOKEN] Failed to sync token on session start: $e');
+    }
+  }
+
+  /// Clears FCM token association upon logout
+  Future<void> _clearFcmToken(String uid) async {
+    if (uid.isEmpty) return;
+    try {
+      final messaging = FirebaseMessaging.instance;
+      final token = await messaging.getToken();
+      final firestore = _firestore;
+      if (token != null && token.isNotEmpty && firestore != null) {
+        await firestore.collection('users').doc(uid).set({
+          'fcmTokens': FieldValue.arrayRemove([token]),
+          'fcmToken': FieldValue.delete(),
+        }, SetOptions(merge: true));
+      }
+      try {
+        await messaging.deleteToken();
+      } catch (_) {}
+      debugPrint('[FCM TOKEN] Successfully cleared token for user $uid');
+    } catch (e) {
+      debugPrint('[FCM TOKEN] Failed to clear token on logout: $e');
+    }
+  }
+
   /// Clear session on Logout
   Future<void> clearSession() async {
+    final prevId = state.id;
     _userSubscription?.cancel();
     _userSubscription = null;
     state = guestUser;
     notifyAuthStateChanged();
+    if (prevId.isNotEmpty) {
+      _clearFcmToken(prevId);
+    }
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_sessionKey);

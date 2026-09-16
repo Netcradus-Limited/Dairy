@@ -19,6 +19,7 @@ import '../../features/checkout/checkout_screen.dart';
 import '../../features/delivery_panel/delivery_panel_screen.dart';
 import '../../features/delivery_map/delivery_map_screen.dart';
 import '../../features/main_layout/main_layout_screen.dart';
+import '../../features/orders/order_details_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/product/product_details_screen.dart';
@@ -32,6 +33,10 @@ import '../../features/subscription/subscriptions_screen.dart';
 import '../../features/subscription/edit_subscription_screen.dart';
 import 'auth_refresh.dart';
 
+/// Global root navigator key for deep-link / push notification navigation.
+final GlobalKey<NavigatorState> rootNavigatorKey =
+    GlobalKey<NavigatorState>(debugLabel: 'rootNavigator');
+
 /// Central GoRouter configuration provider for Sawariya Dairy.
 ///
 /// The router is created ONCE (not rebuilt on every auth state change). Auth
@@ -40,6 +45,7 @@ import 'auth_refresh.dart';
 /// [GoRouter.initialLocation] and can trigger mid-build constraint assertions).
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     refreshListenable: authRefreshNotifier,
     redirect: (context, state) {
@@ -93,7 +99,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           path == '/add-address' ||
           path == '/checkout' ||
           path == '/settings' ||
-          path == '/support';
+          path == '/support' ||
+          path.startsWith('/orders');
 
       if (isCustomerRoute) {
         if (isAdmin) return '/admin';
@@ -173,6 +180,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/checkout',
         builder: (context, state) => const CheckoutScreen(),
+      ),
+      GoRoute(
+        path: '/orders/:orderId',
+        builder: (context, state) {
+          final orderId = state.pathParameters['orderId'] ?? '';
+          return OrderDetailsRouteScreen(orderId: orderId);
+        },
       ),
       GoRoute(
         path: '/notifications',

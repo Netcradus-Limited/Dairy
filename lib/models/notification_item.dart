@@ -65,6 +65,8 @@ class NotificationItem {
   final String body;
   final DateTime timestamp;
   final String? orderId;
+  final String? assignedAgentId;
+  final String? route;
   final bool isRead;
   final bool isActionable;
 
@@ -74,6 +76,9 @@ class NotificationItem {
   /// Optional: recipient uid (stored on document for filtering)
   final String? userId;
 
+  /// Optional: additional arbitrary metadata
+  final Map<String, dynamic>? metadata;
+
   const NotificationItem({
     required this.id,
     required this.type,
@@ -81,36 +86,49 @@ class NotificationItem {
     required this.body,
     required this.timestamp,
     this.orderId,
+    this.assignedAgentId,
+    this.route,
     this.isRead = false,
     this.isActionable = false,
     this.createdBy,
     this.userId,
+    this.metadata,
   });
 
-  /// Deserialize from a Firestore [DocumentSnapshot].
-  factory NotificationItem.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>? ?? {};
+  /// Deserialize from a map and ID.
+  factory NotificationItem.fromMap(Map<String, dynamic> data, String id) {
     final ts = data['timestamp'];
     final DateTime parsedTime;
     if (ts is Timestamp) {
       parsedTime = ts.toDate();
     } else if (ts is DateTime) {
       parsedTime = ts;
+    } else if (ts is String) {
+      parsedTime = DateTime.tryParse(ts) ?? DateTime.now();
     } else {
       parsedTime = DateTime.now();
     }
     return NotificationItem(
-      id: doc.id,
+      id: id,
       type: NotificationTypeExtension.fromString(data['type'] as String?),
       title: (data['title'] as String?) ?? '',
       body: (data['body'] as String?) ?? (data['message'] as String?) ?? '',
       timestamp: parsedTime,
-      orderId: data['orderId'] as String?,
+      orderId: (data['orderId'] ?? data['order_id']) as String?,
+      assignedAgentId: (data['assignedAgentId'] ?? data['assigned_agent_id']) as String?,
+      route: data['route'] as String?,
       isRead: (data['isRead'] as bool?) ?? false,
       isActionable: (data['isActionable'] as bool?) ?? false,
       createdBy: data['createdBy'] as String?,
       userId: data['userId'] as String?,
+      metadata: data['metadata'] as Map<String, dynamic>?,
     );
+  }
+
+  /// Deserialize from a Firestore [DocumentSnapshot].
+  factory NotificationItem.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    return NotificationItem.fromMap(data, doc.id);
   }
 
   /// Serialize to a Firestore-compatible map.
@@ -121,10 +139,13 @@ class NotificationItem {
       'body': body,
       'timestamp': FieldValue.serverTimestamp(),
       if (orderId != null) 'orderId': orderId,
+      if (assignedAgentId != null) 'assignedAgentId': assignedAgentId,
+      if (route != null) 'route': route,
       'isRead': isRead,
       'isActionable': isActionable,
       if (createdBy != null) 'createdBy': createdBy,
       if (userId != null) 'userId': userId,
+      if (metadata != null) 'metadata': metadata,
     };
   }
 
@@ -135,10 +156,13 @@ class NotificationItem {
     String? body,
     DateTime? timestamp,
     String? orderId,
+    String? assignedAgentId,
+    String? route,
     bool? isRead,
     bool? isActionable,
     String? createdBy,
     String? userId,
+    Map<String, dynamic>? metadata,
   }) {
     return NotificationItem(
       id: id ?? this.id,
@@ -147,10 +171,13 @@ class NotificationItem {
       body: body ?? this.body,
       timestamp: timestamp ?? this.timestamp,
       orderId: orderId ?? this.orderId,
+      assignedAgentId: assignedAgentId ?? this.assignedAgentId,
+      route: route ?? this.route,
       isRead: isRead ?? this.isRead,
       isActionable: isActionable ?? this.isActionable,
       createdBy: createdBy ?? this.createdBy,
       userId: userId ?? this.userId,
+      metadata: metadata ?? this.metadata,
     );
   }
 }

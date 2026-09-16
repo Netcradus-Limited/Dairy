@@ -6,10 +6,12 @@ import 'package:intl/intl.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/responsive/responsive_layout.dart';
 import '../../models/notification_item.dart';
+import '../../models/order.dart' as order_model;
 import '../../providers/notification_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../services/order_service.dart';
 
-/// Admin Notifications Screen — Broadcasts & History (Task 11: Firestore-backed)
+/// Admin Notifications Screen — Role-Aware Broadcasts, Targeted Alerts & History
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
 
@@ -24,6 +26,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   NotificationType _selectedType = NotificationType.promotional;
   bool _isSending = false;
 
+  // Contextual state
+  String? _selectedOrderId;
+  String _deliveryTarget = 'orderCustomer'; // orderCustomer, assignedDriver, both, allFleet
+  String _audienceFilter = 'allUsers'; // allUsers, customersOnly, activeSubscribers, deliveryFleet
+
   @override
   void dispose() {
     _titleController.dispose();
@@ -31,7 +38,137 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     super.dispose();
   }
 
-  Future<void> _sendBroadcast() async {
+  void _applyTemplate(String title, String body) {
+    setState(() {
+      _titleController.text = title;
+      _bodyController.text = body;
+    });
+  }
+
+  List<({String label, String title, String body})> _getTemplatesForType(
+      NotificationType type) {
+    switch (type) {
+      case NotificationType.order:
+        return [
+          (
+            label: 'Confirmed',
+            title: 'Order Confirmed 🥛',
+            body:
+                'Your fresh milk order has been confirmed and is being packed in our cold-chain facility.'
+          ),
+          (
+            label: 'Out for Delivery',
+            title: 'Order Out for Delivery 🚚',
+            body:
+                'Our delivery rider is on the way to your address with your dairy order.'
+          ),
+          (
+            label: 'Delivered',
+            title: 'Order Delivered 🎉',
+            body:
+                'Your fresh dairy products have been delivered safely. Enjoy your pure dairy!'
+          ),
+          (
+            label: 'Delayed',
+            title: 'Delivery Update ⏳',
+            body:
+                'Your order is running a few minutes behind schedule due to route traffic. We apologize for the wait.'
+          ),
+          (
+            label: 'Cancelled',
+            title: 'Order Cancelled ❌',
+            body:
+                'Your order has been cancelled. Any applicable refund has been initiated.'
+          ),
+        ];
+      case NotificationType.delivery:
+        return [
+          (
+            label: 'Driver Assigned',
+            title: 'Delivery Agent Assigned 📦',
+            body:
+                'A dedicated delivery agent has been assigned and will pick up your order shortly.'
+          ),
+          (
+            label: 'Driver Approaching',
+            title: 'Driver Near Your Location 🛵',
+            body:
+                'Your delivery agent is approaching your delivery address. Please keep gate access ready.'
+          ),
+          (
+            label: 'Fleet Morning Dispatch',
+            title: 'Morning Fleet Dispatch 🚀',
+            body:
+                'All morning batch crates have been organized for route departure. Safe driving!'
+          ),
+        ];
+      case NotificationType.promotional:
+        return [
+          (
+            label: 'Ghee Offer',
+            title: 'Pure Desi A2 Cow Ghee Offer 🏷️',
+            body:
+                'Enjoy 15% off on our traditional Bilona Cow Ghee this weekend only. Pure aroma in every spoon!'
+          ),
+          (
+            label: 'Morning Combo',
+            title: 'Fresh Paneer & Milk Combo 🥛',
+            body:
+                'Order 2L Whole Milk today and get 200g Fresh Malai Paneer at special discount.'
+          ),
+          (
+            label: 'Festive Treats',
+            title: 'Celebrate with Pure Dairy ✨',
+            body:
+                'Special festive supply of Mawa, Butter, and Rabri now available for pre-order.'
+          ),
+        ];
+      case NotificationType.subscription:
+        return [
+          (
+            label: 'Morning Dispatch',
+            title: 'Daily Milk Dispatched 🥛',
+            body:
+                'Today\'s morning subscription bottle has left the depot. Expected at your door by 6:30 AM.'
+          ),
+          (
+            label: 'Renewal Reminder',
+            title: 'Subscription Renewal Reminder 🔄',
+            body:
+                'Your monthly milk subscription will renew in 3 days. Tap to check your delivery schedule.'
+          ),
+          (
+            label: 'Vacation Pause',
+            title: 'Going on Vacation? ⏸️',
+            body:
+                'Easily pause your daily milk deliveries anytime through the Calendar tab in the app.'
+          ),
+        ];
+      case NotificationType.system:
+        return [
+          (
+            label: 'Maintenance',
+            title: 'Scheduled System Maintenance ⚙️',
+            body:
+                'The Sawariya Dairy app will undergo routine maintenance tonight from 1:00 AM to 3:00 AM.'
+          ),
+          (
+            label: 'Holiday Timings',
+            title: 'Special Delivery Schedule 📢',
+            body:
+                'Morning delivery timings will operate from 5:30 AM to 7:30 AM tomorrow.'
+          ),
+          (
+            label: 'Quality Assurance',
+            title: 'Cold-Chain Quality Guarantee ❄️',
+            body:
+                'All dairy batches maintain strict 4°C chilled temperature standards from farm to doorstep.'
+          ),
+        ];
+    }
+  }
+
+  Future<void> _sendNotification() async {
     final title = _titleController.text.trim();
     final body = _bodyController.text.trim();
     if (title.isEmpty || body.isEmpty) {
@@ -39,6 +176,33 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         const SnackBar(content: Text('Please enter both title and message.')),
       );
       return;
+    }
+
+    // Validation for ORDER
+    if (_selectedType == NotificationType.order) {
+      if (_selectedOrderId == null || _selectedOrderId!.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select an order to send an order-specific notification.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+    }
+
+    // Validation for DELIVERY with order targeting
+    if (_selectedType == NotificationType.delivery) {
+      if (_deliveryTarget != 'allFleet' &&
+          (_selectedOrderId == null || _selectedOrderId!.trim().isEmpty)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select an order or choose "All Delivery Fleet".'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
     }
 
     setState(() => _isSending = true);
@@ -53,16 +217,170 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       }
 
       final repo = ref.read(notificationRepositoryProvider);
-      await repo.sendBroadcast(
-        adminUid: adminUid,
-        title: title,
-        body: body,
-        type: _selectedType,
-        isActionable: false,
-      );
+
+      if (_selectedType == NotificationType.order) {
+        // ── 1. Targeted 1-to-1 Order Notification ──
+        final cleanOrderId = _selectedOrderId!.trim();
+        final fullOrder = await ref
+            .read(orderServiceProvider)
+            .getOrderById(cleanOrderId);
+
+        if (fullOrder == null) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Selected order not found.')),
+            );
+          }
+          return;
+        }
+
+        final targetUid = fullOrder.userId;
+
+        if (targetUid.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text('Customer UID not found on selected order.')),
+            );
+          }
+          return;
+        }
+
+        await repo.sendNotificationToUser(
+          targetUserId: targetUid,
+          title: title,
+          body: body,
+          type: NotificationType.order,
+          createdBy: adminUid,
+          orderId: fullOrder.id,
+          route: '/orders/${fullOrder.id}',
+          isActionable: true,
+        );
+      } else if (_selectedType == NotificationType.delivery) {
+        // ── 2. Delivery Notification Flow ──
+        if (_deliveryTarget == 'allFleet') {
+          final agentIds = await repo.fetchDeliveryAgentUserIds();
+          await repo.sendBroadcast(
+            adminUid: adminUid,
+            title: title,
+            body: body,
+            type: NotificationType.delivery,
+            targetUserIds: agentIds,
+            route: '/delivery',
+            isActionable: true,
+          );
+        } else if (_selectedOrderId != null &&
+            _selectedOrderId!.trim().isNotEmpty) {
+          final cleanOrderId = _selectedOrderId!.trim();
+          final fullOrder = await ref
+              .read(orderServiceProvider)
+              .getOrderById(cleanOrderId);
+
+          if (fullOrder != null) {
+            final customerUid = fullOrder.userId;
+
+            if (_deliveryTarget == 'orderCustomer' || _deliveryTarget == 'both') {
+              if (customerUid.isNotEmpty) {
+                await repo.sendNotificationToUser(
+                  targetUserId: customerUid,
+                  title: title,
+                  body: body,
+                  type: NotificationType.delivery,
+                  createdBy: adminUid,
+                  orderId: fullOrder.id,
+                  route: '/orders/${fullOrder.id}',
+                  isActionable: true,
+                );
+              }
+            }
+
+            final agentId = (fullOrder.assignedAgentId != null &&
+                    fullOrder.assignedAgentId!.isNotEmpty)
+                ? fullOrder.assignedAgentId!
+                : '';
+
+            if ((_deliveryTarget == 'assignedDriver' ||
+                    _deliveryTarget == 'both') &&
+                agentId.isNotEmpty) {
+              await repo.sendNotificationToUser(
+                targetUserId: agentId,
+                title: title,
+                body: body,
+                type: NotificationType.delivery,
+                createdBy: adminUid,
+                orderId: fullOrder.id,
+                assignedAgentId: agentId,
+                route: '/delivery',
+                isActionable: true,
+              );
+            }
+          }
+        }
+      } else if (_selectedType == NotificationType.promotional) {
+        // ── 3. Promotional Broadcast ──
+        List<String> targetUids = [];
+        if (_audienceFilter == 'customersOnly') {
+          targetUids = await repo.fetchCustomerUserIds();
+        } else if (_audienceFilter == 'activeSubscribers') {
+          targetUids = await repo.fetchActiveSubscriberUserIds();
+        } else {
+          targetUids = await repo.fetchAllUserIds();
+        }
+
+        await repo.sendBroadcast(
+          adminUid: adminUid,
+          title: title,
+          body: body,
+          type: NotificationType.promotional,
+          targetUserIds: targetUids,
+          route: '/notifications',
+          isActionable: true,
+        );
+      } else if (_selectedType == NotificationType.subscription) {
+        // ── 4. Subscription Targeted / Broadcast ──
+        List<String> targetUids = [];
+        if (_audienceFilter == 'activeSubscribers') {
+          targetUids = await repo.fetchActiveSubscriberUserIds();
+        } else {
+          targetUids = await repo.fetchAllUserIds();
+        }
+
+        await repo.sendBroadcast(
+          adminUid: adminUid,
+          title: title,
+          body: body,
+          type: NotificationType.subscription,
+          targetUserIds: targetUids,
+          route: '/subscriptions',
+          isActionable: true,
+        );
+      } else if (_selectedType == NotificationType.system) {
+        // ── 5. System Notification ──
+        List<String> targetUids = [];
+        if (_audienceFilter == 'deliveryFleet') {
+          targetUids = await repo.fetchDeliveryAgentUserIds();
+        } else if (_audienceFilter == 'customersOnly') {
+          targetUids = await repo.fetchCustomerUserIds();
+        } else {
+          targetUids = await repo.fetchAllUserIds();
+        }
+
+        await repo.sendBroadcast(
+          adminUid: adminUid,
+          title: title,
+          body: body,
+          type: NotificationType.system,
+          targetUserIds: targetUids,
+          route: '/notifications',
+          isActionable: false,
+        );
+      }
 
       _titleController.clear();
       _bodyController.clear();
+      setState(() {
+        _selectedOrderId = null;
+      });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -71,7 +389,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               children: [
                 Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
                 SizedBox(width: 8),
-                Text('Broadcast sent successfully! 🚀'),
+                Text('Notification dispatched successfully! 🚀'),
               ],
             ),
             backgroundColor: AppColors.success,
@@ -83,7 +401,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to send broadcast: $e'),
+            content: Text('Failed to dispatch notification: $e'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -101,11 +419,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final textPrimary = AppColors.textPrimaryOf(context);
     final textSecondary = AppColors.textSecondaryOf(context);
 
-    // Admin's own notification stream (shows broadcast history)
     final adminUid = ref.watch(userProvider).id;
     final asyncHistory = adminUid.isNotEmpty
         ? ref.watch(notificationsForUserStreamProvider(adminUid))
         : const AsyncValue<List<NotificationItem>>.data([]);
+
+    final templates = _getTemplatesForType(_selectedType);
 
     return SingleChildScrollView(
       padding: EdgeInsets.symmetric(
@@ -115,9 +434,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header ──────────────────────────────────────────────────────
+          // ── Header ──
           Text(
-            'Broadcasts & Alerts',
+            'Broadcasts & Targeted Alerts',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 20,
               fontWeight: FontWeight.w800,
@@ -125,7 +444,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             ),
           ),
           Text(
-            'Send delivery updates, morning dispatch notifications, and festival dairy offers.',
+            'Send order alerts, delivery dispatches, subscriber updates, and marketing offers with precise recipient targeting.',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
               color: textSecondary,
@@ -133,7 +452,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           ),
           const SizedBox(height: 20),
 
-          // ── Broadcast Compose Card ───────────────────────────────────────
+          // ── Composer Card ──
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -158,9 +477,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     ),
                     const SizedBox(width: 10),
                     Text(
-                      'Send Quick Broadcast to Subscribers',
+                      'Compose Notification',
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: textPrimary,
                       ),
@@ -171,7 +490,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
                 // Notification type selector
                 Text(
-                  'Notification Type',
+                  '1. Select Notification Type',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -185,11 +504,20 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   children: NotificationType.values.map((type) {
                     final isSelected = _selectedType == type;
                     return GestureDetector(
-                      onTap: () => setState(() => _selectedType = type),
+                      onTap: () {
+                        setState(() {
+                          _selectedType = type;
+                          if (type == NotificationType.subscription) {
+                            _audienceFilter = 'activeSubscribers';
+                          } else {
+                            _audienceFilter = 'allUsers';
+                          }
+                        });
+                      },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
+                            horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? AppColors.primary
@@ -206,17 +534,17 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                           children: [
                             Icon(
                               type.icon,
-                              size: 14,
+                              size: 15,
                               color:
                                   isSelected ? Colors.white : AppColors.primary,
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 6),
                             Text(
                               type.value[0].toUpperCase() +
                                   type.value.substring(1),
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w700,
                                 color: isSelected
                                     ? Colors.white
                                     : AppColors.primary,
@@ -229,7 +557,53 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   }).toList(),
                 ),
 
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
+
+                // ── Contextual Recipient Selector ──
+                if (_selectedType == NotificationType.order) ...[
+                  _buildOrderSelector(cardBg, cardBorder, textPrimary, textSecondary),
+                  const SizedBox(height: 16),
+                ] else if (_selectedType == NotificationType.delivery) ...[
+                  _buildDeliveryTargetSelector(cardBg, cardBorder, textPrimary, textSecondary),
+                  const SizedBox(height: 16),
+                ] else ...[
+                  _buildAudienceSelector(cardBg, cardBorder, textPrimary, textSecondary),
+                  const SizedBox(height: 16),
+                ],
+
+                // ── Quick Templates ──
+                Text(
+                  'Quick Message Templates',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: templates.map((tmpl) {
+                    return ActionChip(
+                      label: Text(
+                        tmpl.label,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      backgroundColor: AppColors.primaryLight.withValues(alpha: 0.6),
+                      side: const BorderSide(color: AppColors.border),
+                      onPressed: () => _applyTemplate(tmpl.title, tmpl.body),
+                    );
+                  }).toList(),
+                ),
+
+                const SizedBox(height: 16),
+
+                // ── Title & Message Fields ──
                 TextField(
                   controller: _titleController,
                   decoration: InputDecoration(
@@ -251,9 +625,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                         color: textSecondary, fontSize: 13),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
+
+                // ── Dispatch Button ──
                 ElevatedButton.icon(
-                  onPressed: _isSending ? null : _sendBroadcast,
+                  onPressed: _isSending ? null : _sendNotification,
                   icon: _isSending
                       ? const SizedBox(
                           width: 16,
@@ -266,15 +642,20 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       : const Icon(Icons.send_rounded,
                           size: 18, color: Colors.white),
                   label: Text(
-                    _isSending ? 'Sending…' : 'Broadcast Notification',
-                    style: const TextStyle(color: Colors.white),
+                    _isSending
+                        ? 'Dispatching…'
+                        : (_selectedType == NotificationType.order
+                            ? 'Send Order Notification'
+                            : 'Dispatch Notification'),
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     disabledBackgroundColor:
                         AppColors.primary.withValues(alpha: 0.6),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12),
+                        horizontal: 24, vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                   ),
@@ -285,11 +666,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
           const SizedBox(height: 24),
 
-          // ── Notification History Panel ────────────────────────────────────
+          // ── Notification History Panel ──
           Row(
             children: [
               Text(
-                'Broadcast History',
+                'Notification History',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
@@ -299,7 +680,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               const Spacer(),
               asyncHistory.whenOrNull(
                     data: (list) => Text(
-                      '${list.length} sent',
+                      '${list.length} logged',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         color: textSecondary,
@@ -365,18 +746,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'No broadcasts sent yet',
+                          'No notifications dispatched yet',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 13,
                             color: textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Sent notifications will appear here.',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
-                            color: textSecondary.withValues(alpha: 0.7),
                           ),
                         ),
                       ],
@@ -397,6 +770,239 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           const SizedBox(height: 24),
         ],
       ),
+    );
+  }
+
+  Widget _buildOrderSelector(
+      Color cardBg, Color cardBorder, Color textPrimary, Color textSecondary) {
+    return StreamBuilder<List<order_model.Order>>(
+      stream: ref.read(orderServiceProvider).streamAllDeliveryOrders(),
+      builder: (context, snapshot) {
+        final rawOrders = snapshot.data ?? [];
+        // Deduplicate orders by unique ID to guarantee each order ID appears at most once
+        final uniqueOrders = <String, order_model.Order>{};
+        for (final o in rawOrders) {
+          if (o.id.isNotEmpty && !uniqueOrders.containsKey(o.id)) {
+            uniqueOrders[o.id] = o;
+          }
+        }
+        final orders = uniqueOrders.values.toList();
+
+        // Ensure selected value exists in current list to prevent assertion errors
+        final isSelectedInList = _selectedOrderId != null &&
+            uniqueOrders.containsKey(_selectedOrderId);
+        final selectedValue = isSelectedInList ? _selectedOrderId : null;
+        final selectedOrder =
+            selectedValue != null ? uniqueOrders[selectedValue] : null;
+
+        return Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.receipt_long_rounded,
+                      size: 16, color: AppColors.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    '2. Target Specific Order (Customer Owner)',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (orders.isEmpty)
+                Text(
+                  'No orders found in the system.',
+                  style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12, color: textSecondary),
+                )
+              else
+                DropdownButtonFormField<String>(
+                  value: selectedValue,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: cardBg,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: cardBorder),
+                    ),
+                  ),
+                  hint: Text(
+                    'Select an Order (#ORD - Customer Name - ₹Amount)',
+                    style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12, color: textSecondary),
+                  ),
+                  items: orders.map((o) {
+                    return DropdownMenuItem<String>(
+                      value: o.id,
+                      child: Text(
+                        '#${o.displayOrderCode} — ${o.deliveryAddress.fullName} (₹${o.totalAmount.toStringAsFixed(0)}) [${o.status.label}]',
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12, fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedOrderId = val;
+                    });
+                  },
+                ),
+              if (selectedOrder != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.person_pin_circle_rounded,
+                        size: 14, color: AppColors.primary),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        'Recipient: ${selectedOrder.deliveryAddress.fullName} (${selectedOrder.deliveryAddress.mobileNumber})',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDeliveryTargetSelector(
+      Color cardBg, Color cardBorder, Color textPrimary, Color textSecondary) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '2. Delivery Recipient Target',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: textSecondary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: _deliveryTarget,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: cardBg,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: cardBorder),
+            ),
+          ),
+          items: const [
+            DropdownMenuItem(
+              value: 'orderCustomer',
+              child: Text('Selected Order Customer'),
+            ),
+            DropdownMenuItem(
+              value: 'assignedDriver',
+              child: Text('Assigned Delivery Agent Only'),
+            ),
+            DropdownMenuItem(
+              value: 'both',
+              child: Text('Both Customer & Assigned Driver'),
+            ),
+            DropdownMenuItem(
+              value: 'allFleet',
+              child: Text('All Delivery Fleet (Broadcast)'),
+            ),
+          ],
+          onChanged: (val) {
+            if (val != null) setState(() => _deliveryTarget = val);
+          },
+        ),
+        if (_deliveryTarget != 'allFleet') ...[
+          const SizedBox(height: 12),
+          _buildOrderSelector(cardBg, cardBorder, textPrimary, textSecondary),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAudienceSelector(
+      Color cardBg, Color cardBorder, Color textPrimary, Color textSecondary) {
+    List<DropdownMenuItem<String>> items = [];
+
+    if (_selectedType == NotificationType.promotional) {
+      items = const [
+        DropdownMenuItem(value: 'allUsers', child: Text('All Registered Users')),
+        DropdownMenuItem(value: 'customersOnly', child: Text('Customers Only')),
+        DropdownMenuItem(value: 'activeSubscribers', child: Text('Active Subscribers Only')),
+      ];
+    } else if (_selectedType == NotificationType.subscription) {
+      items = const [
+        DropdownMenuItem(
+            value: 'activeSubscribers',
+            child: Text('Active Subscribers Only (Targeted)')),
+        DropdownMenuItem(
+            value: 'allUsers',
+            child: Text('All Users (Subscription Announcement)')),
+      ];
+    } else {
+      items = const [
+        DropdownMenuItem(value: 'allUsers', child: Text('All Registered Users')),
+        DropdownMenuItem(value: 'deliveryFleet', child: Text('Delivery Fleet Only')),
+        DropdownMenuItem(value: 'customersOnly', child: Text('Customers Only')),
+      ];
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '2. Target Audience Filter',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: textSecondary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: _audienceFilter,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: cardBg,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: cardBorder),
+            ),
+          ),
+          items: items,
+          onChanged: (val) {
+            if (val != null) setState(() => _audienceFilter = val);
+          },
+        ),
+      ],
     );
   }
 }
@@ -457,7 +1063,6 @@ class _AdminNotifHistoryTile extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Type icon badge
           Container(
             width: 38,
             height: 38,
@@ -487,7 +1092,6 @@ class _AdminNotifHistoryTile extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Type badge
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),

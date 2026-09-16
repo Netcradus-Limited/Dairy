@@ -38,22 +38,23 @@ class NotificationsScreen extends ConsumerWidget {
           .catchError((_) {});
     }
 
-    if (item.orderId != null) {
-      if (userId != null) {
-        final asyncOrders = ref.read(userOrdersStreamProvider(userId));
-        asyncOrders.whenData((orders) {
-          final matches = orders.where((o) => o.id == item.orderId);
-          if (matches.isNotEmpty && context.mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => OrderDetailsScreen(order: matches.first)),
-            );
-            return;
-          }
-        });
+    final rawOrderId = item.orderId?.trim();
+    if (rawOrderId != null && rawOrderId.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => OrderDetailsRouteScreen(orderId: rawOrderId),
+        ),
+      );
+      return;
+    }
+
+    final explicitRoute = item.route?.trim();
+    if (explicitRoute != null && explicitRoute.isNotEmpty) {
+      try {
+        context.push(explicitRoute);
         return;
-      }
+      } catch (_) {}
     }
 
     ScaffoldMessenger.of(context).showSnackBar(

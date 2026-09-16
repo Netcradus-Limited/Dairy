@@ -66,6 +66,7 @@ class Order {
   final String estimatedDeliveryTime;
   final String? assignedAgentId;
   final DateTime? acceptedAt;
+  final String userId;
 
   const Order({
     required this.id,
@@ -82,6 +83,7 @@ class Order {
     this.estimatedDeliveryTime = 'Today by 7:30 AM',
     this.assignedAgentId,
     this.acceptedAt,
+    this.userId = '',
   });
 
   /// The customer-facing 6-character order code (e.g. "KRT482").
@@ -128,6 +130,7 @@ class Order {
     String? estimatedDeliveryTime,
     String? assignedAgentId,
     DateTime? acceptedAt,
+    String? userId,
   }) {
     return Order(
       id: id ?? this.id,
@@ -145,6 +148,7 @@ class Order {
           estimatedDeliveryTime ?? this.estimatedDeliveryTime,
       assignedAgentId: assignedAgentId ?? this.assignedAgentId,
       acceptedAt: acceptedAt ?? this.acceptedAt,
+      userId: userId ?? this.userId,
     );
   }
 
@@ -255,6 +259,7 @@ class Order {
       estimatedDeliveryTime: (data['estimatedDeliveryTime'] as String?) ?? '',
       assignedAgentId: (data['assignedAgentId'] as String?),
       acceptedAt: acceptedAt,
+      userId: (data['userId'] as String?) ?? '',
     );
   }
 
@@ -262,6 +267,7 @@ class Order {
   Map<String, dynamic> toFirestore() => {
         'orderCode': orderCode.isNotEmpty ? orderCode : displayOrderCode,
         'status': orderStatusToString(status),
+        if (userId.isNotEmpty) 'userId': userId,
         'items': items
             .map((item) => {
                   'productId': item.product.id,

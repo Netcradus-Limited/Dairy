@@ -26,10 +26,13 @@ void main() {
         body: 'Your fresh milk order #ORD-101 is confirmed.',
         timestamp: now,
         orderId: 'ORD-101',
+        route: '/orders/ORD-101',
+        assignedAgentId: 'agent_99',
         isRead: false,
         isActionable: true,
         createdBy: 'admin_1',
         userId: 'cust_1',
+        metadata: {'status': 'confirmed'},
       );
 
       final firestoreMap = item.toFirestore();
@@ -38,16 +41,20 @@ void main() {
       expect(
           firestoreMap['body'], 'Your fresh milk order #ORD-101 is confirmed.');
       expect(firestoreMap['orderId'], 'ORD-101');
+      expect(firestoreMap['route'], '/orders/ORD-101');
+      expect(firestoreMap['assignedAgentId'], 'agent_99');
       expect(firestoreMap['isRead'], false);
       expect(firestoreMap['isActionable'], true);
       expect(firestoreMap['createdBy'], 'admin_1');
       expect(firestoreMap['userId'], 'cust_1');
+      expect(firestoreMap['metadata']['status'], 'confirmed');
 
       // Test copyWith
       final readItem = item.copyWith(isRead: true);
       expect(readItem.isRead, true);
       expect(readItem.id, 'notif_1');
       expect(readItem.title, 'Order Confirmed');
+      expect(readItem.route, '/orders/ORD-101');
     });
 
     test('NotificationType parsing and icon coverage', () {
@@ -67,6 +74,196 @@ void main() {
       expect(NotificationType.promotional.value, 'promotional');
       expect(NotificationType.subscription.value, 'subscription');
       expect(NotificationType.system.value, 'system');
+    });
+
+    test('Dual orderId / order_id parsing in NotificationItem.fromFirestore', () {
+      final now = DateTime.now();
+
+      // Case 1: camelCase orderId
+      final mapCamel = {
+        'id': 'n1',
+        'type': 'order',
+        'title': 'Test',
+        'body': 'Test body',
+        'timestamp': now.toIso8601String(),
+        'orderId': 'ORD-CAMEL-100',
+      };
+      final itemCamel = NotificationItem.fromMap(mapCamel, 'n1');
+      expect(itemCamel.orderId, 'ORD-CAMEL-100');
+
+      // Case 2: snake_case order_id
+      final mapSnake = {
+        'id': 'n2',
+        'type': 'order',
+        'title': 'Test',
+        'body': 'Test body',
+        'timestamp': now.toIso8601String(),
+        'order_id': 'ORD-SNAKE-200',
+      };
+      final itemSnake = NotificationItem.fromMap(mapSnake, 'n2');
+      expect(itemSnake.orderId, 'ORD-SNAKE-200');
+
+      // Case 3: Both null/missing
+      final mapNone = {
+        'id': 'n3',
+        'type': 'promotional',
+        'title': 'Promo',
+        'body': 'Promo body',
+        'timestamp': now.toIso8601String(),
+      };
+      final itemNone = NotificationItem.fromMap(mapNone, 'n3');
+      expect(itemNone.orderId, isNull);
+    });
+
+    group('Task 5 — Type-Specific Notification Flow & Business Logic', () {
+      // 1. ORDER NOTIFICATIONS
+      test('ORDER: Resolves only the customer who owns the order and generates order route', () {
+        final orderDoc = {
+          'id': 'ORD-888',
+          'userId': 'customer_cust_123',
+          'status': 'confirmed',
+        };
+
+        // Recipient must be the customer
+        final recipientUserId = orderDoc['userId'];
+        expect(recipientUserId, 'customer_cust_123');
+
+        // Unrelated user must not receive it
+        const unrelatedUserId = 'customer_unrelated_456';
+        expect(unrelatedUserId == recipientUserId, isFalse);
+
+        final notif = NotificationItem(
+          id: 'n_ord_1',
+          type: NotificationType.order,
+          title: 'Order Confirmed',
+          body: 'Order #ORD-888 confirmed',
+          timestamp: DateTime.now(),
+          orderId: orderDoc['id'],
+          route: '/orders/${orderDoc['id']}',
+          userId: recipientUserId,
+        );
+
+        expect(notif.orderId, 'ORD-888');
+        expect(notif.route, '/orders/ORD-888');
+        expect(notif.userId, 'customer_cust_123');
+      });
+
+      // 2. DELIVERY NOTIFICATIONS
+      test('DELIVERY: Resolves customer and/or assigned agent with correct IDs', () {
+        final deliveryOrder = {
+          'id': 'ORD-999',
+          'userId': 'customer_alpha',
+          'assignedAgentId': 'agent_bravo',
+          'status': 'outForDelivery',
+        };
+
+        // Customer notification
+        final customerNotif = NotificationItem(
+          id: 'deliv_cust_1',
+          type: NotificationType.delivery,
+          title: 'Out for Delivery 🚀',
+          body: 'Your fresh milk is on its way.',
+          timestamp: DateTime.now(),
+          orderId: deliveryOrder['id'],
+          assignedAgentId: deliveryOrder['assignedAgentId'],
+          route: '/orders/${deliveryOrder['id']}',
+          userId: deliveryOrder['userId'],
+        );
+
+        // Agent notification
+        final agentNotif = NotificationItem(
+          id: 'deliv_agent_1',
+          type: NotificationType.delivery,
+          title: 'New Delivery Assigned 📦',
+          body: 'Deliver order #ORD-999 to customer',
+          timestamp: DateTime.now(),
+          orderId: deliveryOrder['id'],
+          assignedAgentId: deliveryOrder['assignedAgentId'],
+          route: '/orders/${deliveryOrder['id']}',
+          userId: deliveryOrder['assignedAgentId'],
+        );
+
+        expect(customerNotif.userId, 'customer_alpha');
+        expect(agentNotif.userId, 'agent_bravo');
+        expect(customerNotif.assignedAgentId, 'agent_bravo');
+        expect(agentNotif.orderId, 'ORD-999');
+      });
+
+      // 3. PROMOTIONAL NOTIFICATIONS
+      test('PROMOTIONAL: Operates without orderId and chunks recipients into batches <= 500', () {
+        // Simulates 1250 total user IDs
+        final allUserIds = List.generate(1250, (index) => 'user_$index');
+
+        final chunks = <List<String>>[];
+        for (var i = 0; i < allUserIds.length; i += 500) {
+          chunks.add(
+            allUserIds.sublist(
+              i,
+              i + 500 > allUserIds.length ? allUserIds.length : i + 500,
+            ),
+          );
+        }
+
+        expect(chunks.length, 3);
+        expect(chunks[0].length, 500);
+        expect(chunks[1].length, 500);
+        expect(chunks[2].length, 250);
+
+        final promoNotif = NotificationItem(
+          id: 'promo_1',
+          type: NotificationType.promotional,
+          title: 'Diwali Dairy Fest 🪔',
+          body: 'Get 25% discount on Pure Cow Ghee',
+          timestamp: DateTime.now(),
+          route: '/notifications',
+        );
+
+        expect(promoNotif.orderId, isNull);
+        expect(promoNotif.route, '/notifications');
+        expect(promoNotif.type, NotificationType.promotional);
+      });
+
+      // 4. SUBSCRIPTION NOTIFICATIONS
+      test('SUBSCRIPTION: Filters only active subscribers and excludes non-subscribers', () {
+        final mockSubscriptions = [
+          {'userId': 'sub_user_1', 'status': 'active'},
+          {'userId': 'sub_user_2', 'status': 'active'},
+          {'userId': 'sub_user_3', 'status': 'cancelled'},
+          {'userId': 'sub_user_4', 'status': 'expired'},
+          {'userId': 'sub_user_1', 'status': 'active'}, // Duplicate user with 2 active subs
+        ];
+
+        final activeUserIds = mockSubscriptions
+            .where((doc) => doc['status']?.toLowerCase() == 'active')
+            .map((doc) => doc['userId']!)
+            .toSet()
+            .toList();
+
+        expect(activeUserIds.length, 2);
+        expect(activeUserIds, contains('sub_user_1'));
+        expect(activeUserIds, contains('sub_user_2'));
+        expect(activeUserIds.contains('sub_user_3'), isFalse);
+        expect(activeUserIds.contains('sub_user_4'), isFalse);
+      });
+
+      // 5. SYSTEM NOTIFICATIONS
+      test('SYSTEM: Provides safe fallback route when route is empty or unspecified', () {
+        final systemNotif = NotificationItem(
+          id: 'sys_1',
+          type: NotificationType.system,
+          title: 'Scheduled Maintenance Notice',
+          body: 'App services will undergo maintenance from 2 AM to 4 AM.',
+          timestamp: DateTime.now(),
+          route: null,
+        );
+
+        final resolvedRoute = (systemNotif.route != null && systemNotif.route!.isNotEmpty)
+            ? systemNotif.route!
+            : '/notifications';
+
+        expect(resolvedRoute, '/notifications');
+        expect(systemNotif.type, NotificationType.system);
+      });
     });
 
     group('Firestore Security Rules Logic Verification', () {

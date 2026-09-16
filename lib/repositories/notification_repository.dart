@@ -63,10 +63,10 @@ class NotificationRepository {
     await batch.commit();
   }
 
-  // ─── Write (Admin) ──────────────────────────────────────────────────────
+  // ─── Write (Targeted & Admin) ──────────────────────────────────────────
 
-  /// Writes a broadcast notification document to [targetUserId]'s subcollection.
-  /// [createdBy] is the admin's uid for audit trail.
+  /// Writes a notification document directly to [targetUserId]'s subcollection.
+  /// [createdBy] is the admin's or system's uid for audit trail.
   Future<void> sendNotificationToUser({
     required String targetUserId,
     required String title,
@@ -74,9 +74,16 @@ class NotificationRepository {
     required NotificationType type,
     required String createdBy,
     String? orderId,
+    String? assignedAgentId,
+    String? route,
     bool isActionable = false,
+    Map<String, dynamic>? metadata,
+    bool trackInAdminHistory = true,
   }) async {
-    await _notifCol(targetUserId).add({
+    final cleanTargetUid = targetUserId.trim();
+    if (cleanTargetUid.isEmpty) return;
+
+    final docData = <String, dynamic>{
       'title': title,
       'body': body,
       'type': type.value,
@@ -84,16 +91,90 @@ class NotificationRepository {
       'isRead': false,
       'isActionable': isActionable,
       'createdBy': createdBy,
-      'userId': targetUserId,
-      if (orderId != null) 'orderId': orderId,
-    });
+      'userId': cleanTargetUid,
+      if (orderId != null && orderId.trim().isNotEmpty) 'orderId': orderId.trim(),
+      if (assignedAgentId != null && assignedAgentId.trim().isNotEmpty)
+        'assignedAgentId': assignedAgentId.trim(),
+      if (route != null && route.trim().isNotEmpty) 'route': route.trim(),
+      if (metadata != null) 'metadata': metadata,
+    };
+
+    await _notifCol(cleanTargetUid).add(docData);
+
+    // If sent by an admin to a customer/agent, track in admin's own notification history as read
+    if (trackInAdminHistory && createdBy.isNotEmpty && createdBy != cleanTargetUid) {
+      try {
+        await _notifCol(createdBy).add({
+          ...docData,
+          'isRead': true,
+          'isSentHistory': true,
+        });
+      } catch (_) {}
+    }
   }
 
   /// Fetches all UIDs from the `users` top-level collection.
-  /// Admins can read all user documents per existing Firestore rules.
-  Future<List<String>> _fetchAllUserIds() async {
-    final snapshot = await _firestore.collection('users').get();
-    return snapshot.docs.map((d) => d.id).toList();
+  Future<List<String>> fetchAllUserIds() async {
+    try {
+      final snapshot = await _firestore.collection('users').get();
+      return snapshot.docs.map((d) => d.id).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Fetches UIDs of all delivery agents (`role == 'delivery'`).
+  Future<List<String>> fetchDeliveryAgentUserIds() async {
+    try {
+      final snapshot = await _firestore
+          .collection('users')
+          .where('role', isEqualTo: 'delivery')
+          .get();
+      return snapshot.docs.map((d) => d.id).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Fetches UIDs of standard customers (`role == 'customer'`).
+  Future<List<String>> fetchCustomerUserIds() async {
+    try {
+      final snapshot = await _firestore
+          .collection('users')
+          .where('role', isEqualTo: 'customer')
+          .get();
+      return snapshot.docs.map((d) => d.id).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Fetches UIDs of users with active subscriptions.
+  Future<List<String>> fetchActiveSubscriberUserIds() async {
+    final activeUids = <String>{};
+    try {
+      // 1. Try checking collectionGroup or querying users
+      final userSnap = await _firestore.collection('users').get();
+      for (final userDoc in userSnap.docs) {
+        final uid = userDoc.id;
+        try {
+          final subDoc = await _firestore
+              .collection('users')
+              .doc(uid)
+              .collection('subscription')
+              .doc('current')
+              .get();
+          if (subDoc.exists) {
+            final data = subDoc.data();
+            final status = (data?['status'] as String?)?.toLowerCase();
+            if (status == 'active') {
+              activeUids.add(uid);
+            }
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
+    return activeUids.toList();
   }
 
   /// Commits a list of batch operations, splitting into chunks of 500
@@ -116,49 +197,48 @@ class NotificationRepository {
     }
   }
 
-  /// Sends a broadcast notification to every user in the `users` collection.
+  /// Sends a broadcast notification to the resolved recipient list.
   ///
-  /// When [targetUserIds] is empty (the default), the method queries ALL user
-  /// documents from Firestore and fans the write out to each one. The admin's
-  /// own copy is marked `isRead: true` so it shows as read-only history.
-  ///
-  /// Uses chunked batches (≤ 500 ops each) to handle large user bases without
-  /// exceeding Firestore's per-batch limit.
+  /// When [targetUserIds] is empty, defaults to all users in Firestore.
+  /// The admin's own copy is marked `isRead: true` so it shows as sent-history.
   Future<void> sendBroadcast({
     required String adminUid,
     required String title,
     required String body,
     required NotificationType type,
     List<String> targetUserIds = const [],
+    String? orderId,
+    String? assignedAgentId,
+    String? route,
     bool isActionable = false,
+    Map<String, dynamic>? metadata,
   }) async {
-    // Resolve recipient list: caller-supplied list OR all users in Firestore.
     final List<String> recipients;
     if (targetUserIds.isNotEmpty) {
-      // Explicit targets — ensure admin is always included for history.
       recipients = {...targetUserIds, adminUid}.toList();
     } else {
-      // No explicit targets → fan out to every registered user.
-      final allUserIds = await _fetchAllUserIds();
-      // Ensure admin is included even if their profile doc doesn't exist yet.
+      final allUserIds = await fetchAllUserIds();
       recipients = {...allUserIds, adminUid}.toList();
     }
 
-    // Build a list of batch-operation closures (one per recipient).
     final operations = recipients.map<void Function(WriteBatch)>((uid) {
       return (WriteBatch batch) {
-        final ref = _notifCol(uid).doc(); // auto-ID
+        final ref = _notifCol(uid).doc();
         batch.set(ref, {
           'title': title,
           'body': body,
           'type': type.value,
           'timestamp': FieldValue.serverTimestamp(),
-          // Admin's copy is pre-marked read so it shows as sent-history only.
           'isRead': uid == adminUid,
           'isActionable': isActionable,
           'createdBy': adminUid,
           'userId': uid,
           'isBroadcast': true,
+          if (orderId != null && orderId.trim().isNotEmpty) 'orderId': orderId.trim(),
+          if (assignedAgentId != null && assignedAgentId.trim().isNotEmpty)
+            'assignedAgentId': assignedAgentId.trim(),
+          if (route != null && route.trim().isNotEmpty) 'route': route.trim(),
+          if (metadata != null) 'metadata': metadata,
         });
       };
     }).toList();
