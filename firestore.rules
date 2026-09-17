@@ -41,7 +41,10 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && currentRole() in ['admin', 'superadmin'];
+      return isSignedIn() && (
+        currentRole() in ['admin', 'superadmin', 'owner']
+        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
     }
 
     function isDelivery() {
@@ -337,6 +340,64 @@ service cloud.firestore {
 
       // Only Admins can delete payment records
       allow delete: if isAdmin();
+    }
+
+    // ── 13. admins Collection ───────────────────────────────────────────────
+    match /admins/{adminId} {
+      // Signed-in users can read admins collection for role verification / discovery
+      allow read: if isSignedIn();
+      // Only authenticated admins may create, update, or delete admin records
+      allow write: if isAdmin();
+    }
+
+    // ── 14. delivery_batches Collection ────────────────────────────────────
+    match /delivery_batches/{batchId} {
+      // Admins have full access.
+      // Delivery agents can read batches assigned to them.
+      // Customers cannot access delivery batches.
+      allow read: if isAdmin()
+          || (isDelivery() && (
+              resource.data.agentId == request.auth.uid
+              || resource.data.staffName == request.auth.uid
+             ));
+
+      // Only Admins can create or delete delivery batches
+      allow create, delete: if isAdmin();
+
+      // Admins have full update; Assigned delivery agents can only update status/completedOrders/pendingOrders/updatedAt
+      allow update: if isAdmin()
+          || (isDelivery()
+              && (
+                  resource.data.agentId == request.auth.uid
+                  || resource.data.staffName == request.auth.uid
+                 )
+              && (!('agentId' in request.resource.data) || request.resource.data.agentId == resource.data.agentId)
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'completedOrders', 'completedCount', 'pendingOrders', 'updatedAt']));
+    }
+
+    // ── 15. delivery_routes Collection ─────────────────────────────────────
+    match /delivery_routes/{routeId} {
+      // Admins have full access.
+      // Delivery agents can read routes assigned to them.
+      // Customers cannot access delivery routes.
+      allow read: if isAdmin()
+          || (isDelivery() && (
+              resource.data.agentId == request.auth.uid
+              || resource.data.riderName == request.auth.uid
+             ));
+
+      // Only Admins can create or delete delivery routes
+      allow create, delete: if isAdmin();
+
+      // Admins have full update; Assigned delivery agents can only update status/completedOrders/updatedAt
+      allow update: if isAdmin()
+          || (isDelivery()
+              && (
+                  resource.data.agentId == request.auth.uid
+                  || resource.data.riderName == request.auth.uid
+                 )
+              && (!('agentId' in request.resource.data) || request.resource.data.agentId == resource.data.agentId)
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'completedOrders', 'updatedAt']));
     }
   }
 }

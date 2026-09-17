@@ -15,6 +15,7 @@ import '../models/order_model.dart';
 import '../models/product_model.dart';
 import '../repositories/firestore_product_repository.dart';
 import '../services/complaint_service.dart';
+import '../services/delivery_management_service.dart';
 import '../services/order_service.dart';
 import '../services/payment_service.dart';
 
@@ -23,6 +24,7 @@ class AdminProvider extends ChangeNotifier {
   final OrderService _orderService;
   final ComplaintService _complaintService;
   final PaymentService _paymentService;
+  final DeliveryManagementService _deliveryService;
 
   int _selectedNavIndex = 2;
   String _searchQuery = '';
@@ -47,6 +49,14 @@ class AdminProvider extends ChangeNotifier {
   bool _paymentsLoading = true;
   String? _paymentsError;
 
+  List<DeliveryBatch> _deliveryBatches = [];
+  bool _deliveryBatchesLoading = true;
+  String? _deliveryBatchesError;
+
+  List<DeliveryCorridor> _corridors = [];
+  bool _corridorsLoading = true;
+  String? _corridorsError;
+
   int _customersCount = 0;
   int _deliveryAgentsCount = 0;
   bool _usersLoading = true;
@@ -57,6 +67,8 @@ class AdminProvider extends ChangeNotifier {
   StreamSubscription<List<order.Order>>? _ordersSub;
   StreamSubscription<List<complaint_model.CustomerComplaint>>? _complaintsSub;
   StreamSubscription<List<DairyPayment>>? _paymentsSub;
+  StreamSubscription<List<DeliveryBatch>>? _batchesSub;
+  StreamSubscription<List<DeliveryCorridor>>? _routesSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _usersSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _deliveryAgentsSub;
 
@@ -136,10 +148,12 @@ class AdminProvider extends ChangeNotifier {
     OrderService? orderService,
     ComplaintService? complaintService,
     PaymentService? paymentService,
+    DeliveryManagementService? deliveryService,
   })  : _repo = repo ?? FirestoreProductRepository(),
         _orderService = orderService ?? OrderService(),
         _complaintService = complaintService ?? ComplaintService(),
-        _paymentService = paymentService ?? PaymentService() {
+        _paymentService = paymentService ?? PaymentService(),
+        _deliveryService = deliveryService ?? DeliveryManagementService() {
     _listenToProducts();
     _listenToCategories();
     _listenToOrders();
@@ -147,6 +161,8 @@ class AdminProvider extends ChangeNotifier {
     _listenToPayments();
     _listenToUsers();
     _listenToDeliveryAgents();
+    _listenToDeliveryBatches();
+    _listenToDeliveryRoutes();
   }
 
   // ─── Firestore listeners ───────────────────────────────────────────────
@@ -812,182 +828,76 @@ class AdminProvider extends ChangeNotifier {
 
   // ─── Today's Deliveries Data (Firestore-backed) ───────────────────────
 
-  List<DeliveryBatch> get deliveryBatches {
-    if (_riders.isEmpty && _orders.isEmpty) {
-      return [];
-    }
-
-    final List<DeliveryBatch> batches = [];
-    final Set<String> processedRiderIds = {};
-
-    for (final rider in _riders) {
-      processedRiderIds.add(rider.id);
-      final riderOrders =
-          _orders.where((o) => o.assignedAgentId == rider.id).toList();
-      final assignedCount = riderOrders.isNotEmpty
-          ? riderOrders.length
-          : rider.totalDeliveriesToday;
-      final completedCount = riderOrders
-          .where((o) => o.status == OrderStatus.delivered)
-          .length;
-      final outForDeliveryCount = riderOrders
-          .where((o) => o.status == OrderStatus.outForDelivery)
-          .length;
-
-      String status;
-      if (assignedCount > 0 && completedCount == assignedCount) {
-        status = 'Completed';
-      } else if (outForDeliveryCount > 0) {
-        status = 'On Route';
-      } else if (rider.isOnline || rider.status.toLowerCase() == 'active') {
-        status = assignedCount > 0 ? 'On Route' : 'Active';
-      } else {
-        status = rider.status.isNotEmpty ? rider.status : 'Offline';
-      }
-
-      final cleanId = rider.id.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
-      final shortId = cleanId.length > 5
-          ? cleanId.substring(cleanId.length - 4).toUpperCase()
-          : (cleanId.isNotEmpty ? cleanId.toUpperCase() : '1001');
-
-      batches.add(
-        DeliveryBatch(
-          deliveryId: '#DLV$shortId',
-          staffName: rider.name.isNotEmpty ? rider.name : 'Delivery Partner',
-          assignedCount: assignedCount,
-          completedCount: completedCount,
-          status: status,
-          zone: rider.assignedZone.isNotEmpty
-              ? rider.assignedZone
-              : 'Standard Route',
-        ),
+  void _listenToDeliveryBatches() {
+    try {
+      _batchesSub = _deliveryService.streamBatches().listen(
+        (batches) {
+          _deliveryBatches = batches;
+          _deliveryBatchesLoading = false;
+          _deliveryBatchesError = null;
+          notifyListeners();
+        },
+        onError: (e) {
+          debugPrint('AdminProvider: delivery_batches stream error: $e');
+          _deliveryBatchesError = 'Failed to load delivery batches: $e';
+          _deliveryBatchesLoading = false;
+          notifyListeners();
+        },
       );
+    } catch (e) {
+      debugPrint('AdminProvider: delivery_batches stream error: $e');
+      _deliveryBatchesError = 'Failed to load delivery batches: $e';
+      _deliveryBatchesLoading = false;
     }
+  }
 
-    // Also include any active orders with assigned agent not in _riders
-    for (final order in _orders) {
-      final agentId = order.assignedAgentId?.trim();
-      if (agentId != null &&
-          agentId.isNotEmpty &&
-          !processedRiderIds.contains(agentId)) {
-        processedRiderIds.add(agentId);
-        final agentOrders =
-            _orders.where((o) => o.assignedAgentId == agentId).toList();
-        final assignedCount = agentOrders.length;
-        final completedCount = agentOrders
-            .where((o) => o.status == OrderStatus.delivered)
-            .length;
-        final outForDeliveryCount = agentOrders
-            .where((o) => o.status == OrderStatus.outForDelivery)
-            .length;
-
-        String status;
-        if (assignedCount > 0 && completedCount == assignedCount) {
-          status = 'Completed';
-        } else if (outForDeliveryCount > 0) {
-          status = 'On Route';
-        } else {
-          status = 'Active';
-        }
-
-        final cleanId = agentId.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
-        final shortId = cleanId.length > 5
-            ? cleanId.substring(cleanId.length - 4).toUpperCase()
-            : cleanId.toUpperCase();
-
-        batches.add(
-          DeliveryBatch(
-            deliveryId: '#DLV$shortId',
-            staffName: order.assignedAgentName ?? 'Delivery Partner',
-            assignedCount: assignedCount,
-            completedCount: completedCount,
-            status: status,
-            zone: 'Assigned Route',
-          ),
-        );
-      }
+  void _listenToDeliveryRoutes() {
+    try {
+      _routesSub = _deliveryService.streamRoutes().listen(
+        (routes) {
+          _corridors = routes;
+          _corridorsLoading = false;
+          _corridorsError = null;
+          notifyListeners();
+        },
+        onError: (e) {
+          debugPrint('AdminProvider: delivery_routes stream error: $e');
+          _corridorsError = 'Failed to load delivery routes: $e';
+          _corridorsLoading = false;
+          notifyListeners();
+        },
+      );
+    } catch (e) {
+      debugPrint('AdminProvider: delivery_routes stream error: $e');
+      _corridorsError = 'Failed to load delivery routes: $e';
+      _corridorsLoading = false;
     }
+  }
 
-    return batches;
+  List<DeliveryBatch> get deliveryBatches => _deliveryBatches;
+  bool get deliveryBatchesLoading => _deliveryBatchesLoading;
+  String? get deliveryBatchesError => _deliveryBatchesError;
+
+  Future<void> addDeliveryBatch(DeliveryBatch batch) async {
+    await _deliveryService.createOrUpdateBatch(batch);
+  }
+
+  Future<void> updateDeliveryBatch(DeliveryBatch batch) async {
+    await _deliveryService.createOrUpdateBatch(batch);
   }
 
   // ─── Delivery Corridors Data (Firestore-backed) ───────────────────────
 
-  List<DeliveryCorridor> get corridors {
-    if (_riders.isEmpty && _customers.isEmpty) {
-      return [];
-    }
+  List<DeliveryCorridor> get corridors => _corridors;
+  bool get corridorsLoading => _corridorsLoading;
+  String? get corridorsError => _corridorsError;
 
-    final List<DeliveryCorridor> result = [];
-    final Map<String, List<DeliveryRider>> zoneToRiders = {};
+  Future<void> addDeliveryRoute(DeliveryCorridor route) async {
+    await _deliveryService.createOrUpdateRoute(route);
+  }
 
-    for (final rider in _riders) {
-      final zone = rider.assignedZone.trim();
-      if (zone.isNotEmpty) {
-        zoneToRiders.putIfAbsent(zone, () => []).add(rider);
-      }
-    }
-
-    int routeIdx = 1;
-    for (final entry in zoneToRiders.entries) {
-      final zone = entry.key;
-      final ridersInZone = entry.value;
-      final primaryRider = ridersInZone.first;
-      final subCount = _customers
-          .where(
-              (c) => c.deliveryZone.trim().toLowerCase() == zone.toLowerCase())
-          .length;
-
-      final riderNames = ridersInZone
-          .map((r) => r.name.trim())
-          .where((n) => n.isNotEmpty)
-          .join(', ');
-
-      result.add(
-        DeliveryCorridor(
-          routeName: 'Route $routeIdx — $zone',
-          zone: zone,
-          riderName: riderNames.isNotEmpty ? riderNames : 'Unassigned Rider',
-          subscribersCount: subCount,
-          timing: '05:00 AM - 07:00 AM',
-          vehicleType: primaryRider.vehicle.isNotEmpty
-              ? primaryRider.vehicle
-              : 'Delivery Vehicle',
-        ),
-      );
-      routeIdx++;
-    }
-
-    // Cover zones present in customers or orders without a dedicated rider
-    final Set<String> coveredZones =
-        zoneToRiders.keys.map((k) => k.toLowerCase()).toSet();
-    final Set<String> unassignedZones = {};
-    for (final cust in _customers) {
-      final zone = cust.deliveryZone.trim();
-      if (zone.isNotEmpty && !coveredZones.contains(zone.toLowerCase())) {
-        unassignedZones.add(zone);
-      }
-    }
-
-    for (final zone in unassignedZones) {
-      final subCount = _customers
-          .where(
-              (c) => c.deliveryZone.trim().toLowerCase() == zone.toLowerCase())
-          .length;
-      result.add(
-        DeliveryCorridor(
-          routeName: 'Route $routeIdx — $zone',
-          zone: zone,
-          riderName: 'Unassigned',
-          subscribersCount: subCount,
-          timing: '05:00 AM - 07:00 AM',
-          vehicleType: 'Pending Assignment',
-        ),
-      );
-      routeIdx++;
-    }
-
-    return result;
+  Future<void> updateDeliveryRoute(DeliveryCorridor route) async {
+    await _deliveryService.createOrUpdateRoute(route);
   }
 
   // ─── Customers Data (Firestore-backed) ─────────────────────────────────
@@ -1590,6 +1500,8 @@ class AdminProvider extends ChangeNotifier {
     _ordersSub?.cancel();
     _complaintsSub?.cancel();
     _paymentsSub?.cancel();
+    _batchesSub?.cancel();
+    _routesSub?.cancel();
     _usersSub?.cancel();
     _deliveryAgentsSub?.cancel();
     super.dispose();

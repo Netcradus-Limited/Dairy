@@ -53,114 +53,196 @@ class DeliveryManagementScreen extends StatelessWidget {
               color: textPrimary,
             ),
           ),
-          const SizedBox(height: 12),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: provider.corridors.length,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: isDesktop ? 2 : 1,
-              mainAxisExtent: 140,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
-            itemBuilder: (ctx, idx) {
-              final corridor = provider.corridors[idx];
-              return Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: cardBorder),
-                  boxShadow: AppColors.cardShadow,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          corridor.routeName,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: textPrimary,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color:
-                                AppColors.primaryLight.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '${corridor.subscribersCount} Subscriptions',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primary,
+          if (provider.corridorsLoading && provider.corridors.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              alignment: Alignment.center,
+              child: const CircularProgressIndicator(),
+            )
+          else if (provider.corridorsError != null &&
+              provider.corridors.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                    color: AppColors.error.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline_rounded,
+                      color: AppColors.error),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      provider.corridorsError!,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: AppColors.error,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (provider.corridors.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: cardBorder),
+                boxShadow: AppColors.cardShadow,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.route_outlined, size: 36, color: textMuted),
+                  const SizedBox(height: 10),
+                  Text(
+                    'No active delivery corridors registered yet.',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Corridors will appear automatically as delivery staff and customer zones are added.',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      color: textMuted,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            )
+          else
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: provider.corridors.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: isDesktop ? 2 : 1,
+                mainAxisExtent: 140,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              itemBuilder: (ctx, idx) {
+                final corridor = provider.corridors[idx];
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: cardBg,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: cardBorder),
+                    boxShadow: AppColors.cardShadow,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              corridor.routeName,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: textPrimary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Icon(Icons.location_on_outlined,
-                            size: 16, color: textMuted),
-                        const SizedBox(width: 4),
-                        Text(
-                          corridor.zone,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
-                            color: textSecondary,
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color:
+                                  AppColors.primaryLight.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${corridor.subscribersCount} Subscriptions',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
+                            ),
                           ),
-                        ),
-                        const Spacer(),
-                        Icon(Icons.electric_moped_outlined,
-                            size: 16, color: textMuted),
-                        const SizedBox(width: 4),
-                        Text(
-                          corridor.vehicleType,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
-                            color: textSecondary,
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on_outlined,
+                              size: 16, color: textMuted),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              corridor.zone,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                color: textSecondary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Icon(Icons.person_outline, size: 16, color: textMuted),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Rider: ${corridor.riderName}',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: textPrimary,
+                          const SizedBox(width: 8),
+                          Icon(Icons.electric_moped_outlined,
+                              size: 16, color: textMuted),
+                          const SizedBox(width: 4),
+                          Text(
+                            corridor.vehicleType,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              color: textSecondary,
+                            ),
                           ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          corridor.timing,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
-                            color: AppColors.revenueGreen,
-                            fontWeight: FontWeight.w600,
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          Icon(Icons.person_outline,
+                              size: 16, color: textMuted),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'Rider: ${corridor.riderName}',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: textPrimary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            corridor.timing,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              color: AppColors.revenueGreen,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           const SizedBox(height: 24),
           // Batch Progress Table
           Text(
@@ -171,106 +253,180 @@ class DeliveryManagementScreen extends StatelessWidget {
               color: textPrimary,
             ),
           ),
-          const SizedBox(height: 12),
-          Container(
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: cardBorder),
-              boxShadow: AppColors.cardShadow,
-            ),
-            child: ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: provider.deliveryBatches.length,
-              separatorBuilder: (ctx, idx) => Divider(color: dividerColor),
-              itemBuilder: (ctx, idx) {
-                final batch = provider.deliveryBatches[idx];
-                return Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          batch.deliveryId,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
+          if (provider.deliveryBatchesLoading &&
+              provider.deliveryBatches.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              alignment: Alignment.center,
+              child: const CircularProgressIndicator(),
+            )
+          else if (provider.deliveryBatchesError != null &&
+              provider.deliveryBatches.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                    color: AppColors.error.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline_rounded,
+                      color: AppColors.error),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      provider.deliveryBatchesError!,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: AppColors.error,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (provider.deliveryBatches.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: cardBorder),
+                boxShadow: AppColors.cardShadow,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.local_shipping_outlined,
+                      size: 36, color: textMuted),
+                  const SizedBox(height: 10),
+                  Text(
+                    'No delivery batches dispatched today.',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Active dispatch batches will appear here as orders are assigned to delivery partners.',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      color: textMuted,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            )
+          else
+            Container(
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: cardBorder),
+                boxShadow: AppColors.cardShadow,
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: provider.deliveryBatches.length,
+                separatorBuilder: (ctx, idx) => Divider(color: dividerColor),
+                itemBuilder: (ctx, idx) {
+                  final batch = provider.deliveryBatches[idx];
+                  return Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            batch.deliveryId,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primary,
+                            ),
                           ),
                         ),
-                      ),
-                      Expanded(
-                        flex: 3,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              batch.staffName,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: textPrimary,
-                              ),
-                            ),
-                            Text(
-                              batch.zone,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                color: textMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        flex: 4,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  '${batch.completedCount} / ${batch.assignedCount} Delivered',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: textSecondary,
-                                  ),
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                batch.staffName,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: textPrimary,
                                 ),
-                                Text(
-                                  '${(batch.completionPercentage * 100).toInt()}%',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.primary,
-                                  ),
+                              ),
+                              Text(
+                                batch.zone,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  color: textMuted,
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            LinearProgressIndicator(
-                              value: batch.completionPercentage,
-                              backgroundColor: cardBorder,
-                              color: batch.completionPercentage >= 1.0
-                                  ? AppColors.revenueGreen
-                                  : AppColors.primary,
-                              borderRadius: BorderRadius.circular(4),
-                              minHeight: 6,
-                            ),
-                          ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      StatusBadge.fromString(batch.status),
-                    ],
-                  ),
-                );
-              },
+                        Expanded(
+                          flex: 4,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    '${batch.completedCount} / ${batch.assignedCount} Delivered',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: textSecondary,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${(batch.completionPercentage * 100).toInt()}%',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              LinearProgressIndicator(
+                                value: batch.completionPercentage,
+                                backgroundColor: cardBorder,
+                                color: batch.completionPercentage >= 1.0
+                                    ? AppColors.revenueGreen
+                                    : AppColors.primary,
+                                borderRadius: BorderRadius.circular(4),
+                                minHeight: 6,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        StatusBadge.fromString(batch.status),
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
         ],
       ),
     );
