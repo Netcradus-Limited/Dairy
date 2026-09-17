@@ -61,6 +61,7 @@ class Order {
   final double totalAmount;
   final OrderStatus status;
   final DateTime orderDate;
+  final DateTime? deliveryDate;
   final Address deliveryAddress;
   final String paymentMethod;
   final String estimatedDeliveryTime;
@@ -78,6 +79,7 @@ class Order {
     required this.totalAmount,
     required this.status,
     required this.orderDate,
+    this.deliveryDate,
     required this.deliveryAddress,
     this.paymentMethod = 'Cash on Delivery',
     this.estimatedDeliveryTime = 'Today by 7:30 AM',
@@ -125,6 +127,7 @@ class Order {
     double? totalAmount,
     OrderStatus? status,
     DateTime? orderDate,
+    DateTime? deliveryDate,
     Address? deliveryAddress,
     String? paymentMethod,
     String? estimatedDeliveryTime,
@@ -142,6 +145,7 @@ class Order {
       totalAmount: totalAmount ?? this.totalAmount,
       status: status ?? this.status,
       orderDate: orderDate ?? this.orderDate,
+      deliveryDate: deliveryDate ?? this.deliveryDate,
       deliveryAddress: deliveryAddress ?? this.deliveryAddress,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       estimatedDeliveryTime:
@@ -266,6 +270,13 @@ class Order {
             ? DateTime.tryParse(created) ?? DateTime.now()
             : DateTime.now());
 
+    final rawDeliveryDate = data['deliveryDate'];
+    final deliveryDate = rawDeliveryDate is Timestamp
+        ? rawDeliveryDate.toDate()
+        : (rawDeliveryDate is String
+            ? DateTime.tryParse(rawDeliveryDate)
+            : null);
+
     final accepted = data['acceptedAt'];
     final acceptedAt = accepted is Timestamp
         ? accepted.toDate()
@@ -285,6 +296,7 @@ class Order {
       totalAmount: (data['totalAmount'] as num?)?.toDouble() ?? 0.0,
       status: orderStatusFromString((data['status'] as String?) ?? 'Pending'),
       orderDate: orderDate,
+      deliveryDate: deliveryDate,
       deliveryAddress: deliveryAddress,
       paymentMethod: (data['paymentMethod'] as String?) ?? 'Cash on Delivery',
       estimatedDeliveryTime: (data['estimatedDeliveryTime'] as String?) ?? '',
@@ -325,6 +337,8 @@ class Order {
         'deliveryAddress': deliveryAddress.toMap(),
         'paymentMethod': paymentMethod,
         'estimatedDeliveryTime': estimatedDeliveryTime,
+        if (deliveryDate != null)
+          'deliveryDate': Timestamp.fromDate(deliveryDate!),
         if (assignedAgentId != null) 'assignedAgentId': assignedAgentId,
         if (acceptedAt != null) 'acceptedAt': acceptedAt,
       };
@@ -334,6 +348,8 @@ class Order {
         'orderCode': orderCode.isNotEmpty ? orderCode : displayOrderCode,
         ...toFirestore(),
         'orderDate': orderDate.toIso8601String(),
+        if (deliveryDate != null)
+          'deliveryDate': Timestamp.fromDate(deliveryDate!),
       };
 
   factory Order.fromMap(Map<String, dynamic> map, String id) =>

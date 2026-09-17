@@ -44,6 +44,27 @@ class DeliveryManagementScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
+          // Today's Delivery Progress Overview
+          Text(
+            "Today's Delivery Progress",
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildTodaysProgressCard(
+            context,
+            isDesktop,
+            provider,
+            cardBg,
+            cardBorder,
+            textPrimary,
+            textSecondary,
+            textMuted,
+          ),
+          const SizedBox(height: 24),
           // Corridor Cards
           Text(
             'Active Delivery Corridors',
@@ -429,6 +450,341 @@ class DeliveryManagementScreen extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTodaysProgressCard(
+    BuildContext context,
+    bool isDesktop,
+    AdminProvider provider,
+    Color cardBg,
+    Color cardBorder,
+    Color textPrimary,
+    Color textSecondary,
+    Color textMuted,
+  ) {
+    if (provider.todaysDeliveryProgressLoading && provider.orders.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: cardBorder),
+          boxShadow: AppColors.cardShadow,
+        ),
+        child: const CircularProgressIndicator(),
+      );
+    }
+
+    if (provider.todaysDeliveryProgressError != null &&
+        provider.orders.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.error.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline_rounded, color: AppColors.error),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                provider.todaysDeliveryProgressError!,
+                style: GoogleFonts.plusJakartaSans(
+                  color: AppColors.error,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final progress = provider.todaysDeliveryProgress;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cardBorder),
+        boxShadow: AppColors.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Real-Time Dispatch Status',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${progress.completed} of ${progress.total} deliveries fulfilled',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      color: textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: (progress.completionPercentage >= 100.0 &&
+                          progress.total > 0)
+                      ? AppColors.revenueGreen.withValues(alpha: 0.15)
+                      : AppColors.primaryLight.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${progress.completionPercentage.toInt()}% Completed',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: (progress.completionPercentage >= 100.0 &&
+                            progress.total > 0)
+                        ? AppColors.revenueGreen
+                        : AppColors.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          LinearProgressIndicator(
+            value: progress.progressFraction,
+            backgroundColor: cardBorder,
+            color: (progress.completionPercentage >= 100.0 && progress.total > 0)
+                ? AppColors.revenueGreen
+                : AppColors.primary,
+            borderRadius: BorderRadius.circular(4),
+            minHeight: 8,
+          ),
+          const SizedBox(height: 18),
+          // KPI Metric Items
+          isDesktop
+              ? Row(
+                  children: [
+                    Expanded(
+                      child: _buildProgressMetric(
+                        label: 'Total Orders',
+                        value: '${progress.total}',
+                        icon: Icons.local_shipping_outlined,
+                        color: AppColors.ordersBlue,
+                        bgColor: AppColors.ordersBlueBg,
+                        textPrimary: textPrimary,
+                        textMuted: textMuted,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildProgressMetric(
+                        label: 'Delivered',
+                        value: '${progress.completed}',
+                        icon: Icons.check_circle_outline_rounded,
+                        color: AppColors.statusDelivered,
+                        bgColor: const Color(0xFFE8FAF2),
+                        textPrimary: textPrimary,
+                        textMuted: textMuted,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildProgressMetric(
+                        label: 'Pending',
+                        value: '${progress.pending}',
+                        icon: Icons.pending_actions_rounded,
+                        color: AppColors.statusPending,
+                        bgColor: const Color(0xFFFFF4EC),
+                        textPrimary: textPrimary,
+                        textMuted: textMuted,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildProgressMetric(
+                        label: 'Cancelled',
+                        value: '${progress.cancelled}',
+                        icon: Icons.cancel_outlined,
+                        color: AppColors.statusCancelled,
+                        bgColor: const Color(0xFFF1F5F9),
+                        textPrimary: textPrimary,
+                        textMuted: textMuted,
+                      ),
+                    ),
+                  ],
+                )
+              : Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    _buildResponsiveMetricItem(
+                      context: context,
+                      label: 'Total Orders',
+                      value: '${progress.total}',
+                      icon: Icons.local_shipping_outlined,
+                      color: AppColors.ordersBlue,
+                      bgColor: AppColors.ordersBlueBg,
+                      textPrimary: textPrimary,
+                      textMuted: textMuted,
+                    ),
+                    _buildResponsiveMetricItem(
+                      context: context,
+                      label: 'Delivered',
+                      value: '${progress.completed}',
+                      icon: Icons.check_circle_outline_rounded,
+                      color: AppColors.statusDelivered,
+                      bgColor: const Color(0xFFE8FAF2),
+                      textPrimary: textPrimary,
+                      textMuted: textMuted,
+                    ),
+                    _buildResponsiveMetricItem(
+                      context: context,
+                      label: 'Pending',
+                      value: '${progress.pending}',
+                      icon: Icons.pending_actions_rounded,
+                      color: AppColors.statusPending,
+                      bgColor: const Color(0xFFFFF4EC),
+                      textPrimary: textPrimary,
+                      textMuted: textMuted,
+                    ),
+                    _buildResponsiveMetricItem(
+                      context: context,
+                      label: 'Cancelled',
+                      value: '${progress.cancelled}',
+                      icon: Icons.cancel_outlined,
+                      color: AppColors.statusCancelled,
+                      bgColor: const Color(0xFFF1F5F9),
+                      textPrimary: textPrimary,
+                      textMuted: textMuted,
+                    ),
+                  ],
+                ),
+          if (progress.total == 0 && progress.cancelled == 0) ...[
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.info_outline_rounded, size: 16, color: textMuted),
+                const SizedBox(width: 6),
+                Text(
+                  'No deliveries scheduled for today yet.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    color: textMuted,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressMetric({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+    required Color bgColor,
+    required Color textPrimary,
+    required Color textMuted,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: bgColor.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: textPrimary,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: textMuted,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResponsiveMetricItem({
+    required BuildContext context,
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+    required Color bgColor,
+    required Color textPrimary,
+    required Color textMuted,
+  }) {
+    return LayoutBuilder(
+      builder: (ctx, constraints) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final cardWidth = (screenWidth - 32 - 40 - 10) / 2;
+        return SizedBox(
+          width: cardWidth > 130 ? cardWidth : 130,
+          child: _buildProgressMetric(
+            label: label,
+            value: value,
+            icon: icon,
+            color: color,
+            bgColor: bgColor,
+            textPrimary: textPrimary,
+            textMuted: textMuted,
+          ),
+        );
+      },
     );
   }
 }

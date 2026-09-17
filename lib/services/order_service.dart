@@ -109,6 +109,7 @@ class OrderService {
       totalAmount: totals.total,
       status: OrderStatus.placed,
       orderDate: now,
+      deliveryDate: now,
       deliveryAddress: deliveryAddress,
       paymentMethod: paymentMethod,
     );
@@ -157,6 +158,7 @@ class OrderService {
           'longitude': deliveryAddress.longitude,
       },
       'paymentMethod': paymentMethod,
+      'deliveryDate': Timestamp.fromDate(now),
       'createdAt': FieldValue.serverTimestamp(),
     });
 

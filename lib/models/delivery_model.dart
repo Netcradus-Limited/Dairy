@@ -325,3 +325,44 @@ class DeliveryCorridor {
     );
   }
 }
+
+/// Real-time metrics model for Today's Delivery Progress calculated from Firestore orders.
+class TodaysDeliveryProgress {
+  final int total;
+  final int completed;
+  final int pending;
+  final int cancelled;
+  final double completionPercentage;
+
+  const TodaysDeliveryProgress({
+    this.total = 0,
+    this.completed = 0,
+    this.pending = 0,
+    this.cancelled = 0,
+    this.completionPercentage = 0.0,
+  });
+
+  static const TodaysDeliveryProgress empty = TodaysDeliveryProgress();
+
+  double get progressFraction =>
+      total == 0 ? 0.0 : (completed / total).clamp(0.0, 1.0);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TodaysDeliveryProgress &&
+          runtimeType == other.runtimeType &&
+          total == other.total &&
+          completed == other.completed &&
+          pending == other.pending &&
+          cancelled == other.cancelled &&
+          completionPercentage == other.completionPercentage;
+
+  @override
+  int get hashCode =>
+      total.hashCode ^
+      completed.hashCode ^
+      pending.hashCode ^
+      cancelled.hashCode ^
+      completionPercentage.hashCode;
+}

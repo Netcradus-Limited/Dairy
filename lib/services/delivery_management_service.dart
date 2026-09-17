@@ -1,6 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/delivery_model.dart';
+import '../models/order.dart';
 
 /// Riverpod provider for DeliveryManagementService
 final deliveryManagementServiceProvider =
@@ -23,6 +24,73 @@ class DeliveryManagementService {
 
   CollectionReference<Map<String, dynamic>> get _routesRef =>
       _firestore.collection('delivery_routes');
+
+  CollectionReference<Map<String, dynamic>> get _ordersRef =>
+      _firestore.collection('orders');
+
+  /// Calculates real-time delivery progress metrics for [orders] on [targetDate] (defaults to local today).
+  static TodaysDeliveryProgress calculateTodaysProgress(
+    List<Order> orders, {
+    DateTime? targetDate,
+  }) {
+    final now = targetDate ?? DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final tomorrowStart = DateTime(now.year, now.month, now.day + 1);
+
+    int completed = 0;
+    int pending = 0;
+    int cancelled = 0;
+
+    for (final o in orders) {
+      final date = o.deliveryDate ?? o.orderDate;
+      if (date.isBefore(todayStart) || !date.isBefore(tomorrowStart)) {
+        continue;
+      }
+
+      switch (o.status) {
+        case OrderStatus.delivered:
+          completed++;
+          break;
+        case OrderStatus.cancelled:
+          cancelled++;
+          break;
+        case OrderStatus.placed:
+        case OrderStatus.confirmed:
+        case OrderStatus.preparing:
+        case OrderStatus.outForDelivery:
+          pending++;
+          break;
+      }
+    }
+
+    final total = completed + pending;
+    final completionPercentage =
+        total == 0 ? 0.0 : ((completed / total) * 100.0);
+
+    return TodaysDeliveryProgress(
+      total: total,
+      completed: completed,
+      pending: pending,
+      cancelled: cancelled,
+      completionPercentage: completionPercentage,
+    );
+  }
+
+  /// Real-time stream of today's delivery progress calculated from the `orders` collection in Firestore.
+  Stream<TodaysDeliveryProgress> streamTodaysDeliveryProgress({
+    DateTime? targetDate,
+  }) {
+    try {
+      return _ordersRef.snapshots().map((snapshot) {
+        final orders = snapshot.docs
+            .map((doc) => Order.fromFirestore(doc.data(), doc.id))
+            .toList();
+        return calculateTodaysProgress(orders, targetDate: targetDate);
+      });
+    } catch (_) {
+      return const Stream.empty();
+    }
+  }
 
   /// Real-time stream of all delivery batches in Firestore.
   Stream<List<DeliveryBatch>> streamBatches() {

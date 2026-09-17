@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:dairy_app/models/delivery_model.dart';
+import 'package:dairy_app/models/order_model.dart';
 import 'package:dairy_app/providers/admin_provider.dart';
 import 'package:dairy_app/screens/delivery/delivery_management_screen.dart';
 
@@ -15,6 +16,11 @@ class MockDeliveryAdminProvider extends ChangeNotifier
   List<DeliveryBatch> _deliveryBatches = [];
   bool _deliveryBatchesLoading = false;
   String? _deliveryBatchesError;
+
+  TodaysDeliveryProgress _todaysDeliveryProgress =
+      TodaysDeliveryProgress.empty;
+  bool _todaysDeliveryProgressLoading = false;
+  String? _todaysDeliveryProgressError;
 
   @override
   List<DeliveryCorridor> get corridors => _corridors;
@@ -34,9 +40,23 @@ class MockDeliveryAdminProvider extends ChangeNotifier
   @override
   String? get deliveryBatchesError => _deliveryBatchesError;
 
+  @override
+  TodaysDeliveryProgress get todaysDeliveryProgress =>
+      _todaysDeliveryProgress;
+
+  @override
+  bool get todaysDeliveryProgressLoading => _todaysDeliveryProgressLoading;
+
+  @override
+  String? get todaysDeliveryProgressError => _todaysDeliveryProgressError;
+
+  @override
+  List<DairyOrder> get orders => [];
+
   void setMockData({
     List<DeliveryCorridor>? corridors,
     List<DeliveryBatch>? batches,
+    TodaysDeliveryProgress? progress,
   }) {
     _corridors = corridors ?? [];
     _corridorsLoading = false;
@@ -46,20 +66,31 @@ class MockDeliveryAdminProvider extends ChangeNotifier
     _deliveryBatchesLoading = false;
     _deliveryBatchesError = null;
 
+    _todaysDeliveryProgress = progress ?? TodaysDeliveryProgress.empty;
+    _todaysDeliveryProgressLoading = false;
+    _todaysDeliveryProgressError = null;
+
     notifyListeners();
   }
 
   void setLoading(bool loading) {
     _corridorsLoading = loading;
     _deliveryBatchesLoading = loading;
+    _todaysDeliveryProgressLoading = loading;
     notifyListeners();
   }
 
-  void setError({String? corridorsErr, String? batchesErr}) {
+  void setError({
+    String? corridorsErr,
+    String? batchesErr,
+    String? progressErr,
+  }) {
     _corridorsError = corridorsErr;
     _deliveryBatchesError = batchesErr;
+    _todaysDeliveryProgressError = progressErr;
     _corridorsLoading = false;
     _deliveryBatchesLoading = false;
+    _todaysDeliveryProgressLoading = false;
     notifyListeners();
   }
 

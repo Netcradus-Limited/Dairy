@@ -38,6 +38,7 @@ class AdminProvider extends ChangeNotifier {
   String? _error;
 
   List<DairyOrder> _orders = [];
+  List<order.Order> _rawOrders = [];
   bool _ordersLoading = true;
   String? _ordersError;
 
@@ -208,6 +209,7 @@ class AdminProvider extends ChangeNotifier {
     try {
       _ordersSub = _orderService.streamAllDeliveryOrders().listen(
         (orders) {
+          _rawOrders = orders;
           _orders = orders.map(_dairyOrderFromOrder).toList();
           _ordersLoading = false;
           _ordersError = null;
@@ -877,6 +879,21 @@ class AdminProvider extends ChangeNotifier {
   List<DeliveryBatch> get deliveryBatches => _deliveryBatches;
   bool get deliveryBatchesLoading => _deliveryBatchesLoading;
   String? get deliveryBatchesError => _deliveryBatchesError;
+
+  // ─── Today's Delivery Progress (Firestore-backed) ─────────────────────
+
+  TodaysDeliveryProgress get todaysDeliveryProgress =>
+      DeliveryManagementService.calculateTodaysProgress(_rawOrders);
+
+  bool get todaysDeliveryProgressLoading => _ordersLoading;
+  String? get todaysDeliveryProgressError => _ordersError;
+
+  int get todaysTotalDeliveries => todaysDeliveryProgress.total;
+  int get todaysCompletedDeliveries => todaysDeliveryProgress.completed;
+  int get todaysPendingDeliveries => todaysDeliveryProgress.pending;
+  int get todaysCancelledDeliveries => todaysDeliveryProgress.cancelled;
+  double get todaysCompletionPercentage =>
+      todaysDeliveryProgress.completionPercentage;
 
   Future<void> addDeliveryBatch(DeliveryBatch batch) async {
     await _deliveryService.createOrUpdateBatch(batch);
