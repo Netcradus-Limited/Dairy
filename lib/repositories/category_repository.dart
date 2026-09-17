@@ -34,7 +34,7 @@ class CategoryRepository {
         id: 'cat_ghee',
         title: 'Pure Ghee',
         subtitle: 'Premium Quality',
-        imageUrl: 'assets/images/gh.png',
+        imageUrl: 'assets/images/newgh.png',
         iconData: Icons.opacity_rounded,
         backgroundColor: Color(0xFFFFF9EE),
         borderColor: Color(0xFFEDC240),

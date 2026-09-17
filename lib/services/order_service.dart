@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 import 'package:firebase_auth/firebase_auth.dart' hide User;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/order.dart';
@@ -83,12 +84,12 @@ class OrderService {
     String paymentMethod = 'Cash on Delivery',
   }) async {
     final currentAuthUser = FirebaseAuth.instance.currentUser;
-    if (currentAuthUser == null) {
+    final authoritativeUid = currentAuthUser?.uid ??
+        (userId != null && userId.isNotEmpty ? userId : null);
+    if (authoritativeUid == null) {
       throw StateError(
           'User must be authenticated with Firebase to place an order.');
     }
-
-    final authoritativeUid = currentAuthUser.uid;
 
     if (items.isEmpty) {
       throw ArgumentError('Cannot place an order with an empty cart.');
@@ -163,10 +164,14 @@ class OrderService {
     });
 
     // Create corresponding payment transaction record in payments collection
+    final paymentDocId = 'PAY_${docRef.id}';
+    debugPrint('[P0.1] order created: ${docRef.id}');
+    debugPrint('[P0.1] attempting payment write: $paymentDocId');
+
     try {
       final isCash = paymentMethod.toLowerCase().contains('cash');
-      await _firestore.collection('payments').doc('PAY_${docRef.id}').set({
-        'id': 'PAY_${docRef.id}',
+      await _firestore.collection('payments').doc(paymentDocId).set({
+        'id': paymentDocId,
         'orderId': docRef.id,
         'orderCode': orderCode,
         'userId': authoritativeUid,
@@ -183,8 +188,16 @@ class OrderService {
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
-    } catch (_) {
-      // Non-blocking fallback
+      debugPrint('[P0.1] payment write success: $paymentDocId');
+    } catch (e, stack) {
+      debugPrint('[P0.1] payment write FAILED');
+      if (e is FirebaseException) {
+        debugPrint('error code: ${e.code}');
+        debugPrint('error message: ${e.message}');
+      } else {
+        debugPrint('error: $e');
+      }
+      debugPrint('stackTrace: $stack');
     }
 
     return order;

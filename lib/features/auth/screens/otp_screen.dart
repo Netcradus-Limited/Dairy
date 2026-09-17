@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -30,6 +31,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   late Timer _timer;
   int _startSeconds = 30;
   bool _canResend = false;
+  bool _isVerifying = false;
 
   @override
   void initState() {
@@ -64,6 +66,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   }
 
   Future<void> _handleVerifyOtp() async {
+    // Prevent duplicate verification requests
+    if (_isVerifying || ref.read(authProvider).status.isLoading) return;
+
     if (_otpCode.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -74,30 +79,45 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       return;
     }
 
-    final authNotifier = ref.read(authProvider.notifier);
-    final success = await authNotifier.verifyOtp(_otpCode, ref);
+    setState(() {
+      _isVerifying = true;
+    });
 
-    if (!mounted) return;
+    try {
+      final authNotifier = ref.read(authProvider.notifier);
+      final success = await authNotifier.verifyOtp(_otpCode, ref);
 
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('OTP Verified successfully!'),
-          backgroundColor: AppColors.freshGreen,
-        ),
-      );
+      if (!mounted) return;
 
-      // session is saved, GoRouter redirect will automatically handle routing
-    } else {
-      final errorState = ref.read(authProvider);
-      final errorMsg =
-          errorState.status.error?.toString() ?? 'Invalid OTP code';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMsg.replaceAll('Exception: ', '')),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      if (success) {
+        // Complete OS autofill session smoothly
+        TextInput.finishAutofillContext();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('OTP Verified successfully!'),
+            backgroundColor: AppColors.freshGreen,
+          ),
+        );
+
+        // session is saved, GoRouter redirect will automatically handle routing
+      } else {
+        final errorState = ref.read(authProvider);
+        final errorMsg =
+            errorState.status.error?.toString() ?? 'Invalid OTP code';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMsg.replaceAll('Exception: ', '')),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isVerifying = false;
+        });
+      }
     }
   }
 
@@ -234,8 +254,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
           // Submit Verify Button
           LoadingButton(
             text: 'Verify OTP',
-            isLoading: isLoading,
-            onPressed: _handleVerifyOtp,
+            isLoading: isLoading || _isVerifying,
+            onPressed: (isLoading || _isVerifying) ? null : _handleVerifyOtp,
           ),
 
           const SizedBox(height: 8),

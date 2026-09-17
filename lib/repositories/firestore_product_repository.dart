@@ -294,7 +294,7 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
   'cat_ghee': {
     'title': 'Pure Ghee',
     'subtitle': 'Premium Quality',
-    'imageUrl': 'assets/images/gh.png',
+    'imageUrl': 'assets/images/newgh.png',
     'iconName': 'ghee',
     'colorValue': 0xFFFFF9EE,
     'itemCount': 1,

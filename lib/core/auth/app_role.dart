@@ -9,20 +9,65 @@ enum UserRole {
   static const String customerValue = 'customer';
 
   /// Securely parses a role string.
+  /// Maps 'admin', 'owner', 'superadmin' to [UserRole.admin].
+  /// Maps 'delivery', 'delivery_agent', 'driver' to [UserRole.delivery].
   /// Any unknown, null, empty, or invalid role fails securely to [UserRole.customer].
   static UserRole fromString(String? role) {
     if (role == null) return UserRole.customer;
     switch (role.trim().toLowerCase()) {
       case adminValue:
+      case 'owner':
+      case 'superadmin':
         return UserRole.admin;
       case deliveryValue:
+      case 'delivery_agent':
+      case 'driver':
         return UserRole.delivery;
       case customerValue:
+      case 'user':
         return UserRole.customer;
       default:
         // Fail securely: unknown/invalid roles are never granted privileged access
         return UserRole.customer;
     }
+  }
+
+  /// Resolves role from phone number with E.164 / prefix normalization.
+  /// 9999999999 / 8888888888 -> [UserRole.admin]
+  /// 7777777777 -> [UserRole.delivery]
+  /// All other numbers -> [UserRole.customer]
+  static UserRole fromPhone(String? phone) {
+    if (phone == null || phone.trim().isEmpty) return UserRole.customer;
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    final normalized = (digits.length == 10)
+        ? digits
+        : (digits.length == 11 && digits.startsWith('0'))
+            ? digits.substring(1)
+            : (digits.length == 12 && digits.startsWith('91'))
+                ? digits.substring(2)
+                : (digits.length > 10)
+                    ? digits.substring(digits.length - 10)
+                    : digits;
+
+    if (normalized == '9999999999' || normalized == '8888888888') {
+      return UserRole.admin;
+    }
+    if (normalized == '7777777777') {
+      return UserRole.delivery;
+    }
+    return UserRole.customer;
+  }
+
+  /// Resolves role by prioritizing explicit privileged role strings
+  /// ('admin', 'owner', 'superadmin', 'delivery') and falling back to phone number.
+  static UserRole fromPhoneAndRole({String? phone, String? role}) {
+    if (role != null && role.trim().isNotEmpty) {
+      final parsed = fromString(role);
+      if (parsed != UserRole.customer) {
+        return parsed;
+      }
+    }
+    return fromPhone(phone);
   }
 
   /// Returns the canonical sanitized role string for storage or state.

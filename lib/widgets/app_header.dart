@@ -30,6 +30,17 @@ class AppHeader extends StatelessWidget {
     );
   }
 
+  static String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'Good Morning, Admin!';
+    } else if (hour < 17) {
+      return 'Good Afternoon, Admin!';
+    } else {
+      return 'Good Evening, Admin!';
+    }
+  }
+
   Widget _buildDesktopHeader(
       BuildContext context, AdminProvider provider, String formattedDate) {
     final cardBg = AppColors.cardBgOf(context);
@@ -50,7 +61,7 @@ class AppHeader extends StatelessWidget {
                 children: [
                   Flexible(
                     child: Text(
-                      'Good Morning, Admin!',
+                      _getGreeting(),
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
@@ -140,29 +151,6 @@ class AppHeader extends StatelessWidget {
         ),
         // Notifications Bell
         _buildNotificationBell(context, provider),
-        const SizedBox(width: 12),
-        // Action Button
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: cardBorder),
-            boxShadow: AppColors.cardShadow,
-          ),
-          child: IconButton(
-            icon:
-                Icon(Icons.exit_to_app_rounded, size: 20, color: textSecondary),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text(
-                        'Sawariya Dairy Admin Panel is synced and online.')),
-              );
-            },
-          ),
-        ),
       ],
     );
   }

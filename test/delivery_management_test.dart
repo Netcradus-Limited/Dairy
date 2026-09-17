@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:dairy_app/models/delivery_model.dart';
+import 'package:dairy_app/models/delivery_staff_model.dart';
 import 'package:dairy_app/models/order_model.dart';
 import 'package:dairy_app/providers/admin_provider.dart';
 import 'package:dairy_app/screens/delivery/delivery_management_screen.dart';
@@ -17,10 +18,20 @@ class MockDeliveryAdminProvider extends ChangeNotifier
   bool _deliveryBatchesLoading = false;
   String? _deliveryBatchesError;
 
+  List<DeliveryRider> _riders = [];
+
   TodaysDeliveryProgress _todaysDeliveryProgress =
       TodaysDeliveryProgress.empty;
   bool _todaysDeliveryProgressLoading = false;
   String? _todaysDeliveryProgressError;
+
+  final List<DeliveryCorridor> addedRoutes = [];
+  final List<DeliveryCorridor> updatedRoutes = [];
+  final List<DeliveryBatch> addedBatches = [];
+  final List<DeliveryBatch> updatedBatches = [];
+
+  bool throwOnRoute = false;
+  bool throwOnBatch = false;
 
   @override
   List<DeliveryCorridor> get corridors => _corridors;
@@ -41,6 +52,9 @@ class MockDeliveryAdminProvider extends ChangeNotifier
   String? get deliveryBatchesError => _deliveryBatchesError;
 
   @override
+  List<DeliveryRider> get riders => _riders;
+
+  @override
   TodaysDeliveryProgress get todaysDeliveryProgress =>
       _todaysDeliveryProgress;
 
@@ -53,9 +67,43 @@ class MockDeliveryAdminProvider extends ChangeNotifier
   @override
   List<DairyOrder> get orders => [];
 
+  @override
+  Future<void> addDeliveryRoute(DeliveryCorridor route) async {
+    if (throwOnRoute) throw Exception('Firestore write failed for route');
+    addedRoutes.add(route);
+    _corridors = [..._corridors, route];
+    notifyListeners();
+  }
+
+  @override
+  Future<void> updateDeliveryRoute(DeliveryCorridor route) async {
+    if (throwOnRoute) throw Exception('Firestore update failed for route');
+    updatedRoutes.add(route);
+    _corridors = _corridors.map((c) => c.id == route.id ? route : c).toList();
+    notifyListeners();
+  }
+
+  @override
+  Future<void> addDeliveryBatch(DeliveryBatch batch) async {
+    if (throwOnBatch) throw Exception('Firestore write failed for batch');
+    addedBatches.add(batch);
+    _deliveryBatches = [..._deliveryBatches, batch];
+    notifyListeners();
+  }
+
+  @override
+  Future<void> updateDeliveryBatch(DeliveryBatch batch) async {
+    if (throwOnBatch) throw Exception('Firestore update failed for batch');
+    updatedBatches.add(batch);
+    _deliveryBatches =
+        _deliveryBatches.map((b) => b.id == batch.id ? batch : b).toList();
+    notifyListeners();
+  }
+
   void setMockData({
     List<DeliveryCorridor>? corridors,
     List<DeliveryBatch>? batches,
+    List<DeliveryRider>? riders,
     TodaysDeliveryProgress? progress,
   }) {
     _corridors = corridors ?? [];
@@ -65,6 +113,8 @@ class MockDeliveryAdminProvider extends ChangeNotifier
     _deliveryBatches = batches ?? [];
     _deliveryBatchesLoading = false;
     _deliveryBatchesError = null;
+
+    _riders = riders ?? [];
 
     _todaysDeliveryProgress = progress ?? TodaysDeliveryProgress.empty;
     _todaysDeliveryProgressLoading = false;
@@ -215,10 +265,10 @@ void main() {
     Widget buildTestScreen(MockDeliveryAdminProvider provider) {
       return MaterialApp(
         home: ChangeNotifierProvider<AdminProvider>.value(
-          value: provider,
-          child: const Scaffold(
-            body: DeliveryManagementScreen(),
-          ),
+            value: provider,
+            child: const Scaffold(
+              body: DeliveryManagementScreen(),
+            ),
         ),
       );
     }
@@ -235,11 +285,13 @@ void main() {
 
       expect(find.text('Delivery Routes & Dispatch'), findsOneWidget);
       expect(find.text('Active Delivery Corridors'), findsOneWidget);
+      expect(find.byKey(const Key('add_delivery_route_button')), findsOneWidget);
       expect(
           find.text('No active delivery corridors registered yet.'),
           findsOneWidget);
       expect(
           find.text("Today's Batch Deliveries Progress"), findsOneWidget);
+      expect(find.byKey(const Key('create_delivery_batch_button')), findsOneWidget);
       expect(find.text('No delivery batches dispatched today.'), findsOneWidget);
     });
 
@@ -353,6 +405,182 @@ void main() {
       expect(find.text('35 / 45 Delivered'), findsOneWidget);
       expect(find.text('30 / 30 Delivered'), findsOneWidget);
       expect(find.text('100%'), findsOneWidget);
+    });
+
+    testWidgets('9. Admin route creation flow calls addDeliveryRoute and updates stream',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1200, 900));
+
+      final provider = MockDeliveryAdminProvider();
+      provider.setMockData(
+        corridors: [],
+        batches: [],
+        riders: const [
+          DeliveryRider(
+            id: 'RDR_1',
+            name: 'Amit Sharma',
+            phone: '9876543210',
+            vehicle: 'EV Scooter',
+            assignedZone: 'Vijay Nagar',
+            totalDeliveriesToday: 0,
+            pendingDeliveries: 0,
+            status: 'Active',
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(buildTestScreen(provider));
+      await tester.pump();
+
+      // Click "+ Add Route"
+      final addRouteBtn = find.byKey(const Key('add_delivery_route_button'));
+      expect(addRouteBtn, findsOneWidget);
+      await tester.tap(addRouteBtn);
+      await tester.pumpAndSettle();
+
+      // Verify dialog is open
+      expect(find.text('Add Delivery Corridor'), findsOneWidget);
+
+      // Fill in Route Name
+      final nameField = find.widgetWithText(TextField, 'Route / Corridor Name *');
+      expect(nameField, findsOneWidget);
+      await tester.enterText(nameField, 'Corridor Alpha');
+
+      // Click "Create Route"
+      final createBtn = find.byKey(const Key('submit_route_dialog_button'));
+      expect(createBtn, findsOneWidget);
+      await tester.tap(createBtn);
+      await tester.pumpAndSettle();
+
+      // Verify provider was called
+      expect(provider.addedRoutes.length, 1);
+      expect(provider.addedRoutes.first.routeName, 'Corridor Alpha');
+      expect(provider.addedRoutes.first.zone, 'Vijay Nagar');
+      expect(provider.addedRoutes.first.riderName, 'Amit Sharma');
+      expect(provider.addedRoutes.first.agentId, 'RDR_1');
+
+      // Verify newly created route is displayed in realtime on screen
+      expect(find.text('Corridor Alpha'), findsOneWidget);
+      expect(find.text('Rider: Amit Sharma'), findsOneWidget);
+      expect(find.text('Vijay Nagar'), findsOneWidget);
+    });
+
+    testWidgets('10. Route creation validates required fields and surfaces errors',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1200, 900));
+
+      final provider = MockDeliveryAdminProvider();
+      provider.setMockData(corridors: [], batches: [], riders: []);
+
+      await tester.pumpWidget(buildTestScreen(provider));
+      await tester.pump();
+
+      // Click "+ Add Route"
+      await tester.tap(find.byKey(const Key('add_delivery_route_button')));
+      await tester.pumpAndSettle();
+
+      // Leave fields empty and tap submit
+      await tester.tap(find.byKey(const Key('submit_route_dialog_button')));
+      await tester.pumpAndSettle();
+
+      // Should show validation SnackBar and not call provider
+      expect(find.text('Please enter a Route Name'), findsOneWidget);
+      expect(provider.addedRoutes, isEmpty);
+    });
+
+    testWidgets('11. Admin batch creation flow calls addDeliveryBatch and updates stream',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1200, 900));
+
+      final provider = MockDeliveryAdminProvider();
+      provider.setMockData(
+        corridors: [],
+        batches: [],
+        riders: const [
+          DeliveryRider(
+            id: 'RDR_10',
+            name: 'Sunil Verma',
+            phone: '9811122233',
+            vehicle: 'Van',
+            assignedZone: 'Central Zone',
+            totalDeliveriesToday: 0,
+            pendingDeliveries: 0,
+            status: 'Active',
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(buildTestScreen(provider));
+      await tester.pump();
+
+      // Click "+ Create Batch"
+      final createBatchBtn = find.byKey(const Key('create_delivery_batch_button'));
+      expect(createBatchBtn, findsOneWidget);
+      await tester.tap(createBatchBtn);
+      await tester.pumpAndSettle();
+
+      // Verify dialog is open
+      expect(find.text('Create Delivery Batch'), findsOneWidget);
+
+      // Set total orders
+      final totalField = find.widgetWithText(TextField, 'Total Orders');
+      await tester.enterText(totalField, '25');
+
+      // Click "Create Batch" via key
+      final submitBtn = find.byKey(const Key('submit_batch_dialog_button'));
+      await tester.tap(submitBtn);
+      await tester.pumpAndSettle();
+
+      // Verify provider was called
+      expect(provider.addedBatches.length, 1);
+      expect(provider.addedBatches.first.staffName, 'Sunil Verma');
+      expect(provider.addedBatches.first.agentId, 'RDR_10');
+      expect(provider.addedBatches.first.zone, 'Central Zone');
+      expect(provider.addedBatches.first.totalOrders, 25);
+
+      // Realtime batch appears on screen
+      expect(find.text('Sunil Verma'), findsOneWidget);
+      expect(find.text('Central Zone'), findsOneWidget);
+      expect(find.text('0 / 25 Delivered'), findsOneWidget);
+    });
+
+    testWidgets('12. Firestore errors on route and batch creation are surfaced',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1200, 900));
+
+      final provider = MockDeliveryAdminProvider();
+      provider.throwOnRoute = true;
+      provider.throwOnBatch = true;
+      provider.setMockData(
+        corridors: [],
+        batches: [],
+        riders: const [
+          DeliveryRider(
+            id: 'RDR_1',
+            name: 'Rider One',
+            phone: '9000000000',
+            vehicle: 'Bike',
+            assignedZone: 'Zone A',
+            totalDeliveriesToday: 0,
+            pendingDeliveries: 0,
+            status: 'Active',
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(buildTestScreen(provider));
+      await tester.pump();
+
+      // Try creating route with throwing provider
+      await tester.tap(find.byKey(const Key('add_delivery_route_button')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+          find.widgetWithText(TextField, 'Route / Corridor Name *'), 'Route Error Test');
+      await tester.tap(find.byKey(const Key('submit_route_dialog_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Failed to save corridor: Exception: Firestore write failed for route'),
+          findsOneWidget);
     });
   });
 }

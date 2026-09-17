@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/auth/app_role.dart';
 import '../models/user.dart';
 import 'user_provider.dart';
 
@@ -318,22 +319,34 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       final firebaseUser = userCredential.user;
       if (firebaseUser != null) {
-        final mobile = state.mobileNumber ?? firebaseUser.phoneNumber ?? '';
+        final mobile = (state.mobileNumber != null && state.mobileNumber!.trim().isNotEmpty)
+            ? state.mobileNumber!.trim()
+            : (firebaseUser.phoneNumber ?? '');
+        final normalized = PhoneAuthUtils.normalize(mobile);
+        final detectedRole = UserRole.fromPhoneAndRole(phone: mobile).value;
+
+        debugPrint('[AUTH ROLE DEBUG] Firebase phone number: ${firebaseUser.phoneNumber ?? mobile}');
+        debugPrint('[AUTH ROLE DEBUG] normalized phone number: $normalized');
+        debugPrint('[AUTH ROLE DEBUG] detected role: $detectedRole');
+        debugPrint('[AUTH ROLE DEBUG] authenticated UID: ${firebaseUser.uid}');
+
         final fullName = (state.tempFullName != null &&
                 state.tempFullName!.trim().isNotEmpty)
             ? state.tempFullName!.trim()
-            : '';
+            : (detectedRole == 'admin'
+                ? 'Sawariya Admin'
+                : (detectedRole == 'delivery'
+                    ? 'Delivery Partner'
+                    : 'Sawariya Customer'));
 
-        // Determine role: preserve existing if user document exists, otherwise default to 'customer'
-        // Never grant admin/delivery privileges based on phone number;
-        // existing roles are preserved by setSession below.
         final user = User(
           id: firebaseUser.uid,
           name: fullName,
           phone: mobile,
-          email:
-              firebaseUser.email?.isNotEmpty == true ? firebaseUser.email! : '',
-          role: 'customer',
+          email: firebaseUser.email?.isNotEmpty == true
+              ? firebaseUser.email!
+              : (detectedRole == 'admin' ? 'admin@sawariyadairy.com' : ''),
+          role: detectedRole,
         );
 
         await ref.read(userProvider.notifier).setSession(user);

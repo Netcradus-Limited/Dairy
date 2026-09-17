@@ -197,7 +197,7 @@ class _HeroPromotionalBannerState extends State<_HeroPromotionalBanner> {
   void initState() {
     super.initState();
     _controller = VideoPlayerController.asset(
-      'assets/images/banner3v.mp4',
+      'assets/images/shopv2.mp4',
       videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
     );
     _controller.initialize().then((_) async {
@@ -564,7 +564,7 @@ class _WhyChooseUsVideoState extends State<_WhyChooseUsVideo> {
   void initState() {
     super.initState();
     _controller = VideoPlayerController.asset(
-      'assets/images/whyv.mp4',
+      'assets/images/newhome2.mp4',
       videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
     );
     _controller.initialize().then((_) async {

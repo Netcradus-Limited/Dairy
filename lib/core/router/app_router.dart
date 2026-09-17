@@ -63,51 +63,63 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           path == '/forgot-password' ||
           path == '/reset-password';
 
+      String? targetRoute;
+
       // 1. Unauthenticated users: redirect any protected path to /login
       if (!isLoggedIn) {
-        return isAuthPath ? null : '/login';
+        targetRoute = isAuthPath ? null : '/login';
       }
-
       // 2. Authenticated users:
       // If currently on an auth/onboarding screen, redirect to their role's home panel
-      if (isAuthPath) {
-        if (isAdmin) return '/admin';
-        if (isDelivery) return '/delivery';
-        return '/home';
+      else if (isAuthPath) {
+        if (isAdmin) {
+          targetRoute = '/admin';
+        } else if (isDelivery) {
+          targetRoute = '/delivery';
+        } else {
+          targetRoute = '/home';
+        }
       }
-
       // 3. Admin-only routes: strictly enforce Admin authorization
-      final isAdminRoute = path == '/admin' || path.startsWith('/admin/');
-      if (isAdminRoute && !isAdmin) {
-        return isDelivery ? '/delivery' : '/home';
+      else if (path == '/admin' || path.startsWith('/admin/')) {
+        if (!isAdmin) {
+          targetRoute = isDelivery ? '/delivery' : '/home';
+        }
       }
-
       // 4. Delivery-only routes: strictly enforce Delivery Agent authorization
-      final isDeliveryRoute = path == '/delivery' ||
+      else if (path == '/delivery' ||
           path == '/delivery-map' ||
-          path.startsWith('/delivery/');
-      if (isDeliveryRoute && !isDelivery) {
-        return isAdmin ? '/admin' : '/home';
+          path.startsWith('/delivery/')) {
+        if (!isDelivery) {
+          targetRoute = isAdmin ? '/admin' : '/home';
+        }
       }
-
       // 5. Role confinement: Admin and Delivery are routed to their respective panels
-      final isCustomerRoute = path == '/home' ||
-          path == '/shop' ||
-          path == '/product-details' ||
-          path == '/cart' ||
-          path == '/address' ||
-          path == '/add-address' ||
-          path == '/checkout' ||
-          path == '/settings' ||
-          path == '/support' ||
-          path.startsWith('/orders');
+      else {
+        final isCustomerRoute = path == '/home' ||
+            path == '/shop' ||
+            path == '/product-details' ||
+            path == '/cart' ||
+            path == '/address' ||
+            path == '/add-address' ||
+            path == '/checkout' ||
+            path == '/settings' ||
+            path == '/support' ||
+            path.startsWith('/orders');
 
-      if (isCustomerRoute) {
-        if (isAdmin) return '/admin';
-        if (isDelivery) return '/delivery';
+        if (isCustomerRoute) {
+          if (isAdmin) {
+            targetRoute = '/admin';
+          } else if (isDelivery) {
+            targetRoute = '/delivery';
+          }
+        }
       }
 
-      return null;
+      debugPrint(
+          '[AUTH ROLE DEBUG] Final route: ${targetRoute ?? path} (currentLocation=$path, userId=${user.id}, role=${user.role}, isAdmin=$isAdmin, isDelivery=$isDelivery)');
+
+      return targetRoute;
     },
     routes: [
       GoRoute(

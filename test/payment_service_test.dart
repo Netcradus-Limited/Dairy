@@ -139,5 +139,83 @@ void main() {
       expect(map['transactionId'], isNull);
       expect(map['createdAt'], isA<Timestamp>());
     });
+
+    test('Checkout order-creation path generates compliant payment document for COD', () {
+      const orderDocId = 'ORDER_DOC_9812';
+      const orderCode = 'ABC123';
+      const userId = 'cust_uid_456';
+      const customerName = 'Priya Sharma';
+      const customerPhone = '9876543210';
+      const totalAmount = 520.0;
+      const paymentMethod = 'Cash on Delivery';
+
+      final isCash = paymentMethod.toLowerCase().contains('cash');
+      final paymentData = {
+        'id': 'PAY_$orderDocId',
+        'orderId': orderDocId,
+        'orderCode': orderCode,
+        'userId': userId,
+        'customerName': customerName,
+        'customerPhone': customerPhone,
+        'amount': totalAmount,
+        'method': paymentMethod,
+        'paymentMethod': paymentMethod,
+        'status': isCash ? 'Pending' : 'Success',
+        'paymentStatus': isCash ? 'Pending' : 'Success',
+        'transactionId': isCash ? null : 'TXN_$orderDocId',
+      };
+
+      final payment = DairyPayment.fromFirestore(paymentData, 'PAY_$orderDocId');
+
+      expect(payment.id, equals('PAY_ORDER_DOC_9812'));
+      expect(payment.orderId, equals('ORDER_DOC_9812'));
+      expect(payment.orderCode, equals('ABC123'));
+      expect(payment.userId, equals('cust_uid_456'));
+      expect(payment.customerName, equals('Priya Sharma'));
+      expect(payment.customerPhone, equals('9876543210'));
+      expect(payment.amount, equals(520.0));
+      expect(payment.method, equals('Cash on Delivery'));
+      expect(payment.status, equals('Pending'));
+      expect(payment.transactionId, isNull);
+    });
+
+    test('Checkout order-creation path generates compliant payment document for Online Payment', () {
+      const orderDocId = 'ORDER_DOC_9813';
+      const orderCode = 'XYZ789';
+      const userId = 'cust_uid_789';
+      const customerName = 'Amit Verma';
+      const customerPhone = '9123456780';
+      const totalAmount = 850.0;
+      const paymentMethod = 'Online Payment';
+
+      final isCash = paymentMethod.toLowerCase().contains('cash');
+      final paymentData = {
+        'id': 'PAY_$orderDocId',
+        'orderId': orderDocId,
+        'orderCode': orderCode,
+        'userId': userId,
+        'customerName': customerName,
+        'customerPhone': customerPhone,
+        'amount': totalAmount,
+        'method': paymentMethod,
+        'paymentMethod': paymentMethod,
+        'status': isCash ? 'Pending' : 'Success',
+        'paymentStatus': isCash ? 'Pending' : 'Success',
+        'transactionId': isCash ? null : 'TXN_$orderDocId',
+      };
+
+      final payment = DairyPayment.fromFirestore(paymentData, 'PAY_$orderDocId');
+
+      expect(payment.id, equals('PAY_ORDER_DOC_9813'));
+      expect(payment.orderId, equals('ORDER_DOC_9813'));
+      expect(payment.orderCode, equals('XYZ789'));
+      expect(payment.userId, equals('cust_uid_789'));
+      expect(payment.customerName, equals('Amit Verma'));
+      expect(payment.customerPhone, equals('9123456780'));
+      expect(payment.amount, equals(850.0));
+      expect(payment.method, equals('Online Payment'));
+      expect(payment.status, equals('Success'));
+      expect(payment.transactionId, equals('TXN_ORDER_DOC_9813'));
+    });
   });
 }

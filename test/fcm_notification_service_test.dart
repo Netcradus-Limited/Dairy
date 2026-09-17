@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -134,6 +135,20 @@ void main() {
       expect(map['orderId'], 'ORD-101');
       expect(map['type'], 'order');
       expect(map['isActionable'], true);
+    });
+
+    test('Web firebase-messaging-sw.js exists and contains Firebase compat SDK and config', () {
+      final swFile = File('web/firebase-messaging-sw.js');
+      expect(swFile.existsSync(), isTrue,
+          reason: 'web/firebase-messaging-sw.js must exist for Web FCM');
+
+      final content = swFile.readAsStringSync();
+      expect(content.contains('firebase-app-compat.js'), isTrue);
+      expect(content.contains('firebase-messaging-compat.js'), isTrue);
+      expect(content.contains('sawariya-7efd4'), isTrue);
+      expect(content.contains('325042169664'), isTrue);
+      expect(content.contains('firebase.initializeApp'), isTrue);
+      expect(content.contains('onBackgroundMessage'), isTrue);
     });
   });
 }

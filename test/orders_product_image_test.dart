@@ -77,7 +77,7 @@ void main() {
 
     test('Category icons remain untouched', () {
       expect(AppAssets.milkCategory, 'assets/images/doodh.png');
-      expect(AppAssets.gheeCategory, 'assets/images/gh.png');
+      expect(AppAssets.gheeCategory, 'assets/images/newgh.png');
       expect(AppAssets.lassiCategory, 'assets/images/las.png');
       expect(AppAssets.makhanCategory, 'assets/images/mak.png');
       expect(AppAssets.paneerCategory, 'assets/images/pan.png');

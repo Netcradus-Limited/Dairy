@@ -3,14 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-import '../models/notification_item.dart';
 import '../repositories/notification_repository.dart';
-import '../providers/user_provider.dart';
-import '../core/auth/app_role.dart';
 
 /// FCM Service handling token management, permission, and message routing for
 /// the Delivery Panel. Integrates with the existing Firestore notification model
@@ -56,7 +52,14 @@ class FCMService {
   /// Platform-specific FCM token. Returns the most recent cached token value
   /// (may be stale; prefer listening to [onTokenRefresh] stream for up-to-date values).
   /// Call [getCurrentToken] async method for the actual token fetch.
-  Future<String?> getCurrentToken() async => _messaging.getToken();
+  Future<String?> getCurrentToken() async {
+    try {
+      return await _messaging.getToken();
+    } catch (e) {
+      debugPrint('[FCM] Error in getCurrentToken: $e');
+      return null;
+    }
+  }
 
   /// Stream of token refresh events. Emits new token when FCM rotates the token.
   Stream<String> get onTokenRefresh => _messaging.onTokenRefresh;
@@ -156,7 +159,12 @@ class FCMService {
       return;
     }
 
-    final token = await _messaging.getToken();
+    String? token;
+    try {
+      token = await _messaging.getToken();
+    } catch (e) {
+      debugPrint('[FCM] Error getting token in _saveTokenIfAuthorized: $e');
+    }
     if (token == null || token.isEmpty) {
       debugPrint('[FCM] No FCM token available — skipping Firestore write.');
       return;
@@ -212,7 +220,7 @@ class FCMService {
 
   /// Extract orderId from message data, trying both common key names.
   String? _extractOrderId(Map<String, dynamic> data) {
-    return data['orderId'] ?? data['order_id'] ?? null;
+    return data['orderId'] ?? data['order_id'];
   }
 
   /// Show a local notification via flutter_local_notifications. Safe to call even
@@ -226,7 +234,7 @@ class FCMService {
       notification.hashCode,
       notification.title,
       notification.body,
-      NotificationDetails(
+      const NotificationDetails(
         android: AndroidNotificationDetails(
           'order_alerts',
           'Order Alerts',
@@ -234,7 +242,7 @@ class FCMService {
           importance: Importance.high,
           priority: Priority.high,
         ),
-        iOS: const DarwinNotificationDetails(),
+        iOS: DarwinNotificationDetails(),
       ),
       payload: message.data.toString(),
     );
@@ -287,7 +295,7 @@ class FCMService {
           notification.hashCode,
           notification.title,
           notification.body,
-          NotificationDetails(
+          const NotificationDetails(
             android: AndroidNotificationDetails(
               'order_alerts',
               'Order Alerts',
@@ -295,7 +303,7 @@ class FCMService {
               importance: Importance.high,
               priority: Priority.high,
             ),
-            iOS: const DarwinNotificationDetails(),
+            iOS: DarwinNotificationDetails(),
           ),
         );
       } catch (_) {

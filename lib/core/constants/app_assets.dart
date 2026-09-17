@@ -29,7 +29,7 @@ abstract class AppAssets {
 
   // PNG category images (Home / Shop category cards)
   static const String milkCategory = '$imagePath/doodh.png';
-  static const String gheeCategory = '$imagePath/gh.png';
+  static const String gheeCategory = '$imagePath/newgh.png';
   static const String lassiCategory = '$imagePath/las.png';
   static const String makhanCategory = '$imagePath/mak.png';
   static const String paneerCategory = '$imagePath/pan.png';
@@ -132,10 +132,10 @@ abstract class AppAssets {
   /// A valid network URL (http/https) is ALWAYS returned unchanged.
   /// A valid local asset path is returned unchanged.
   /// Only invalid, empty, or obsolete paths fall back to the category default.
-  static String? categoryImage({String? imageUrl, String? categoryKey}) {
+  static String? categoryImage({String? imageUrl, String? categoryKey, String? name}) {
     if (_isNetwork(imageUrl)) return imageUrl!.trim();
     if (_isAsset(imageUrl)) return imageUrl!.trim();
-    return _fallbackDefault(_categoryDefaultByKey, categoryKey);
+    return _fallbackDefault(_categoryDefaultByKey, categoryKey ?? name);
   }
 
   /// Resolves which image source to use for a product thumbnail.
