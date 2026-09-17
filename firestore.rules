@@ -313,5 +313,30 @@ service cloud.firestore {
       // Only Admins can delete complaints
       allow delete: if isAdmin();
     }
+
+    // ── 12. payments Collection ─────────────────────────────────────────────
+    match /payments/{paymentId} {
+      // Users read own payments; Admins read all payments
+      allow read: if isAdmin()
+          || (isSignedIn() && (
+              resource.data.userId == request.auth.uid
+              || (('customerId' in resource.data) && resource.data.customerId == request.auth.uid)
+             ));
+
+      // Users can create a payment record corresponding to their own order during checkout
+      allow create: if isAdmin()
+          || (isSignedIn() && (
+              request.resource.data.userId == request.auth.uid
+              || (('customerId' in request.resource.data) && request.resource.data.customerId == request.auth.uid)
+             ));
+
+      // Admins have full management; Delivery agents can update status on cash collection
+      allow update: if isAdmin()
+          || (isDelivery()
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'paymentStatus', 'updatedAt']));
+
+      // Only Admins can delete payment records
+      allow delete: if isAdmin();
+    }
   }
-}
+}

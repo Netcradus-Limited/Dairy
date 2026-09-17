@@ -16,11 +16,13 @@ import '../models/product_model.dart';
 import '../repositories/firestore_product_repository.dart';
 import '../services/complaint_service.dart';
 import '../services/order_service.dart';
+import '../services/payment_service.dart';
 
 class AdminProvider extends ChangeNotifier {
   final FirestoreProductRepository _repo;
   final OrderService _orderService;
   final ComplaintService _complaintService;
+  final PaymentService _paymentService;
 
   int _selectedNavIndex = 2;
   String _searchQuery = '';
@@ -41,6 +43,10 @@ class AdminProvider extends ChangeNotifier {
   bool _complaintsLoading = true;
   String? _complaintsError;
 
+  List<DairyPayment> _payments = [];
+  bool _paymentsLoading = true;
+  String? _paymentsError;
+
   int _customersCount = 0;
   int _deliveryAgentsCount = 0;
   bool _usersLoading = true;
@@ -50,6 +56,7 @@ class AdminProvider extends ChangeNotifier {
   StreamSubscription<List<Map<String, dynamic>>>? _categoriesSub;
   StreamSubscription<List<order.Order>>? _ordersSub;
   StreamSubscription<List<complaint_model.CustomerComplaint>>? _complaintsSub;
+  StreamSubscription<List<DairyPayment>>? _paymentsSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _usersSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _deliveryAgentsSub;
 
@@ -58,6 +65,24 @@ class AdminProvider extends ChangeNotifier {
   String get orderStatusTimeFilter => _orderStatusTimeFilter;
   int get unreadNotifications => _unreadNotifications;
   bool get isDarkMode => _isDarkMode;
+
+  List<DairyPayment> get payments => _payments;
+  bool get paymentsLoading => _paymentsLoading;
+  String? get paymentsError => _paymentsError;
+
+  double get totalPaymentsAmount => _payments
+      .where((p) => p.status == 'Success')
+      .fold(0.0, (sum, p) => sum + p.amount);
+  int get totalPaymentsCount => _payments.length;
+  int get successfulPaymentsCount =>
+      _payments.where((p) => p.status == 'Success').length;
+  int get pendingPaymentsCount =>
+      _payments.where((p) => p.status == 'Pending').length;
+  int get failedPaymentsCount =>
+      _payments.where((p) => p.status == 'Failed').length;
+  int get cancelledPaymentsCount =>
+      _payments.where((p) => p.status == 'Cancelled').length;
+
   List<DairyProduct> get products => _products;
   List<DairyCategory> get categories => _categories;
   bool get isLoading => _isLoading;
@@ -110,13 +135,16 @@ class AdminProvider extends ChangeNotifier {
     FirestoreProductRepository? repo,
     OrderService? orderService,
     ComplaintService? complaintService,
+    PaymentService? paymentService,
   })  : _repo = repo ?? FirestoreProductRepository(),
         _orderService = orderService ?? OrderService(),
-        _complaintService = complaintService ?? ComplaintService() {
+        _complaintService = complaintService ?? ComplaintService(),
+        _paymentService = paymentService ?? PaymentService() {
     _listenToProducts();
     _listenToCategories();
     _listenToOrders();
     _listenToComplaints();
+    _listenToPayments();
     _listenToUsers();
     _listenToDeliveryAgents();
   }
@@ -782,91 +810,185 @@ class AdminProvider extends ChangeNotifier {
     );
   }
 
-  // ─── Today's Deliveries Data (hardcoded) ──────────────────────────────
+  // ─── Today's Deliveries Data (Firestore-backed) ───────────────────────
 
-  final List<DeliveryBatch> _deliveryBatches = [
-    const DeliveryBatch(
-      deliveryId: '#DLV1021',
-      staffName: 'Amit Kumar',
-      assignedCount: 82,
-      completedCount: 76,
-      status: 'On Route',
-      zone: 'Sector 74 - 78 Hub',
-    ),
-    const DeliveryBatch(
-      deliveryId: '#DLV1022',
-      staffName: 'Rajesh Sharma',
-      assignedCount: 95,
-      completedCount: 95,
-      status: 'Completed',
-      zone: 'Sector 50 - 52 Hub',
-    ),
-    const DeliveryBatch(
-      deliveryId: '#DLV1023',
-      staffName: 'Vikram Singh',
-      assignedCount: 88,
-      completedCount: 81,
-      status: 'On Route',
-      zone: 'Expressway Corridors',
-    ),
-    const DeliveryBatch(
-      deliveryId: '#DLV1024',
-      staffName: 'Suresh Verma',
-      assignedCount: 75,
-      completedCount: 70,
-      status: 'On Route',
-      zone: 'Greater Noida West',
-    ),
-    const DeliveryBatch(
-      deliveryId: '#DLV1025',
-      staffName: 'Manoj Tiwari',
-      assignedCount: 65,
-      completedCount: 65,
-      status: 'Completed',
-      zone: 'Indirapuram Core',
-    ),
-  ];
+  List<DeliveryBatch> get deliveryBatches {
+    if (_riders.isEmpty && _orders.isEmpty) {
+      return [];
+    }
 
-  List<DeliveryBatch> get deliveryBatches => _deliveryBatches;
+    final List<DeliveryBatch> batches = [];
+    final Set<String> processedRiderIds = {};
 
-  // ─── Delivery Corridors Data (hardcoded) ──────────────────────────────
+    for (final rider in _riders) {
+      processedRiderIds.add(rider.id);
+      final riderOrders =
+          _orders.where((o) => o.assignedAgentId == rider.id).toList();
+      final assignedCount = riderOrders.isNotEmpty
+          ? riderOrders.length
+          : rider.totalDeliveriesToday;
+      final completedCount = riderOrders
+          .where((o) => o.status == OrderStatus.delivered)
+          .length;
+      final outForDeliveryCount = riderOrders
+          .where((o) => o.status == OrderStatus.outForDelivery)
+          .length;
 
-  final List<DeliveryCorridor> _corridors = [
-    const DeliveryCorridor(
-      routeName: 'Route 1 — Noida Express Zone',
-      zone: 'Sector 128 to 137',
-      riderName: 'Amit Kumar',
-      subscribersCount: 142,
-      timing: '05:00 AM - 06:45 AM',
-      vehicleType: 'Electric Cargo Van',
-    ),
-    const DeliveryCorridor(
-      routeName: 'Route 2 — Sector 7x Highrise Belt',
-      zone: 'Sector 74, 76, 78, 79',
-      riderName: 'Vikram Singh',
-      subscribersCount: 185,
-      timing: '05:15 AM - 07:00 AM',
-      vehicleType: 'EV Bike 3-Wheeler',
-    ),
-    const DeliveryCorridor(
-      routeName: 'Route 3 — Central Noida Hub',
-      zone: 'Sector 50, 51, 52',
-      riderName: 'Rajesh Sharma',
-      subscribersCount: 128,
-      timing: '05:30 AM - 07:15 AM',
-      vehicleType: 'Cargo Bike',
-    ),
-    const DeliveryCorridor(
-      routeName: 'Route 4 — Greater Noida West',
-      zone: 'Gaur City 1 & 2',
-      riderName: 'Suresh Verma',
-      subscribersCount: 164,
-      timing: '05:00 AM - 07:00 AM',
-      vehicleType: 'Electric Mini Van',
-    ),
-  ];
+      String status;
+      if (assignedCount > 0 && completedCount == assignedCount) {
+        status = 'Completed';
+      } else if (outForDeliveryCount > 0) {
+        status = 'On Route';
+      } else if (rider.isOnline || rider.status.toLowerCase() == 'active') {
+        status = assignedCount > 0 ? 'On Route' : 'Active';
+      } else {
+        status = rider.status.isNotEmpty ? rider.status : 'Offline';
+      }
 
-  List<DeliveryCorridor> get corridors => _corridors;
+      final cleanId = rider.id.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+      final shortId = cleanId.length > 5
+          ? cleanId.substring(cleanId.length - 4).toUpperCase()
+          : (cleanId.isNotEmpty ? cleanId.toUpperCase() : '1001');
+
+      batches.add(
+        DeliveryBatch(
+          deliveryId: '#DLV$shortId',
+          staffName: rider.name.isNotEmpty ? rider.name : 'Delivery Partner',
+          assignedCount: assignedCount,
+          completedCount: completedCount,
+          status: status,
+          zone: rider.assignedZone.isNotEmpty
+              ? rider.assignedZone
+              : 'Standard Route',
+        ),
+      );
+    }
+
+    // Also include any active orders with assigned agent not in _riders
+    for (final order in _orders) {
+      final agentId = order.assignedAgentId?.trim();
+      if (agentId != null &&
+          agentId.isNotEmpty &&
+          !processedRiderIds.contains(agentId)) {
+        processedRiderIds.add(agentId);
+        final agentOrders =
+            _orders.where((o) => o.assignedAgentId == agentId).toList();
+        final assignedCount = agentOrders.length;
+        final completedCount = agentOrders
+            .where((o) => o.status == OrderStatus.delivered)
+            .length;
+        final outForDeliveryCount = agentOrders
+            .where((o) => o.status == OrderStatus.outForDelivery)
+            .length;
+
+        String status;
+        if (assignedCount > 0 && completedCount == assignedCount) {
+          status = 'Completed';
+        } else if (outForDeliveryCount > 0) {
+          status = 'On Route';
+        } else {
+          status = 'Active';
+        }
+
+        final cleanId = agentId.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+        final shortId = cleanId.length > 5
+            ? cleanId.substring(cleanId.length - 4).toUpperCase()
+            : cleanId.toUpperCase();
+
+        batches.add(
+          DeliveryBatch(
+            deliveryId: '#DLV$shortId',
+            staffName: order.assignedAgentName ?? 'Delivery Partner',
+            assignedCount: assignedCount,
+            completedCount: completedCount,
+            status: status,
+            zone: 'Assigned Route',
+          ),
+        );
+      }
+    }
+
+    return batches;
+  }
+
+  // ─── Delivery Corridors Data (Firestore-backed) ───────────────────────
+
+  List<DeliveryCorridor> get corridors {
+    if (_riders.isEmpty && _customers.isEmpty) {
+      return [];
+    }
+
+    final List<DeliveryCorridor> result = [];
+    final Map<String, List<DeliveryRider>> zoneToRiders = {};
+
+    for (final rider in _riders) {
+      final zone = rider.assignedZone.trim();
+      if (zone.isNotEmpty) {
+        zoneToRiders.putIfAbsent(zone, () => []).add(rider);
+      }
+    }
+
+    int routeIdx = 1;
+    for (final entry in zoneToRiders.entries) {
+      final zone = entry.key;
+      final ridersInZone = entry.value;
+      final primaryRider = ridersInZone.first;
+      final subCount = _customers
+          .where(
+              (c) => c.deliveryZone.trim().toLowerCase() == zone.toLowerCase())
+          .length;
+
+      final riderNames = ridersInZone
+          .map((r) => r.name.trim())
+          .where((n) => n.isNotEmpty)
+          .join(', ');
+
+      result.add(
+        DeliveryCorridor(
+          routeName: 'Route $routeIdx — $zone',
+          zone: zone,
+          riderName: riderNames.isNotEmpty ? riderNames : 'Unassigned Rider',
+          subscribersCount: subCount,
+          timing: '05:00 AM - 07:00 AM',
+          vehicleType: primaryRider.vehicle.isNotEmpty
+              ? primaryRider.vehicle
+              : 'Delivery Vehicle',
+        ),
+      );
+      routeIdx++;
+    }
+
+    // Cover zones present in customers or orders without a dedicated rider
+    final Set<String> coveredZones =
+        zoneToRiders.keys.map((k) => k.toLowerCase()).toSet();
+    final Set<String> unassignedZones = {};
+    for (final cust in _customers) {
+      final zone = cust.deliveryZone.trim();
+      if (zone.isNotEmpty && !coveredZones.contains(zone.toLowerCase())) {
+        unassignedZones.add(zone);
+      }
+    }
+
+    for (final zone in unassignedZones) {
+      final subCount = _customers
+          .where(
+              (c) => c.deliveryZone.trim().toLowerCase() == zone.toLowerCase())
+          .length;
+      result.add(
+        DeliveryCorridor(
+          routeName: 'Route $routeIdx — $zone',
+          zone: zone,
+          riderName: 'Unassigned',
+          subscribersCount: subCount,
+          timing: '05:00 AM - 07:00 AM',
+          vehicleType: 'Pending Assignment',
+        ),
+      );
+      routeIdx++;
+    }
+
+    return result;
+  }
 
   // ─── Customers Data (Firestore-backed) ─────────────────────────────────
 
@@ -1059,48 +1181,48 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  // ─── Payments Data (hardcoded) ────────────────────────────────────────
+  // ─── Payments Data (Firestore-backed) ─────────────────────────────────
 
-  final List<DairyPayment> _payments = [
-    const DairyPayment(
-      id: 'TXN-99812',
-      customerName: 'Rahul Sharma',
-      orderOrWalletId: '#ORD10284',
-      amount: 163.0,
-      method: 'Online (UPI)',
-      status: 'Success',
-      timestamp: 'Today, 05:42 AM',
-    ),
-    const DairyPayment(
-      id: 'TXN-99811',
-      customerName: 'Priya Verma',
-      orderOrWalletId: 'Wallet Auto-Debit',
-      amount: 114.0,
-      method: 'Prepaid Wallet',
-      status: 'Success',
-      timestamp: 'Today, 06:10 AM',
-    ),
-    const DairyPayment(
-      id: 'TXN-99810',
-      customerName: 'Anil Gupta',
-      orderOrWalletId: '#ORD10282',
-      amount: 608.0,
-      method: 'Razorpay PG',
-      status: 'Success',
-      timestamp: 'Today, 06:25 AM',
-    ),
-    const DairyPayment(
-      id: 'TXN-99809',
-      customerName: 'Vikas Malhotra',
-      orderOrWalletId: '#ORD10280',
-      amount: 362.0,
-      method: 'Cash On Delivery',
-      status: 'Pending',
-      timestamp: 'Today, 07:45 AM',
-    ),
-  ];
+  void _listenToPayments() {
+    try {
+      _paymentsSub = _paymentService.streamAllPayments().listen(
+        (list) {
+          _payments = list;
+          _paymentsLoading = false;
+          _paymentsError = null;
+          notifyListeners();
+        },
+        onError: (e) {
+          debugPrint('AdminProvider: payments stream error: $e');
+          _paymentsError = 'Failed to load payments: $e';
+          _paymentsLoading = false;
+          notifyListeners();
+        },
+      );
+    } catch (e) {
+      debugPrint('AdminProvider: payments stream error: $e');
+      _paymentsError = 'Failed to load payments: $e';
+      _paymentsLoading = false;
+    }
+  }
 
-  List<DairyPayment> get payments => _payments;
+  /// Updates status for a payment record in Firestore
+  Future<void> updatePaymentStatus(
+    String paymentId,
+    String status, {
+    String? transactionId,
+  }) async {
+    try {
+      await _paymentService.updatePaymentStatus(
+        paymentId,
+        status,
+        transactionId: transactionId,
+      );
+    } catch (e) {
+      debugPrint('AdminProvider: Failed to update payment status: $e');
+      rethrow;
+    }
+  }
 
   // ─── Support Complaints (Firestore-backed) ───────────────────────────
 
@@ -1467,6 +1589,7 @@ class AdminProvider extends ChangeNotifier {
     _categoriesSub?.cancel();
     _ordersSub?.cancel();
     _complaintsSub?.cancel();
+    _paymentsSub?.cancel();
     _usersSub?.cancel();
     _deliveryAgentsSub?.cancel();
     super.dispose();

@@ -160,6 +160,31 @@ class OrderService {
       'createdAt': FieldValue.serverTimestamp(),
     });
 
+    // Create corresponding payment transaction record in payments collection
+    try {
+      final isCash = paymentMethod.toLowerCase().contains('cash');
+      await _firestore.collection('payments').doc('PAY_${docRef.id}').set({
+        'id': 'PAY_${docRef.id}',
+        'orderId': docRef.id,
+        'orderCode': orderCode,
+        'userId': authoritativeUid,
+        'customerName': deliveryAddress.fullName.trim().isNotEmpty
+            ? deliveryAddress.fullName.trim()
+            : 'Customer',
+        'customerPhone': deliveryAddress.mobileNumber,
+        'amount': totals.total,
+        'method': paymentMethod,
+        'paymentMethod': paymentMethod,
+        'status': isCash ? 'Pending' : 'Success',
+        'paymentStatus': isCash ? 'Pending' : 'Success',
+        'transactionId': isCash ? null : 'TXN_${docRef.id}',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {
+      // Non-blocking fallback
+    }
+
     return order;
   }
 
@@ -215,6 +240,25 @@ class OrderService {
           .collection('orders')
           .doc(orderId)
           .update({'status': orderStatusToString(status)});
+
+      // Sync payment status if order is delivered or cancelled
+      try {
+        final paymentDoc =
+            _firestore.collection('payments').doc('PAY_$orderId');
+        if (status == OrderStatus.delivered) {
+          await paymentDoc.update({
+            'status': 'Success',
+            'paymentStatus': 'Success',
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        } else if (status == OrderStatus.cancelled) {
+          await paymentDoc.update({
+            'status': 'Cancelled',
+            'paymentStatus': 'Cancelled',
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      } catch (_) {}
     } catch (e) {
       throw Exception('Failed to update order status for $orderId: $e');
     }

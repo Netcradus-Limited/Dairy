@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../core/constants/app_assets.dart';
 
+export 'payment_model.dart';
+
 class DairyCategory {
   final String id;
   final String name;
@@ -65,23 +67,3 @@ class DairyCategory {
   }
 }
 
-class DairyPayment {
-  final String id;
-  final String customerName;
-  final String orderOrWalletId;
-  final double amount;
-  final String
-      method; // 'UPI', 'Razorpay', 'Cash On Delivery', 'Wallet Auto-Debit'
-  final String status; // 'Success', 'Pending', 'Failed'
-  final String timestamp;
-
-  const DairyPayment({
-    required this.id,
-    required this.customerName,
-    required this.orderOrWalletId,
-    required this.amount,
-    required this.method,
-    required this.status,
-    required this.timestamp,
-  });
-}
