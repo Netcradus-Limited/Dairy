@@ -1,4 +1,4 @@
-/// Sawariya Dairy Asset Paths
+/// Sawariya Dairy Asset Paths & Resolution Logic
 abstract class AppAssets {
   static const String imagePath = 'assets/images';
   static const String logoPath = '$imagePath/logo';
@@ -18,7 +18,7 @@ abstract class AppAssets {
   static const String milkBottle = '$productPath/sawariya_milk_bottle.jpg';
   static const String lassiBottle = '$productPath/sawariya_lassi_bottle.jpg';
 
-  // PNG product images for hero / banner use
+  // PNG product images for hero / banner / cards use
   static const String milkPng = '$imagePath/nnd.png';
   static const String lassiPng = '$imagePath/nnl.png';
   static const String gheePng = '$imagePath/nng.png';
@@ -51,9 +51,6 @@ abstract class AppAssets {
       'https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=1200&q=80';
 
   // ─── Image resolution helpers ──────────────────────────────────────────────
-  // Category cards pick a default from the category mapping; product cards pick
-  // a default from the product mapping. Network URLs and valid local asset paths
-  // are returned untouched so nothing valid is ever overwritten.
 
   /// Default local asset for each category (category card thumbnails).
   static const Map<String, String> _categoryDefaultByKey = {
@@ -77,7 +74,7 @@ abstract class AppAssets {
     'cat_water': waterPng,
   };
 
-  /// Every known-valid local asset path (supports obsolete-path detection).
+  /// Every known-valid local asset path in the project bundle.
   static const Set<String> _validAssetPaths = {
     '$imagePath/all.png',
     milkCategory,
@@ -94,18 +91,86 @@ abstract class AppAssets {
     paneerPng,
     uplePng,
     waterPng,
+    sawariyaLogo,
+    milkBottle,
+    lassiBottle,
+    landingHeroMilk,
+    landingHeroProducts,
+    landingHeroScooter,
+    landingBgMeadow,
+    landingBg,
+    loginHeroCow,
+    dairyMascot,
+    '$imagePath/nicon.png',
+    '$imagePath/1.png',
+    '$imagePath/2.png',
+    '$imagePath/3.png',
+    '$imagePath/deliver.png',
+    '$imagePath/delivery.jpg',
+    '$imagePath/freshness.jpg',
+    '$imagePath/home.png',
+    '$imagePath/hygien.jpg',
+    '$imagePath/nature quality.jpg',
+    '$imagePath/poster.jpg',
+    '$imagePath/purity.jpg',
+    '$imagePath/quality.jpg',
+    '$imagePath/trust.jpg',
+    '$imagePath/why.jpeg',
+    '$imagePath/shopbanner1.png',
+    '$imagePath/shopbanner2.png',
+    '$imagePath/shopbanner3.png',
+    '$imagePath/banner4.png',
+    '$imagePath/banner5.png',
+    '$imagePath/bghome.png',
   };
 
-  static bool _isNetwork(String? url) {
+  /// Returns true if [url] is a remote network URL (http, https, gs).
+  static bool isNetworkImage(String? url) {
     if (url == null) return false;
     final trimmed = url.trim();
-    return trimmed.startsWith('http://') || trimmed.startsWith('https://');
+    return trimmed.startsWith('http://') ||
+        trimmed.startsWith('https://') ||
+        trimmed.startsWith('gs://');
   }
 
-  static bool _isAsset(String? url) {
-    if (url == null) return false;
-    final trimmed = url.trim();
-    return trimmed.startsWith('assets/') && _validAssetPaths.contains(trimmed);
+  /// Normalizes any given image path or remote URL according to application rules:
+  /// 1. Null / empty string returns empty string.
+  /// 2. Remote URLs (http://, https://, gs://) are returned unchanged.
+  /// 3. Redundant `assets/assets/` prefixes are collapsed to single `assets/`.
+  /// 4. Paths already starting with `assets/` are kept as-is (never prepends another assets/).
+  /// 5. Paths starting with `images/` are prepended with `assets/` -> `assets/images/...`.
+  /// 6. Relative subpaths (e.g. `banners/x.png`) are prepended with `assets/` -> `assets/banners/x.png`.
+  /// 7. Plain filenames (e.g. `milk.png`) are prepended with `assets/images/` -> `assets/images/milk.png`.
+  static String normalizeAssetPath(String? rawPath) {
+    if (rawPath == null) return '';
+    var path = rawPath.trim();
+    if (path.isEmpty) return '';
+
+    // Remote network or cloud storage URL
+    if (path.startsWith('http://') ||
+        path.startsWith('https://') ||
+        path.startsWith('gs://')) {
+      return path;
+    }
+
+    // Collapse any repeated assets/ prefixes
+    while (path.startsWith('assets/assets/')) {
+      path = path.substring(7); // removes the first 'assets/'
+    }
+
+    if (path.startsWith('assets/')) {
+      return path;
+    }
+
+    if (path.startsWith('images/')) {
+      return 'assets/$path';
+    }
+
+    if (path.contains('/')) {
+      return 'assets/$path';
+    }
+
+    return 'assets/images/$path';
   }
 
   static String? _fallbackDefault(
@@ -129,19 +194,62 @@ abstract class AppAssets {
   }
 
   /// Resolves which image source to use for a category thumbnail.
-  /// A valid network URL (http/https) is ALWAYS returned unchanged.
+  /// A valid network URL (http/https/gs) is ALWAYS returned unchanged.
   /// A valid local asset path is returned unchanged.
-  /// Only invalid, empty, or obsolete paths fall back to the category default.
-  static String? categoryImage({String? imageUrl, String? categoryKey, String? name}) {
-    if (_isNetwork(imageUrl)) return imageUrl!.trim();
-    if (_isAsset(imageUrl)) return imageUrl!.trim();
-    return _fallbackDefault(_categoryDefaultByKey, categoryKey ?? name);
+  /// Obsolete paths or keyword matches resolve to the correct category asset.
+  static String? categoryImage({
+    String? imageUrl,
+    String? categoryKey,
+    String? name,
+  }) {
+    final normalized = normalizeAssetPath(imageUrl);
+    if (isNetworkImage(normalized)) return normalized;
+
+    final search =
+        '${categoryKey ?? ''} ${name ?? ''} $normalized'.toLowerCase();
+    if (search.contains('paneer') || search.contains('pan')) {
+      return paneerCategory;
+    }
+    if (search.contains('ghee') || search.contains('gh')) {
+      return gheeCategory;
+    }
+    if (search.contains('lassi') || search.contains('las')) {
+      return lassiCategory;
+    }
+    if (search.contains('makhan') ||
+        search.contains('butter') ||
+        search.contains('mak')) {
+      return makhanCategory;
+    }
+    if (search.contains('uple') ||
+        search.contains('dung') ||
+        search.contains('u3')) {
+      return upleCategory;
+    }
+    if (search.contains('water') || search.contains('w3')) {
+      return waterCategory;
+    }
+    if (search.contains('milk') ||
+        search.contains('doodh') ||
+        search.contains('dood')) {
+      return milkCategory;
+    }
+    if (search.contains('all')) {
+      return '$imagePath/all.png';
+    }
+
+    if (_validAssetPaths.contains(normalized)) {
+      return normalized;
+    }
+
+    return _fallbackDefault(_categoryDefaultByKey, categoryKey ?? name) ??
+        milkCategory;
   }
 
   /// Resolves which image source to use for a product thumbnail.
-  /// A valid network URL (http/https) is ALWAYS returned unchanged.
-  /// Identifies the product from title, categoryKey, or productId to avoid
-  /// displaying stale generic milk images from previous order records.
+  /// A valid network URL (http/https/gs) is ALWAYS returned unchanged.
+  /// Identifies the product from title, categoryKey, productId, or imageUrl to avoid
+  /// displaying stale generic milk images from previous order records or 404s for obsolete asset names.
   static String? productImage({
     String? imageUrl,
     String? categoryKey,
@@ -149,18 +257,20 @@ abstract class AppAssets {
     String? productTitle,
     String? title,
   }) {
-    // 1. Direct valid network URL (http/https from Firestore / Firebase Storage)
-    if (_isNetwork(imageUrl)) {
-      return imageUrl!.trim();
+    final normalized = normalizeAssetPath(imageUrl);
+
+    // 1. Direct valid network URL (http/https/gs from Firestore / Firebase Storage)
+    if (isNetworkImage(normalized)) {
+      return normalized;
     }
 
     final effectiveTitle = (productTitle ?? title)?.trim();
     final effectiveProductId = productId?.trim();
     final effectiveCategoryKey = categoryKey?.trim();
 
-    // 2. Identify the product from title, category, or ID first
+    // 2. Identify the product from title, category, ID, or raw asset filename
     final search =
-        '${effectiveTitle ?? ''} ${effectiveCategoryKey ?? ''} ${effectiveProductId ?? ''}'
+        '${effectiveTitle ?? ''} ${effectiveCategoryKey ?? ''} ${effectiveProductId ?? ''} $normalized'
             .toLowerCase();
 
     if (search.contains('paneer') || search.contains('pan')) {
@@ -206,9 +316,9 @@ abstract class AppAssets {
       return fromTitle;
     }
 
-    // 4. If imageUrl is an explicit valid asset and no conflicting keyword was found
-    if (_isAsset(imageUrl)) {
-      return imageUrl!.trim();
+    // 4. If normalized imageUrl is an explicit valid bundled asset and no conflicting keyword was found
+    if (_validAssetPaths.contains(normalized)) {
+      return normalized;
     }
 
     return milkPng;

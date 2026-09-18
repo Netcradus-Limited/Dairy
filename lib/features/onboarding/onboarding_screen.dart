@@ -9,6 +9,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/localization/app_language.dart';
 import '../../core/responsive/responsive.dart';
 import '../../providers/onboarding_provider.dart';
+import '../auth/services/auth_video_service.dart';
 
 /// Data Model for Onboarding Page Content
 class OnboardingData {
@@ -38,6 +39,13 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Preload authentication videos early while user is on landing/onboarding
+    AuthVideoService.instance.preload();
+  }
 
   Future<void> _completeOnboarding() async {
     final service = ref.read(onboardingServiceProvider);

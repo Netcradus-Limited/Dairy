@@ -197,7 +197,7 @@ class _HeroPromotionalBannerState extends State<_HeroPromotionalBanner> {
   void initState() {
     super.initState();
     _controller = VideoPlayerController.asset(
-      'assets/images/shopv2.mp4',
+      'assets/images/homenew2v.mp4',
       videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
     );
     _controller.initialize().then((_) async {

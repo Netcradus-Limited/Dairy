@@ -8,6 +8,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../providers/onboarding_provider.dart';
 import '../../providers/user_provider.dart';
+import '../auth/services/auth_video_service.dart';
 
 /// Premium Minimal Animated Splash Screen for Sawariya Dairy
 class SplashScreen extends ConsumerStatefulWidget {
@@ -27,6 +28,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   void initState() {
     super.initState();
+
+    // Preload authentication videos early for instant playback on login & otp
+    AuthVideoService.instance.preload();
 
     // Setup smooth fade & scale animations
     _controller = AnimationController(

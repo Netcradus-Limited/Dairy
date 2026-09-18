@@ -920,8 +920,43 @@ class AdminProvider extends ChangeNotifier {
   // ─── Customers Data (Firestore-backed) ─────────────────────────────────
 
   List<DairyCustomer> _customers = [];
+  DairyCustomer? _selectedCustomer;
 
   List<DairyCustomer> get customers => _customers;
+  DairyCustomer? get selectedCustomer => _selectedCustomer;
+
+  void selectCustomer(DairyCustomer? customer) {
+    _selectedCustomer = customer;
+    _selectedNavIndex = 1; // Nav index 1 corresponds to Customers
+    notifyListeners();
+  }
+
+  void clearSelectedCustomer() {
+    _selectedCustomer = null;
+    notifyListeners();
+  }
+
+  void selectCustomerById(String customerId) {
+    final cleanId = customerId.trim();
+    final index = _customers.indexWhere((c) => c.id == cleanId);
+    if (index != -1) {
+      selectCustomer(_customers[index]);
+    } else {
+      selectCustomer(DairyCustomer(
+        id: cleanId,
+        name: 'Customer ($cleanId)',
+        phone: '',
+        email: '',
+        address: 'Noida, Uttar Pradesh',
+        deliveryZone: 'Standard Zone',
+        subscriptionPlan: 'Standard Dairy Plan',
+        milkPreference: 'Standard Cow Milk',
+        walletBalance: 0.0,
+        status: 'Active',
+        joinedDate: 'Active',
+      ));
+    }
+  }
 
   /// Saves a new customer document in the Firestore `users` collection.
   Future<void> addCustomer(DairyCustomer customer) async {
@@ -1238,6 +1273,17 @@ class AdminProvider extends ChangeNotifier {
       } else {
         // Genuine Customer account
         custCount++;
+        final dynamic candidateImage = data['profileImageUrl'] ??
+            data['photoUrl'] ??
+            data['photoURL'] ??
+            data['profileImage'] ??
+            data['imageUrl'] ??
+            data['avatar'];
+        final String? profileImg =
+            (candidateImage is String && candidateImage.trim().isNotEmpty)
+                ? candidateImage.trim()
+                : null;
+
         custList.add(
           DairyCustomer(
             id: doc.id,
@@ -1260,6 +1306,7 @@ class AdminProvider extends ChangeNotifier {
                         .format((data['createdAt'] as Timestamp).toDate())
                     : 'Active')
                 : 'Active',
+            profileImageUrl: profileImg,
           ),
         );
       }
@@ -1268,6 +1315,14 @@ class AdminProvider extends ChangeNotifier {
     _customers = custList;
     _customersCount = custCount;
     _staffList = staff;
+
+    if (_selectedCustomer != null) {
+      final matchIdx = custList.indexWhere((c) => c.id == _selectedCustomer!.id);
+      if (matchIdx != -1) {
+        _selectedCustomer = custList[matchIdx];
+      }
+    }
+
     _usersLoading = false;
     _usersError = null;
     notifyListeners();

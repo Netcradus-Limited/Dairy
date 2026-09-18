@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/localization/app_language.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'features/auth/services/auth_video_service.dart';
 import 'firebase_options.dart';
 import 'providers/settings_provider.dart';
 import 'services/notification_service.dart';
@@ -20,6 +21,9 @@ void main() async {
   // Register the background message handler as early as possible. It must not
   // depend on the Riverpod container.
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+  // Preload authentication videos early for seamless playback
+  AuthVideoService.instance.preload();
 
   runApp(const ProviderScope(child: MyApp()));
 }

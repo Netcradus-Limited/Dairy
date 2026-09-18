@@ -115,6 +115,19 @@ service cloud.firestore {
       allow read, create, update, delete: if isAdmin() || isOwnDoc(userId);
     }
 
+    // ── 5a. users/{userId}/delivery_records Subcollection ────────────────────
+    match /users/{userId}/delivery_records/{recordId} {
+      // Owners can read own delivery records; Admins have full access
+      allow read: if isAdmin() || isOwnDoc(userId);
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ── 5b. users/{userId}/skipped_dates Subcollection ───────────────────────
+    match /users/{userId}/skipped_dates/{dateId} {
+      // Owners and Admins can manage skipped delivery dates
+      allow read, create, update, delete: if isAdmin() || isOwnDoc(userId);
+    }
+
     // ── 6. products Collection ──────────────────────────────────────────────
     match /products/{productId} {
       // Any signed-in user can browse products in the shop

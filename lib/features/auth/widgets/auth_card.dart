@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../core/constants/app_assets.dart';
+import '../services/auth_video_service.dart';
 import 'web_video_helper.dart';
 
 /// Responsive Luxury Authentication Shell Container Card for Sawariya Dairy
@@ -288,58 +289,71 @@ class _AuthVideoPlayerState extends State<_AuthVideoPlayer> {
   @override
   void initState() {
     super.initState();
-    _initVideoPlayer();
+    _bindController();
   }
 
-  Future<void> _initVideoPlayer() async {
-    _controller = VideoPlayerController.asset(
-      widget.videoPath,
-      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-    );
-    _controller.addListener(() {
-      if (mounted) {
-        setState(() {});
-      }
-    });
+  void _bindController() {
+    _controller = AuthVideoService.instance.getController(widget.videoPath);
+    _controller.addListener(_onControllerUpdate);
 
+    if (_controller.value.isInitialized) {
+      _isInitialized = true;
+      _startPlayback();
+    } else {
+      final initFuture =
+          AuthVideoService.instance.getInitFuture(widget.videoPath);
+      initFuture?.then((_) {
+        if (mounted) {
+          setState(() {
+            _isInitialized = _controller.value.isInitialized;
+          });
+          if (_isInitialized) {
+            _startPlayback();
+          }
+        }
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _AuthVideoPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.videoPath != widget.videoPath) {
+      _controller.removeListener(_onControllerUpdate);
+      _bindController();
+    }
+  }
+
+  void _onControllerUpdate() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _startPlayback() async {
     try {
-      await _controller.initialize();
-      if (!mounted) return;
-
-      // 1. ALWAYS set muted BEFORE calling play()
       await _controller.setVolume(0.0);
-
-      // 2. Set looping behavior
       await _controller.setLooping(true);
 
-      // 3. Configure underlying web HTML video element for muted autoplay
       if (kIsWeb) {
         configureWebVideoAutoplay();
-      }
-
-      setState(() {
-        _isInitialized = true;
-      });
-
-      // 4. Ensure DOM elements created after build are configured
-      if (kIsWeb) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           configureWebVideoAutoplay();
         });
       }
 
-      // 5. Autoplay immediately; catch any play() error gracefully
       await _controller.play().catchError((error) {
         debugPrint('Auth video play() non-fatal error: $error');
       });
-    } catch (error) {
-      debugPrint('Error initializing auth video: $error');
+    } catch (e) {
+      debugPrint('Error starting auth video playback: $e');
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller.removeListener(_onControllerUpdate);
+    // Note: Do not dispose _controller here as it is cached in AuthVideoService
     super.dispose();
   }
 
@@ -349,6 +363,9 @@ class _AuthVideoPlayerState extends State<_AuthVideoPlayer> {
       _controller.play().catchError((error) {
         debugPrint('Tap play error: $error');
       });
+      if (kIsWeb) {
+        configureWebVideoAutoplay();
+      }
     }
   }
 
@@ -382,48 +399,18 @@ class _AuthVideoPlayerState extends State<_AuthVideoPlayer> {
 
     if (!_isInitialized) {
       return Container(
-        color: const Color(0xFF005F38),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              AppAssets.landingBg,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                color: const Color(0xFF005F38),
-              ),
-            ),
-            Container(
-              color: Colors.black.withValues(alpha: 0.35),
-            ),
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.asset(
-                    AppAssets.sawariyaLogo,
-                    width: 80,
-                    height: 80,
-                    errorBuilder: (_, __, ___) => const Icon(
-                      Icons.eco_rounded,
-                      color: Color(0xFFD4AF37),
-                      size: 50,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Sawariya Dairy',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF0F3822), Color(0xFF052113)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFFD4AF37),
+            strokeWidth: 2,
+          ),
         ),
       );
     }

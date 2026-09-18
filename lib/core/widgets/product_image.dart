@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_assets.dart';
+import 'app_network_image.dart';
 
 /// Reusable Product Image Widget for Cart, Orders, Checkout & Details
 class ProductImage extends StatelessWidget {
@@ -34,25 +35,30 @@ class ProductImage extends StatelessWidget {
         ) ??
         AppAssets.milkPng;
 
-    final isNetwork =
-        resolved.startsWith('http://') || resolved.startsWith('https://');
+    final isNetwork = AppAssets.isNetworkImage(resolved);
 
-    final image = isNetwork
-        ? Image.network(
-            resolved,
+    final fallbackAsset = AppAssets.productImage(
+          productId: productId,
+          title: title,
+          categoryKey: categoryKey,
+        ) ??
+        AppAssets.milkPng;
+
+    final Widget image = isNetwork
+        ? AppNetworkImage(
+            imageUrl: resolved,
             width: size,
             height: size,
             fit: fit,
             errorBuilder: (_, __, ___) => Image.asset(
-              AppAssets.productImage(
-                    productId: productId,
-                    title: title,
-                    categoryKey: categoryKey,
-                  ) ??
-                  AppAssets.milkPng,
+              fallbackAsset,
               width: size,
               height: size,
               fit: fit,
+              errorBuilder: (_, __, ___) => const Center(
+                child: Icon(Icons.inventory_2_outlined,
+                    size: 24, color: Colors.grey),
+              ),
             ),
             loadingBuilder: (_, child, progress) => progress == null
                 ? child
@@ -70,15 +76,14 @@ class ProductImage extends StatelessWidget {
             height: size,
             fit: fit,
             errorBuilder: (_, __, ___) => Image.asset(
-              AppAssets.productImage(
-                    productId: productId,
-                    title: title,
-                    categoryKey: categoryKey,
-                  ) ??
-                  AppAssets.milkPng,
+              fallbackAsset,
               width: size,
               height: size,
               fit: fit,
+              errorBuilder: (_, __, ___) => const Center(
+                child: Icon(Icons.inventory_2_outlined,
+                    size: 24, color: Colors.grey),
+              ),
             ),
           );
 

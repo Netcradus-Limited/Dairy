@@ -7,6 +7,7 @@ import '../../core/responsive/responsive_layout.dart';
 import '../../models/customer_model.dart';
 import '../../providers/admin_provider.dart';
 import '../../widgets/status_badge.dart';
+import 'customer_profile_screen.dart';
 
 class CustomersScreen extends StatelessWidget {
   const CustomersScreen({super.key});
@@ -14,6 +15,12 @@ class CustomersScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AdminProvider>();
+
+    // If a customer is currently selected, render the dedicated Customer Profile view
+    if (provider.selectedCustomer != null) {
+      return CustomerProfileScreen(customer: provider.selectedCustomer!);
+    }
+
     final isDesktop = ResponsiveLayout.isDesktop(context);
     final cardBg = AppColors.cardBgOf(context);
     final cardBorder = AppColors.cardBorderOf(context);
@@ -28,7 +35,8 @@ class CustomersScreen extends StatelessWidget {
       return c.name.toLowerCase().contains(q) ||
           c.phone.contains(q) ||
           c.email.toLowerCase().contains(q) ||
-          c.deliveryZone.toLowerCase().contains(q);
+          c.deliveryZone.toLowerCase().contains(q) ||
+          c.id.toLowerCase().contains(q);
     }).toList();
 
     return SingleChildScrollView(
@@ -181,8 +189,7 @@ class CustomersScreen extends StatelessWidget {
                         itemBuilder: (ctx, idx) {
                           final customer = filteredCustomers[idx];
                           return InkWell(
-                            onTap: () => _showCustomerDetailsDialog(
-                                context, provider, customer),
+                            onTap: () => provider.selectCustomer(customer),
                             borderRadius: BorderRadius.circular(16),
                             child: Padding(
                               padding: const EdgeInsets.all(16.0),
@@ -308,13 +315,12 @@ class CustomersScreen extends StatelessWidget {
                                             Icons.visibility_outlined,
                                             size: 18,
                                             color: AppColors.primary),
-                                        tooltip: 'View Details',
+                                        tooltip: 'View Profile',
                                         padding: EdgeInsets.zero,
                                         constraints: const BoxConstraints(
                                             minWidth: 32, minHeight: 32),
                                         onPressed: () =>
-                                            _showCustomerDetailsDialog(
-                                                context, provider, customer),
+                                            provider.selectCustomer(customer),
                                       ),
                                       IconButton(
                                         icon: const Icon(Icons.edit_outlined,
@@ -351,164 +357,6 @@ class CustomersScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  void _showCustomerDetailsDialog(
-      BuildContext context, AdminProvider provider, DairyCustomer customer) {
-    final currencyFormatter =
-        NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
-              child: Text(
-                customer.name.isNotEmpty
-                    ? customer.name.substring(0, 1).toUpperCase()
-                    : 'C',
-                style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    customer.name,
-                    style: GoogleFonts.plusJakartaSans(
-                        fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                  Text(
-                    'ID: ${customer.id}',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      color: AppColors.textMutedOf(context),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            StatusBadge.fromString(customer.status),
-          ],
-        ),
-        content: SizedBox(
-          width: 460,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildDetailRow(
-                    context, Icons.phone_outlined, 'Phone', customer.phone),
-                const SizedBox(height: 10),
-                _buildDetailRow(
-                    context, Icons.email_outlined, 'Email', customer.email),
-                const SizedBox(height: 10),
-                _buildDetailRow(context, Icons.location_on_outlined, 'Address',
-                    customer.address),
-                const SizedBox(height: 10),
-                _buildDetailRow(context, Icons.map_outlined, 'Delivery Zone',
-                    customer.deliveryZone),
-                const Divider(height: 24),
-                _buildDetailRow(context, Icons.autorenew_rounded,
-                    'Subscription Plan', customer.subscriptionPlan),
-                const SizedBox(height: 10),
-                _buildDetailRow(context, Icons.water_drop_outlined,
-                    'Milk Preference', customer.milkPreference),
-                const SizedBox(height: 10),
-                _buildDetailRow(
-                  context,
-                  Icons.account_balance_wallet_outlined,
-                  'Wallet Balance',
-                  currencyFormatter.format(customer.walletBalance),
-                  valueColor: customer.walletBalance >= 0
-                      ? AppColors.revenueGreen
-                      : const Color(0xFFEF4444),
-                ),
-                const SizedBox(height: 10),
-                _buildDetailRow(context, Icons.calendar_today_outlined,
-                    'Joined Date', customer.joinedDate),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close'),
-          ),
-          OutlinedButton.icon(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _showCustomerDialog(context, provider, customer);
-            },
-            icon: const Icon(Icons.edit_outlined, size: 16),
-            label: const Text('Edit'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _showDeleteConfirmation(context, provider, customer);
-            },
-            icon: const Icon(Icons.delete_outline_rounded,
-                size: 16, color: Colors.white),
-            label: const Text('Delete', style: TextStyle(color: Colors.white)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(
-    BuildContext context,
-    IconData icon,
-    String label,
-    String value, {
-    Color? valueColor,
-  }) {
-    final textPrimary = AppColors.textPrimaryOf(context);
-    final textSecondary = AppColors.textSecondaryOf(context);
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 16, color: AppColors.primary),
-        const SizedBox(width: 10),
-        SizedBox(
-          width: 130,
-          child: Text(
-            label,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: textSecondary,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value.isNotEmpty ? value : '—',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: valueColor ?? textPrimary,
-            ),
-          ),
-        ),
-      ],
     );
   }
 

@@ -237,6 +237,35 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             },
           ),
         ),
+        routes: [
+          GoRoute(
+            path: 'customers/:id',
+            builder: (context, state) {
+              final customerId = state.pathParameters['id'] ?? '';
+              return provider.MultiProvider(
+                providers: [
+                  provider.ChangeNotifierProvider(create: (_) {
+                    final p = AdminProvider();
+                    if (customerId.isNotEmpty) {
+                      p.selectCustomerById(customerId);
+                    }
+                    return p;
+                  }),
+                ],
+                child: provider.Consumer<AdminProvider>(
+                  builder: (context, adminProvider, child) {
+                    return Theme(
+                      data: adminProvider.isDarkMode
+                          ? AdminTheme.darkTheme
+                          : AdminTheme.lightTheme,
+                      child: const AdminMainShell(),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ],
       ),
       GoRoute(
         path: '/delivery',

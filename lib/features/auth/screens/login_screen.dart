@@ -4,9 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_sizes.dart';
 import '../../../core/utils/validators.dart';
 import '../../../providers/auth_provider.dart';
+import '../services/auth_video_service.dart';
 import '../widgets/auth_card.dart';
 import '../widgets/auth_header.dart';
 
@@ -21,6 +21,13 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _mobileController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Ensure both login and OTP videos are warm and ready
+    AuthVideoService.instance.preload();
+  }
 
   @override
   void dispose() {

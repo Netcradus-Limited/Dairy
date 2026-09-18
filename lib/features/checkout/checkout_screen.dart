@@ -16,7 +16,6 @@ import '../../models/order.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/navigation_provider.dart';
-import '../../providers/user_provider.dart';
 import '../../services/order_service.dart';
 import '../address/add_address_screen.dart';
 import '../address/address_screen.dart';
@@ -188,14 +187,6 @@ class CheckoutScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  /// Generates a Sawariya Dairy style order id (e.g. SD-12345)
-  static String _generateOrderId() {
-    final now = DateTime.now();
-    final ms = now.millisecondsSinceEpoch;
-    final sequence = ms.remainder(100000);
-    return 'SD-$sequence';
   }
 
   @override

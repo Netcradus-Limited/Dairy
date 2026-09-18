@@ -42,36 +42,30 @@ class MainLayoutScreen extends ConsumerWidget {
 
     if (isDesktop) {
       return Scaffold(
-        body: Column(
-          children: [
-            AppTopAppBar(
-              cartItemCount: cartCount,
-              deliveryLocation: deliveryLocation,
-              onLocationTap: handleLocationTap,
-              onSearchTap: () {
-                ref.read(navigationProvider.notifier).setIndex(1);
-              },
-              onNotificationTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const NotificationsScreen()),
-                );
-              },
-              onCartTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CartScreen()),
-                );
-              },
-            ),
-            Expanded(
-              child: IndexedStack(
-                index: currentIndex,
-                children: pages,
-              ),
-            ),
-          ],
+        appBar: AppTopAppBar(
+          cartItemCount: cartCount,
+          deliveryLocation: deliveryLocation,
+          onLocationTap: handleLocationTap,
+          onSearchTap: () {
+            ref.read(navigationProvider.notifier).setIndex(1);
+          },
+          onNotificationTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const NotificationsScreen()),
+            );
+          },
+          onCartTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CartScreen()),
+            );
+          },
+        ),
+        body: IndexedStack(
+          index: currentIndex,
+          children: pages,
         ),
       );
     }

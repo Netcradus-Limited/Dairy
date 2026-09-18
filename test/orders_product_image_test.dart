@@ -1,9 +1,102 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dairy_app/core/constants/app_assets.dart';
 import 'package:dairy_app/models/product.dart';
+import 'package:dairy_app/models/product_model.dart';
 import 'package:dairy_app/models/order.dart';
 
 void main() {
+  group('Asset Path Normalization & Rules', () {
+    test('assets/images/milk.png is preserved and not doubled', () {
+      expect(
+        AppAssets.normalizeAssetPath('assets/images/milk.png'),
+        'assets/images/milk.png',
+      );
+    });
+
+    test('images/milk.png is normalized to assets/images/milk.png', () {
+      expect(
+        AppAssets.normalizeAssetPath('images/milk.png'),
+        'assets/images/milk.png',
+      );
+    });
+
+    test('milk.png is normalized to assets/images/milk.png', () {
+      expect(
+        AppAssets.normalizeAssetPath('milk.png'),
+        'assets/images/milk.png',
+      );
+    });
+
+    test('assets/images/gheen.png is kept as single assets/ prefix', () {
+      expect(
+        AppAssets.normalizeAssetPath('assets/images/gheen.png'),
+        'assets/images/gheen.png',
+      );
+    });
+
+    test('images/gheen.png normalizes to assets/images/gheen.png', () {
+      expect(
+        AppAssets.normalizeAssetPath('images/gheen.png'),
+        'assets/images/gheen.png',
+      );
+    });
+
+    test('Duplicate assets/assets/ prefixes are stripped', () {
+      expect(
+        AppAssets.normalizeAssetPath('assets/assets/images/gheen.png'),
+        'assets/images/gheen.png',
+      );
+      expect(
+        AppAssets.normalizeAssetPath('assets/assets/images/milk.png'),
+        'assets/images/milk.png',
+      );
+      expect(
+        AppAssets.normalizeAssetPath('assets/assets/assets/images/paneernew.png'),
+        'assets/images/paneernew.png',
+      );
+    });
+
+    test('Remote URLs (http, https, gs) remain untouched without assets/ prefix', () {
+      expect(
+        AppAssets.normalizeAssetPath('https://example.com/ghee.png'),
+        'https://example.com/ghee.png',
+      );
+      expect(
+        AppAssets.normalizeAssetPath('http://example.com/images/milk.png'),
+        'http://example.com/images/milk.png',
+      );
+      expect(
+        AppAssets.normalizeAssetPath('gs://sawariya.appspot.com/products/ghee.png'),
+        'gs://sawariya.appspot.com/products/ghee.png',
+      );
+    });
+
+    test('Null and empty strings return empty string', () {
+      expect(AppAssets.normalizeAssetPath(null), '');
+      expect(AppAssets.normalizeAssetPath(''), '');
+      expect(AppAssets.normalizeAssetPath('   '), '');
+    });
+
+    test('assets/assets/images/ is NEVER produced by any normalization', () {
+      final samplePaths = [
+        'assets/images/gheen.png',
+        'images/gheen.png',
+        'gheen.png',
+        'assets/assets/images/gheen.png',
+        'assets/images/lassi.png',
+        'assets/images/paneernew.png',
+        'assets/images/makhanew.png',
+        'https://example.com/ghee.png',
+        'gs://bucket/image.png',
+      ];
+
+      for (final p in samplePaths) {
+        final normalized = AppAssets.normalizeAssetPath(p);
+        expect(normalized.contains('assets/assets/'), isFalse);
+      }
+    });
+  });
+
   group('Product Image Mapping across all screens', () {
     test('Products resolve to their specific requested asset images', () {
       const milk = Product(
@@ -56,23 +149,107 @@ void main() {
         imageUrl: '',
       );
 
-      // Verify exact mappings requested by the user:
+      const uple = Product(
+        id: 'prod_uple',
+        title: 'Organic Uple',
+        categoryId: 'cat_uple',
+        categoryName: 'Uple',
+        price: 40,
+        unit: '1 pc',
+        imageUrl: '',
+      );
+
+      const water = Product(
+        id: 'prod_water',
+        title: 'Water Bottle 20L',
+        categoryId: 'cat_water',
+        categoryName: 'Water',
+        price: 60,
+        unit: '20 L',
+        imageUrl: '',
+      );
+
+      // Verify exact mappings requested:
       // Pure Ghee -> assets/images/nng.png
       // Fresh Lassi -> assets/images/nnl.png
       // Fresh Paneer -> assets/images/nnp.png
       // Fresh Milk -> assets/images/nnd.png
       // Fresh Makhan -> assets/images/nnm.png
+      // Uple -> assets/images/uple.png
+      // Water -> assets/images/water.png
       expect(ghee.resolvedImageUrl, 'assets/images/nng.png');
       expect(lassi.resolvedImageUrl, 'assets/images/nnl.png');
       expect(paneer.resolvedImageUrl, 'assets/images/nnp.png');
       expect(milk.resolvedImageUrl, 'assets/images/nnd.png');
       expect(makhan.resolvedImageUrl, 'assets/images/nnm.png');
+      expect(uple.resolvedImageUrl, 'assets/images/uple.png');
+      expect(water.resolvedImageUrl, 'assets/images/water.png');
 
       expect(AppAssets.gheePng, 'assets/images/nng.png');
       expect(AppAssets.lassiPng, 'assets/images/nnl.png');
       expect(AppAssets.paneerPng, 'assets/images/nnp.png');
       expect(AppAssets.milkPng, 'assets/images/nnd.png');
       expect(AppAssets.makhanPng, 'assets/images/nnm.png');
+      expect(AppAssets.uplePng, 'assets/images/uple.png');
+      expect(AppAssets.waterPng, 'assets/images/water.png');
+    });
+
+    test('DairyProduct admin model resolves to the same verified images', () {
+      const dpGhee = DairyProduct(
+        id: 'prod_pure_ghee',
+        name: 'Pure Ghee',
+        subtitle: 'Pure cow ghee',
+        category: 'Pure Ghee',
+        unit: '1 L',
+        price: 650,
+        imageUrl: 'assets/images/gheen.png',
+      );
+
+      const dpLassi = DairyProduct(
+        id: 'prod_fresh_lassi',
+        name: 'Fresh Lassi',
+        subtitle: 'Sweet lassi',
+        category: 'Lassi',
+        unit: '300 ml',
+        price: 30,
+        imageUrl: 'assets/images/lassi.png',
+      );
+
+      const dpMakhan = DairyProduct(
+        id: 'prod_fresh_makhan',
+        name: 'Fresh Makhan',
+        subtitle: 'White butter',
+        category: 'Makhan',
+        unit: '100 g',
+        price: 60,
+        imageUrl: 'assets/images/makhanew.png',
+      );
+
+      const dpPaneer = DairyProduct(
+        id: 'prod_fresh_paneer',
+        name: 'Fresh Paneer',
+        subtitle: 'Fresh cottage cheese',
+        category: 'Paneer',
+        unit: '200 g',
+        price: 95,
+        imageUrl: 'assets/images/paneernew.png',
+      );
+
+      const dpMilk = DairyProduct(
+        id: 'prod_fresh_milk',
+        name: 'Fresh Milk',
+        subtitle: 'Farm fresh milk',
+        category: 'Milk',
+        unit: '500 ml',
+        price: 45,
+        imageUrl: 'assets/images/milk.png',
+      );
+
+      expect(dpGhee.resolvedImageUrl, 'assets/images/nng.png');
+      expect(dpLassi.resolvedImageUrl, 'assets/images/nnl.png');
+      expect(dpMakhan.resolvedImageUrl, 'assets/images/nnm.png');
+      expect(dpPaneer.resolvedImageUrl, 'assets/images/nnp.png');
+      expect(dpMilk.resolvedImageUrl, 'assets/images/nnd.png');
     });
 
     test('Category icons remain untouched', () {
@@ -85,8 +262,26 @@ void main() {
       expect(AppAssets.waterCategory, 'assets/images/w3.png');
     });
 
-    test('AppAssets.productImage resolves correctly for titles and categories',
-        () {
+    test('AppAssets.productImage resolves legacy/unbundled asset names safely', () {
+      expect(
+        AppAssets.productImage(imageUrl: 'assets/images/gheen.png'),
+        'assets/images/nng.png',
+      );
+      expect(
+        AppAssets.productImage(imageUrl: 'assets/images/lassi.png'),
+        'assets/images/nnl.png',
+      );
+      expect(
+        AppAssets.productImage(imageUrl: 'assets/images/paneernew.png'),
+        'assets/images/nnp.png',
+      );
+      expect(
+        AppAssets.productImage(imageUrl: 'assets/images/makhanew.png'),
+        'assets/images/nnm.png',
+      );
+    });
+
+    test('AppAssets.productImage resolves correctly for titles and categories', () {
       expect(AppAssets.productImage(title: 'Pure Ghee 1 L'),
           'assets/images/nng.png');
       expect(AppAssets.productImage(categoryKey: 'cat_ghee'),
@@ -174,7 +369,6 @@ void main() {
     test(
         'Existing Firestore orders with stale nnd.png image resolve to their correct product images',
         () {
-      // Test the exact orders seen in the screenshot
       final orderWithStaleMilkImage = Order.fromFirestore({
         'status': 'cancelled',
         'subtotal': 670.0,

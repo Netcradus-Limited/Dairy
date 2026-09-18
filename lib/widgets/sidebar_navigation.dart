@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../core/constants/app_assets.dart';
 import '../core/constants/app_colors.dart';
+import '../core/widgets/app_network_image.dart';
 import '../core/widgets/category_image.dart';
 import '../providers/admin_provider.dart';
 import '../providers/cart_provider.dart';
@@ -105,7 +106,7 @@ class SidebarNavigation extends ConsumerWidget {
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.sidebarActive,
+                          color: Colors.white,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -240,22 +241,26 @@ class SidebarNavigation extends ConsumerWidget {
                       backgroundColor: AppColors.sidebarHover,
                       child: ClipOval(
                         child: (user.profileImageUrl != null &&
-                                user.profileImageUrl!.isNotEmpty)
-                            ? Image.network(
-                                user.profileImageUrl!,
+                                user.profileImageUrl!.trim().isNotEmpty)
+                            ? AppNetworkImage(
+                                imageUrl: user.profileImageUrl!.trim(),
                                 width: 32,
                                 height: 32,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Icon(
+                                errorBuilder: (_, __, ___) => const Center(
+                                  child: Icon(
+                                    Icons.person_rounded,
+                                    color: Colors.white70,
+                                    size: 18,
+                                  ),
+                                ),
+                              )
+                            : const Center(
+                                child: Icon(
                                   Icons.person_rounded,
                                   color: Colors.white70,
                                   size: 18,
                                 ),
-                              )
-                            : const Icon(
-                                Icons.person_rounded,
-                                color: Colors.white70,
-                                size: 18,
                               ),
                       ),
                     ),
@@ -266,7 +271,10 @@ class SidebarNavigation extends ConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            user.name.isNotEmpty ? user.name : 'Admin User',
+                            user.name.trim().isNotEmpty &&
+                                    user.name.trim() != 'Guest Customer'
+                                ? user.name.trim()
+                                : 'Sawariya Admin',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,

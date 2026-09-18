@@ -10,6 +10,7 @@ class DairyCustomer {
   final double walletBalance;
   final String status;
   final String joinedDate;
+  final String? profileImageUrl;
 
   const DairyCustomer({
     required this.id,
@@ -23,6 +24,7 @@ class DairyCustomer {
     required this.walletBalance,
     required this.status,
     required this.joinedDate,
+    this.profileImageUrl,
   });
 
   DairyCustomer copyWith({
@@ -37,6 +39,7 @@ class DairyCustomer {
     double? walletBalance,
     String? status,
     String? joinedDate,
+    String? profileImageUrl,
   }) {
     return DairyCustomer(
       id: id ?? this.id,
@@ -50,6 +53,7 @@ class DairyCustomer {
       walletBalance: walletBalance ?? this.walletBalance,
       status: status ?? this.status,
       joinedDate: joinedDate ?? this.joinedDate,
+      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
     );
   }
 }
