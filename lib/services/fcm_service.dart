@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -43,6 +44,8 @@ class FCMService {
   final NotificationRepository _notifRepo;
   final FlutterLocalNotificationsPlugin _localNotifications;
 
+  StreamSubscription<User?>? _authSubscription;
+
   FirebaseMessaging get _messaging =>
       _customMessaging ?? FirebaseMessaging.instance;
   FirebaseAuth get _auth => _customAuth ?? FirebaseAuth.instance;
@@ -82,6 +85,10 @@ class FCMService {
       // Observe token refresh and automatically sync to Firestore for the
       // authenticated delivery agent.
       _listenTokenRefresh();
+
+      // Observe auth state changes so that when a delivery agent logs in,
+      // their FCM token is saved to Firestore automatically.
+      _listenAuthChanges();
 
       // Initial token fetch & registration (best-effort; never crashes).
       await _saveTokenIfAuthorized();
@@ -127,6 +134,27 @@ class FCMService {
       debugPrint('[FCM] onTokenRefresh error: $error');
     });
   }
+
+  /// Listen to auth changes so the FCM token is automatically synced whenever
+  /// a delivery agent logs in.
+  void _listenAuthChanges() {
+    _authSubscription?.cancel();
+    try {
+      _authSubscription = _auth.authStateChanges().listen((User? user) async {
+        if (user != null) {
+          await _saveTokenIfAuthorized();
+        }
+      })
+        ..onError((Object error) {
+          debugPrint('[FCM] onAuthStateChanges error: $error');
+        });
+    } catch (e) {
+      debugPrint('[FCM] Error listening to auth changes: $e');
+    }
+  }
+
+  /// Public method to sync the FCM token to Firestore if authorized.
+  Future<void> saveTokenIfAuthorized() => _saveTokenIfAuthorized();
 
   /// Save or update the FCM token for the authenticated delivery agent in
   /// Firestore. Only writes if:
@@ -230,22 +258,24 @@ class FCMService {
     final notification = message.notification;
     if (notification == null) return;
 
-    await _localNotifications.show(
-      notification.hashCode,
-      notification.title,
-      notification.body,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'order_alerts',
-          'Order Alerts',
-          channelDescription: 'Notifications for new and updated orders',
-          importance: Importance.high,
-          priority: Priority.high,
+    if (!kIsWeb) {
+      await _localNotifications.show(
+        notification.hashCode,
+        notification.title,
+        notification.body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'order_alerts',
+            'Order Alerts',
+            channelDescription: 'Notifications for new and updated orders',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: DarwinNotificationDetails(),
         ),
-        iOS: DarwinNotificationDetails(),
-      ),
-      payload: message.data.toString(),
-    );
+        payload: message.data.toString(),
+      );
+    }
   }
 
   /// Handle a message that opened the app from background/terminated state.
@@ -277,6 +307,7 @@ class FCMService {
   /// IMPORTANT: This function must be a top-level @pragma('vm:entry-point')
   /// function and must NOT depend on the Riverpod container.
   static Future<void> backgroundHandler(RemoteMessage message) async {
+    if (kIsWeb) return;
     await Firebase.initializeApp();
     // For background/terminated state, we show the local notification directly.
     // The foreground handler [handleForegroundMessage] is responsible for
@@ -314,8 +345,7 @@ class FCMService {
 
   /// Dispose of listeners etc. Called when the service is no longer needed.
   void dispose() {
-    // The streams are managed by Riverpod/lifecycle; no explicit cancel needed
-    // for the FirebaseMessaging streams as they are tied to the app lifecycle.
+    _authSubscription?.cancel();
   }
 }
 

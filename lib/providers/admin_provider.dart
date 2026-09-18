@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -95,7 +96,6 @@ class AdminProvider extends ChangeNotifier {
       _payments.where((p) => p.status == 'Failed').length;
   int get cancelledPaymentsCount =>
       _payments.where((p) => p.status == 'Cancelled').length;
-
   List<DairyProduct> get products => _products;
   List<DairyCategory> get categories => _categories;
   bool get isLoading => _isLoading;
@@ -144,6 +144,14 @@ class AdminProvider extends ChangeNotifier {
   List<DairyProduct> get topSellingProducts =>
       _products.where((p) => p.isBestSeller).toList();
 
+  static bool get _canAccessFirestore {
+    try {
+      return Firebase.apps.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   AdminProvider({
     FirestoreProductRepository? repo,
     OrderService? orderService,
@@ -155,15 +163,17 @@ class AdminProvider extends ChangeNotifier {
         _complaintService = complaintService ?? ComplaintService(),
         _paymentService = paymentService ?? PaymentService(),
         _deliveryService = deliveryService ?? DeliveryManagementService() {
-    _listenToProducts();
-    _listenToCategories();
-    _listenToOrders();
-    _listenToComplaints();
-    _listenToPayments();
-    _listenToUsers();
-    _listenToDeliveryAgents();
-    _listenToDeliveryBatches();
-    _listenToDeliveryRoutes();
+    if (_canAccessFirestore) {
+      _listenToProducts();
+      _listenToCategories();
+      _listenToOrders();
+      _listenToComplaints();
+      _listenToPayments();
+      _listenToUsers();
+      _listenToDeliveryAgents();
+      _listenToDeliveryBatches();
+      _listenToDeliveryRoutes();
+    }
   }
 
   // ─── Firestore listeners ───────────────────────────────────────────────
@@ -319,36 +329,37 @@ class AdminProvider extends ChangeNotifier {
     final effectiveAgentId =
         (cleanAgentId != null && cleanAgentId.isNotEmpty) ? cleanAgentId : null;
 
+    final resolvedAgentName = (agentName != null && agentName.trim().isNotEmpty)
+        ? agentName.trim()
+        : (effectiveAgentId != null
+            ? _riders
+                .cast<DeliveryRider?>()
+                .firstWhere((r) => r?.id == effectiveAgentId,
+                    orElse: () => null)
+                ?.name
+            : null);
+
     try {
-      await FirebaseFirestore.instance
-          .collection('orders')
-          .doc(cleanOrderId)
-          .update({
-        'assignedAgentId': effectiveAgentId,
-        if (agentName != null && agentName.trim().isNotEmpty)
-          'assignedAgentName': agentName.trim()
-        else if (effectiveAgentId == null)
-          'assignedAgentName': null,
-      });
+      await _orderService.assignDeliveryAgent(
+        cleanOrderId,
+        effectiveAgentId,
+        agentName: resolvedAgentName,
+      );
 
       // Optimistically update in-memory order for immediate UI responsiveness
       final idx = _orders.indexWhere((o) => o.id == cleanOrderId);
       if (idx != -1) {
         _orders[idx] = _orders[idx].copyWith(
           assignedAgentId: effectiveAgentId,
-          assignedAgentName: agentName ??
-              (effectiveAgentId != null
-                  ? _riders
-                      .cast<DeliveryRider?>()
-                      .firstWhere((r) => r?.id == effectiveAgentId,
-                          orElse: () => null)
-                      ?.name
-                  : null),
+          assignedAgentName: resolvedAgentName,
         );
         notifyListeners();
       }
+      _ordersError = null;
     } catch (e) {
       debugPrint('AdminProvider: Failed to assign delivery agent: $e');
+      _ordersError = 'Failed to assign agent: $e';
+      notifyListeners();
       rethrow;
     }
   }

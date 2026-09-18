@@ -77,12 +77,21 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
 /// Returns the signed-in delivery agent's Firebase Auth uid, or an empty
 /// string when unauthenticated (so agent-scoped streams fall back to only the
 /// public pending orders).
-String get _currentAgentId => FirebaseAuth.instance.currentUser?.uid ?? '';
+String get _currentAgentId {
+  try {
+    return FirebaseAuth.instance.currentUser?.uid ?? '';
+  } catch (_) {
+    return '';
+  }
+}
 
 String _resolveAgentId(Ref ref) {
-  final authUid = FirebaseAuth.instance.currentUser?.uid;
+  String? authUid;
+  try {
+    authUid = FirebaseAuth.instance.currentUser?.uid;
+  } catch (_) {}
   if (authUid != null && authUid.isNotEmpty) return authUid;
-  return ref.watch(userProvider).id;
+  return ref.watch(userProvider.select((u) => u.id));
 }
 
 /// Streams the authenticated delivery agent's real-time geographic position from Firestore.
@@ -161,27 +170,54 @@ final deliveryHistoryStreamProvider =
 class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
   final Ref _ref;
   final User _user;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  FirebaseFirestore? get _firestore {
+    try {
+      return FirebaseFirestore.instance;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  FirebaseAuth? get _auth {
+    try {
+      return FirebaseAuth.instance;
+    } catch (_) {
+      return null;
+    }
+  }
+
   StreamSubscription? _authSubscription;
   StreamSubscription<DocumentSnapshot>? _subscription;
 
   DeliveryNotifier(this._ref, this._user)
-      : super(DeliveryAgent.empty(
-            FirebaseAuth.instance.currentUser?.uid ?? _user.id)) {
+      : super(DeliveryAgent.empty(() {
+          try {
+            return FirebaseAuth.instance.currentUser?.uid ?? _user.id;
+          } catch (_) {
+            return _user.id;
+          }
+        }())) {
     // Listen to Firebase Auth state changes so when user logs in / out,
     // the listener is automatically attached or reset.
-    _authSubscription =
-        FirebaseAuth.instance.authStateChanges().listen((fbUser) {
-      if (fbUser != null && fbUser.uid.isNotEmpty) {
-        _listenToAgentDoc(fbUser.uid);
-      } else {
-        _subscription?.cancel();
-        _subscription = null;
-        state = DeliveryAgent.empty('').copyWith(isLoaded: true);
-      }
-    });
+    try {
+      _authSubscription =
+          _auth?.authStateChanges().listen((fbUser) {
+        if (fbUser != null && fbUser.uid.isNotEmpty) {
+          _listenToAgentDoc(fbUser.uid);
+        } else {
+          _subscription?.cancel();
+          _subscription = null;
+          if (!mounted) return;
+          state = DeliveryAgent.empty('').copyWith(isLoaded: true);
+        }
+      });
+    } catch (_) {}
 
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    String? currentUid;
+    try {
+      currentUid = _auth?.currentUser?.uid;
+    } catch (_) {}
+
     if (currentUid != null && currentUid.isNotEmpty) {
       _listenToAgentDoc(currentUid);
     } else if (_user.id.isNotEmpty) {
@@ -189,12 +225,20 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
     }
   }
 
+  User get _currentUser {
+    try {
+      return _ref.read(userProvider);
+    } catch (_) {
+      return _user;
+    }
+  }
+
   String get _effectiveUid {
     try {
-      final authUid = FirebaseAuth.instance.currentUser?.uid;
+      final authUid = _auth?.currentUser?.uid;
       if (authUid != null && authUid.isNotEmpty) return authUid;
     } catch (_) {}
-    if (_user.id.isNotEmpty) return _user.id;
+    if (_currentUser.id.isNotEmpty) return _currentUser.id;
     return '';
   }
 
@@ -239,18 +283,30 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
 
   void _listenToAgentDoc([String? targetUid]) {
     _subscription?.cancel();
-    final uid = targetUid ?? FirebaseAuth.instance.currentUser?.uid ?? _effectiveUid;
+    String? currentUid;
+    try {
+      currentUid = _auth?.currentUser?.uid;
+    } catch (_) {}
+    final uid = targetUid ?? currentUid ?? _effectiveUid;
     if (uid.isEmpty) {
+      if (!mounted) return;
       state = DeliveryAgent.empty('').copyWith(isLoaded: true);
       return;
     }
 
-    _subscription = _firestore
+    final firestore = _firestore;
+    if (firestore == null) {
+      if (!mounted) return;
+      state = state.copyWith(isLoaded: true);
+      return;
+    }
+
+    _subscription = firestore
         .collection('delivery_agents')
         .doc(uid)
         .snapshots()
         .listen((snapshot) async {
-      final authUser = FirebaseAuth.instance.currentUser;
+      final authUser = _auth?.currentUser;
 
       debugPrint('DeliveryNotifier: Agent document path = delivery_agents/$uid');
       debugPrint('DeliveryNotifier: Agent document exists = ${snapshot.exists}');
@@ -265,11 +321,11 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
         final agentDocName = (data['name'] as String?)?.trim() ?? '';
         if (agentDocName.isNotEmpty && !_isLegacyMockName(agentDocName)) {
           realName = agentDocName;
-        } else if (_user.name.trim().isNotEmpty &&
-            _user.name.trim() != 'Guest Customer' &&
-            _user.name.trim() != 'Sawariya Customer' &&
-            !_isLegacyMockName(_user.name)) {
-          realName = _user.name.trim();
+        } else if (_currentUser.name.trim().isNotEmpty &&
+            _currentUser.name.trim() != 'Guest Customer' &&
+            _currentUser.name.trim() != 'Sawariya Customer' &&
+            !_isLegacyMockName(_currentUser.name)) {
+          realName = _currentUser.name.trim();
         } else if (authUser?.displayName != null &&
             authUser!.displayName!.trim().isNotEmpty &&
             authUser.displayName!.trim() != 'Guest Customer' &&
@@ -283,9 +339,9 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
         final agentDocPhone = (data['phone'] as String?)?.trim() ?? '';
         if (agentDocPhone.isNotEmpty && !_isLegacyMockPhone(agentDocPhone)) {
           realPhone = agentDocPhone;
-        } else if (_user.phone.trim().isNotEmpty &&
-            !_isLegacyMockPhone(_user.phone)) {
-          realPhone = _user.phone.trim();
+        } else if (_currentUser.phone.trim().isNotEmpty &&
+            !_isLegacyMockPhone(_currentUser.phone)) {
+          realPhone = _currentUser.phone.trim();
         } else if (authUser?.phoneNumber != null &&
             authUser!.phoneNumber!.trim().isNotEmpty &&
             !_isLegacyMockPhone(authUser.phoneNumber)) {
@@ -297,8 +353,8 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
         final agentDocEmail = (data['email'] as String?)?.trim() ?? '';
         if (agentDocEmail.isNotEmpty) {
           realEmail = agentDocEmail;
-        } else if ((_user.email?.trim() ?? '').isNotEmpty) {
-          realEmail = _user.email!.trim();
+        } else if ((_currentUser.email?.trim() ?? '').isNotEmpty) {
+          realEmail = _currentUser.email!.trim();
         } else if (authUser?.email != null &&
             authUser!.email!.trim().isNotEmpty) {
           realEmail = authUser.email!.trim();
@@ -338,9 +394,9 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
             ?.trim();
         if (agentDocImage != null && agentDocImage.isNotEmpty) {
           realProfileImage = agentDocImage;
-        } else if (_user.profileImageUrl != null &&
-            _user.profileImageUrl!.trim().isNotEmpty) {
-          realProfileImage = _user.profileImageUrl!.trim();
+        } else if (_currentUser.profileImageUrl != null &&
+            _currentUser.profileImageUrl!.trim().isNotEmpty) {
+          realProfileImage = _currentUser.profileImageUrl!.trim();
         } else if (authUser?.photoURL != null &&
             authUser!.photoURL!.trim().isNotEmpty) {
           realProfileImage = authUser.photoURL!.trim();
@@ -354,7 +410,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
             realZone.isEmpty ||
             realProfileImage == null) {
           try {
-            final userDoc = await _firestore.collection('users').doc(uid).get();
+            final userDoc = await firestore.collection('users').doc(uid).get();
             if (userDoc.exists) {
               final uData = userDoc.data() ?? {};
               if (realName.isEmpty) {
@@ -421,6 +477,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
         debugPrint('DeliveryNotifier: Loaded assignedZone = $realZone');
         debugPrint('DeliveryNotifier: Loaded profileImageUrl = $realProfileImage');
 
+        if (!mounted) return;
         state = DeliveryAgent(
           id: uid,
           name: realName,
@@ -443,12 +500,12 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
         // Doc in delivery_agents doesn't exist yet; check users/{uid}
         debugPrint('DeliveryNotifier: Doc in delivery_agents does not exist; checking users/$uid');
         try {
-          final userDoc = await _firestore.collection('users').doc(uid).get();
+          final userDoc = await firestore.collection('users').doc(uid).get();
           if (userDoc.exists) {
             final uData = userDoc.data() ?? {};
             debugPrint('DeliveryNotifier: users doc found, fields = ${uData.keys.toList()}');
-            final uName = (uData['name'] as String? ?? _user.name).trim();
-            final uPhone = (uData['phone'] as String? ?? _user.phone).trim();
+            final uName = (uData['name'] as String? ?? _currentUser.name).trim();
+            final uPhone = (uData['phone'] as String? ?? _currentUser.phone).trim();
             final uVehicle = (uData['vehicle'] as String? ?? '').trim();
             final uVehicleNumber =
                 (uData['vehicleNumber'] as String? ?? '').trim();
@@ -478,11 +535,12 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
             debugPrint('DeliveryNotifier: Loaded assignedZone = $cleanZone');
             debugPrint('DeliveryNotifier: Loaded profileImageUrl = $uProfileImage');
 
+            if (!mounted) return;
             state = DeliveryAgent(
               id: uid,
               name: cleanName,
               phone: cleanPhone,
-              email: (uData['email'] as String? ?? _user.email)?.trim(),
+              email: (uData['email'] as String? ?? _currentUser.email)?.trim(),
               vehicle: cleanVehicle,
               vehicleNumber: cleanVehicleNum,
               assignedZone: cleanZone,
@@ -494,7 +552,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
               profileImageUrl:
                   (uProfileImage != null && uProfileImage.isNotEmpty)
                       ? uProfileImage
-                      : _user.profileImageUrl,
+                      : _currentUser.profileImageUrl,
               isLoaded: true,
             );
             return;
@@ -504,15 +562,15 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
         }
 
         // Fallback strictly to authenticated User object without fake mock data
-        final fallbackName = _user.name.trim() == 'Guest Customer' ||
-                _user.name.trim() == 'Sawariya Customer' ||
-                _isLegacyMockName(_user.name)
+        final fallbackName = _currentUser.name.trim() == 'Guest Customer' ||
+                _currentUser.name.trim() == 'Sawariya Customer' ||
+                !_isLegacyMockName(_currentUser.name)
             ? (authUser?.displayName ?? '')
-            : _user.name.trim();
+            : _currentUser.name.trim();
 
-        final fallbackPhone = _isLegacyMockPhone(_user.phone)
+        final fallbackPhone = _isLegacyMockPhone(_currentUser.phone)
             ? (authUser?.phoneNumber ?? '')
-            : _user.phone.trim();
+            : _currentUser.phone.trim();
 
         debugPrint('DeliveryNotifier: Loaded name = $fallbackName');
         debugPrint('DeliveryNotifier: Loaded phone = $fallbackPhone');
@@ -520,19 +578,21 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
         debugPrint('DeliveryNotifier: Loaded vehicleType = ');
         debugPrint('DeliveryNotifier: Loaded vehicleNumber = ');
         debugPrint('DeliveryNotifier: Loaded assignedZone = ');
-        debugPrint('DeliveryNotifier: Loaded profileImageUrl = ${_user.profileImageUrl ?? authUser?.photoURL}');
+        debugPrint('DeliveryNotifier: Loaded profileImageUrl = ${_currentUser.profileImageUrl ?? authUser?.photoURL}');
 
+        if (!mounted) return;
         state = DeliveryAgent.empty(uid).copyWith(
           name: fallbackName,
           phone: fallbackPhone,
-          email: _user.email?.trim() ?? authUser?.email,
-          profileImageUrl: _user.profileImageUrl ?? authUser?.photoURL,
+          email: _currentUser.email?.trim() ?? authUser?.email,
+          profileImageUrl: _currentUser.profileImageUrl ?? authUser?.photoURL,
           isLoaded: true,
         );
       }
     }, onError: (err) {
       debugPrint(
           'DeliveryNotifier: Stream error on delivery_agents/$uid: $err');
+      if (!mounted) return;
       state = state.copyWith(isLoaded: true);
     });
   }
@@ -554,18 +614,21 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
     // Optimistically update local state
     state = state.copyWith(status: newStatus);
 
-    try {
-      await _firestore.collection('delivery_agents').doc(uid).set({
-        'isOnline': isOnline,
-        'isOnDuty': isOnline,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+    final firestore = _firestore;
+    if (firestore != null) {
+      try {
+        await firestore.collection('delivery_agents').doc(uid).set({
+          'isOnline': isOnline,
+          'isOnDuty': isOnline,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
 
-      // Update legacy tracking service
-      await _ref
-          .read(deliveryTrackingServiceProvider)
-          .updateAgentOnlineStatus(uid, isOnline);
-    } catch (_) {}
+        // Update legacy tracking service
+        await _ref
+            .read(deliveryTrackingServiceProvider)
+            .updateAgentOnlineStatus(uid, isOnline);
+      } catch (_) {}
+    }
   }
 
   void startBreak() {
@@ -598,7 +661,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
     String? assignedZone,
     String? profileImageUrl,
   }) async {
-    final authUser = FirebaseAuth.instance.currentUser;
+    final authUser = _auth?.currentUser;
     final uid = authUser?.uid ?? (_effectiveUid.isNotEmpty ? _effectiveUid : '');
     if (uid.isEmpty) {
       throw StateError('Cannot update profile: user is not authenticated.');
@@ -636,22 +699,25 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
     }
 
     // Write to Firestore delivery_agents/{uid} with only allowed fields
-    debugPrint(
-        'DeliveryNotifier: Writing to delivery_agents/$uid with fields: ${agentUpdates.keys.toList()}');
-    final agentDocRef = _firestore.collection('delivery_agents').doc(uid);
-    final agentDoc = await agentDocRef.get();
-    if (!agentDoc.exists) {
-      // Creation requires uid for rules compliance: request.resource.data.uid == request.auth.uid
-      agentUpdates['uid'] = uid;
-      if (trimmedImage == null &&
-          state.profileImageUrl != null &&
-          state.profileImageUrl!.isNotEmpty) {
-        agentUpdates['profileImageUrl'] = state.profileImageUrl;
+    final firestore = _firestore;
+    if (firestore != null) {
+      debugPrint(
+          'DeliveryNotifier: Writing to delivery_agents/$uid with fields: ${agentUpdates.keys.toList()}');
+      final agentDocRef = firestore.collection('delivery_agents').doc(uid);
+      final agentDoc = await agentDocRef.get();
+      if (!agentDoc.exists) {
+        // Creation requires uid for rules compliance: request.resource.data.uid == request.auth.uid
+        agentUpdates['uid'] = uid;
+        if (trimmedImage == null &&
+            state.profileImageUrl != null &&
+            state.profileImageUrl!.isNotEmpty) {
+          agentUpdates['profileImageUrl'] = state.profileImageUrl;
+        }
+        await agentDocRef.set(agentUpdates);
+      } else {
+        // Update must strictly contain ONLY allowed profile fields (no uid, no photoUrl)
+        await agentDocRef.update(agentUpdates);
       }
-      await agentDocRef.set(agentUpdates);
-    } else {
-      // Update must strictly contain ONLY allowed profile fields (no uid, no photoUrl)
-      await agentDocRef.update(agentUpdates);
     }
 
     // Synchronize profile details to users/{uid} and userProvider in-sync
@@ -670,6 +736,8 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
         await authUser.updateDisplayName(trimmedName);
       } catch (_) {}
     }
+
+    if (!mounted) return;
 
     // Update local state
     state = state.copyWith(
@@ -711,7 +779,8 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
 
 final deliveryAgentProvider =
     StateNotifierProvider<DeliveryNotifier, DeliveryAgent>((ref) {
-  final user = ref.watch(userProvider);
+  ref.watch(userProvider.select((u) => u.id));
+  final user = ref.read(userProvider);
   return DeliveryNotifier(ref, user);
 });
 
@@ -732,6 +801,7 @@ class DeliveryEarningsNotifier extends StateNotifier<List<DeliveryEarnings>> {
         .read(earningsServiceProvider)
         .getAgentEarnings(agentId)
         .listen((earningModels) {
+      if (!mounted) return;
       state = _groupEarningsByDate(earningModels);
     }, onError: (_) {
       // Gracefully maintain state on connection error

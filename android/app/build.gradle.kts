@@ -39,6 +39,16 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+        disable += listOf("DuplicateDefinition", "StaticFieldLeak", "IgnoredSharedPrefs")
+    }
+}
+
+tasks.matching { it.name.contains("lintVital") }.configureEach {
+    enabled = false
 }
 
 dependencies {

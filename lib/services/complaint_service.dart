@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/complaint_model.dart';
@@ -123,6 +124,9 @@ class ComplaintService {
   /// Real-time stream of all complaints across the system for the Admin panel.
   Stream<List<CustomerComplaint>> streamAllComplaints() {
     try {
+      if (Firebase.apps.isEmpty) {
+        return const Stream.empty();
+      }
       return _complaintsRef.snapshots().map((snapshot) {
         final list = snapshot.docs
             .map((doc) => CustomerComplaint.fromFirestore(doc))

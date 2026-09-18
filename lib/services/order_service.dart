@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 import 'package:firebase_auth/firebase_auth.dart' hide User;
 import 'package:flutter/foundation.dart';
@@ -307,6 +308,9 @@ class OrderService {
   /// the Requests, Active and History tabs all derive their lists from it.
   Stream<List<Order>> streamAllDeliveryOrders() {
     try {
+      if (Firebase.apps.isEmpty) {
+        return const Stream.empty();
+      }
       return _firestore.collection('orders').snapshots().map((snap) =>
           snap.docs.map((d) => Order.fromFirestore(d.data(), d.id)).toList()
             ..sort((a, b) => b.orderDate.compareTo(a.orderDate)));
@@ -320,6 +324,9 @@ class OrderService {
   /// Uses a Firestore query filter to ensure compliance with Security Rules.
   Stream<List<Order>> streamDeliveryOrdersForAgent(String agentId) {
     try {
+      if (Firebase.apps.isEmpty) {
+        return const Stream.empty();
+      }
       final Query<Map<String, dynamic>> query;
       if (agentId.isEmpty) {
         query =
@@ -362,6 +369,25 @@ class OrderService {
       'assignedAgentId': null,
       'acceptedAt': null,
     });
+  }
+
+  /// Assigns or unassigns a delivery agent to an order in Firestore.
+  /// Preserves the existing status of the order.
+  Future<void> assignDeliveryAgent(
+    String orderId,
+    String? agentId, {
+    String? agentName,
+  }) async {
+    try {
+      final Map<String, dynamic> updateData = {
+        'assignedAgentId': agentId,
+        'assignedAgentName': agentName,
+        'assignedAt': agentId != null ? FieldValue.serverTimestamp() : null,
+      };
+      await _firestore.collection('orders').doc(orderId).update(updateData);
+    } catch (e) {
+      throw Exception('Failed to assign delivery agent for $orderId: $e');
+    }
   }
 
   /// Safely backfills existing Firestore order documents that lack an `orderCode`.

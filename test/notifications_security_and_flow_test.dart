@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dairy_app/models/notification_item.dart';
 
@@ -420,6 +421,43 @@ void main() {
           targetUserId: 'user_123',
         );
         expect(allowed, isFalse);
+      });
+    });
+
+    group('Web FCM Service Worker File & Configuration Tests', () {
+      test('web/firebase-messaging-sw.js exists and is not empty', () {
+        final swFile = File('web/firebase-messaging-sw.js');
+        expect(swFile.existsSync(), isTrue,
+            reason: 'web/firebase-messaging-sw.js must exist in the Flutter web public root');
+        final content = swFile.readAsStringSync();
+        expect(content.trim().isNotEmpty, isTrue);
+      });
+
+      test('web/firebase-messaging-sw.js contains exact Firebase web credentials', () {
+        final swFile = File('web/firebase-messaging-sw.js');
+        final content = swFile.readAsStringSync();
+
+        expect(content.contains('AIzaSyCHV_tWBg53-HsR5DDFL7WQfJrL56qvBaI'), isTrue,
+            reason: 'Service worker must contain the exact web apiKey');
+        expect(content.contains('1:325042169664:web:78b972a71a1775611d7ca5'), isTrue,
+            reason: 'Service worker must contain the exact web appId');
+        expect(content.contains('325042169664'), isTrue,
+            reason: 'Service worker must contain the exact messagingSenderId');
+        expect(content.contains('sawariya-7efd4'), isTrue,
+            reason: 'Service worker must contain the exact projectId');
+        expect(content.contains('sawariya-7efd4.firebaseapp.com'), isTrue,
+            reason: 'Service worker must contain the exact authDomain');
+      });
+
+      test('web/firebase-messaging-sw.js imports compat libraries and registers listeners', () {
+        final swFile = File('web/firebase-messaging-sw.js');
+        final content = swFile.readAsStringSync();
+
+        expect(content.contains('firebase-app-compat.js'), isTrue);
+        expect(content.contains('firebase-messaging-compat.js'), isTrue);
+        expect(content.contains('onBackgroundMessage'), isTrue);
+        expect(content.contains('notificationclick'), isTrue);
+        expect(content.contains('/#/delivery'), isTrue);
       });
     });
   });

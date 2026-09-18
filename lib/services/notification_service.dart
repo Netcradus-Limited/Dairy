@@ -282,6 +282,7 @@ class NotificationService {
 
   /// Displays high-importance local notification for incoming message.
   Future<void> _showLocalNotification(RemoteMessage message) async {
+    if (kIsWeb) return;
     final notification = message.notification;
     final title = notification?.title ??
         message.data['title']?.toString() ??

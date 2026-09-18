@@ -33,13 +33,13 @@ messaging.onBackgroundMessage((payload) => {
 // Handle notification click to bring app window to focus or open it
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const urlToOpen = new URL('/', self.location.origin).href;
+  const urlToOpen = new URL('/#/delivery', self.location.origin).href;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (let i = 0; i < windowClients.length; i++) {
         const client = windowClients[i];
-        if (client.url === urlToOpen && 'focus' in client) {
+        if ((client.url === urlToOpen || client.url.includes('/#/delivery')) && 'focus' in client) {
           return client.focus();
         }
       }
