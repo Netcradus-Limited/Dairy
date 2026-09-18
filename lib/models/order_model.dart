@@ -38,6 +38,8 @@ class DairyOrder {
   final String paymentMode;
   final String? assignedAgentId;
   final String? assignedAgentName;
+  final String orderType;
+  final String? subscriptionId;
 
   const DairyOrder({
     required this.id,
@@ -53,7 +55,13 @@ class DairyOrder {
     required this.paymentMode,
     this.assignedAgentId,
     this.assignedAgentName,
+    this.orderType = 'normal',
+    this.subscriptionId,
   });
+
+  bool get isSubscription =>
+      orderType.toLowerCase() == 'subscription' ||
+      (subscriptionId != null && subscriptionId!.isNotEmpty);
 
   /// The customer-facing 6-character order code (e.g. "KRT482").
   String get displayCode => orderCode.isNotEmpty ? orderCode : id;
@@ -78,6 +86,8 @@ class DairyOrder {
     String? paymentMode,
     Object? assignedAgentId = _sentinel,
     Object? assignedAgentName = _sentinel,
+    String? orderType,
+    String? subscriptionId,
   }) {
     return DairyOrder(
       id: id ?? this.id,
@@ -97,6 +107,8 @@ class DairyOrder {
       assignedAgentName: identical(assignedAgentName, _sentinel)
           ? this.assignedAgentName
           : assignedAgentName as String?,
+      orderType: orderType ?? this.orderType,
+      subscriptionId: subscriptionId ?? this.subscriptionId,
     );
   }
 }

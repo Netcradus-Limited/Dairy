@@ -9,6 +9,7 @@ import '../../../models/delivery_boy_model.dart';
 import '../../../models/order.dart';
 import '../../../providers/delivery_provider.dart';
 import '../../../services/order_service.dart';
+import '../../../services/subscription_service.dart';
 import '../../../services/delivery_tracking_service.dart';
 
 /// Active Delivery Tab - Pickup -> Out for Delivery -> Delivered flow
@@ -248,6 +249,10 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
           Row(
             children: [
               _buildStatusBadge(order.status),
+              if (order.isSubscription) ...[
+                const SizedBox(width: 8),
+                _buildSubscriptionBadge(),
+              ],
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -392,6 +397,32 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
           fontWeight: FontWeight.w700,
           color: status.statusColor,
         ),
+      ),
+    );
+  }
+
+  Widget _buildSubscriptionBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF6366F1)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.repeat_rounded, size: 12, color: Color(0xFF6366F1)),
+          const SizedBox(width: 4),
+          Text(
+            'Subscription',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF6366F1),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -727,12 +758,19 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
           ElevatedButton(
             onPressed: () async {
               try {
-                await ref
-                    .read(orderServiceProvider)
-                    .updateOrderStatus(order.id, OrderStatus.delivered);
+                final agentId = ref.read(deliveryAgentProvider).id;
+                if (order.isSubscription) {
+                  await SubscriptionService().completeSubscriptionDelivery(
+                    order.id,
+                    agentId: agentId.isNotEmpty ? agentId : null,
+                  );
+                } else {
+                  await ref
+                      .read(orderServiceProvider)
+                      .updateOrderStatus(order.id, OrderStatus.delivered);
+                }
 
                 // Clear the agent's active orderId in Firestore & stop location tracking for that order
-                final agentId = ref.read(deliveryAgentProvider).id;
                 if (agentId.isNotEmpty) {
                   await ref
                       .read(deliveryTrackingServiceProvider)

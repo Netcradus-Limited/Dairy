@@ -276,6 +276,7 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'emoji': '🥛',
     'isActive': true,
     'sortOrder': 0,
+    'subscriptionEnabled': true,
   },
   'cat_paneer': {
     'title': 'Paneer',
@@ -290,6 +291,7 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'emoji': '🧀',
     'isActive': true,
     'sortOrder': 1,
+    'subscriptionEnabled': true,
   },
   'cat_ghee': {
     'title': 'Pure Ghee',
@@ -304,6 +306,7 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'emoji': '🍯',
     'isActive': true,
     'sortOrder': 2,
+    'subscriptionEnabled': true,
   },
   'cat_lassi': {
     'title': 'Lassi',
@@ -318,6 +321,7 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'emoji': '🥛',
     'isActive': true,
     'sortOrder': 3,
+    'subscriptionEnabled': true,
   },
   'cat_makhan': {
     'title': 'Makhan',
@@ -332,6 +336,7 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'emoji': '🧈',
     'isActive': true,
     'sortOrder': 4,
+    'subscriptionEnabled': true,
   },
   'cat_uple': {
     'title': 'Uple',
@@ -346,6 +351,7 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'emoji': '🟤',
     'isActive': true,
     'sortOrder': 5,
+    'subscriptionEnabled': false,
   },
   'cat_water': {
     'title': 'Water',
@@ -360,6 +366,7 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'emoji': '💧',
     'isActive': true,
     'sortOrder': 6,
+    'subscriptionEnabled': false,
   },
 };
 
@@ -379,6 +386,7 @@ const Map<String, Map<String, dynamic>> _defaultProducts = {
     'isBestSeller': true,
     'isA2CowMilk': false,
     'inStock': true,
+    'subscriptionEnabled': true,
     'fatContent': '3.5% Fat',
     'packaging': 'Fresh Pouch',
     'emoji': '🥛',
@@ -402,6 +410,7 @@ const Map<String, Map<String, dynamic>> _defaultProducts = {
     'isBestSeller': true,
     'isA2CowMilk': false,
     'inStock': true,
+    'subscriptionEnabled': true,
     'fatContent': '',
     'packaging': 'Fresh Pack',
     'emoji': '🧀',
@@ -425,6 +434,7 @@ const Map<String, Map<String, dynamic>> _defaultProducts = {
     'isBestSeller': true,
     'isA2CowMilk': false,
     'inStock': true,
+    'subscriptionEnabled': true,
     'fatContent': '',
     'packaging': 'Glass Jar',
     'emoji': '🍯',
@@ -447,6 +457,7 @@ const Map<String, Map<String, dynamic>> _defaultProducts = {
     'isBestSeller': true,
     'isA2CowMilk': false,
     'inStock': true,
+    'subscriptionEnabled': true,
     'fatContent': '',
     'packaging': 'Fresh Bottle',
     'emoji': '🥛',
@@ -469,6 +480,7 @@ const Map<String, Map<String, dynamic>> _defaultProducts = {
     'isBestSeller': true,
     'isA2CowMilk': false,
     'inStock': true,
+    'subscriptionEnabled': true,
     'fatContent': '',
     'packaging': 'Fresh Pack',
     'emoji': '🧈',
@@ -491,6 +503,7 @@ const Map<String, Map<String, dynamic>> _defaultProducts = {
     'isBestSeller': true,
     'isA2CowMilk': false,
     'inStock': true,
+    'subscriptionEnabled': false,
     'fatContent': '',
     'packaging': 'Eco Pack',
     'emoji': '🟤',
@@ -513,6 +526,7 @@ const Map<String, Map<String, dynamic>> _defaultProducts = {
     'isBestSeller': true,
     'isA2CowMilk': false,
     'inStock': true,
+    'subscriptionEnabled': false,
     'fatContent': '',
     'packaging': 'Bottle',
     'emoji': '💧',

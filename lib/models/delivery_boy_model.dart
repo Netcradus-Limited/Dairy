@@ -138,8 +138,7 @@ class DeliveryAgent {
       vehicleNumber: rawVehicleNumber,
       assignedZone: rawZone,
       status: isOnline ? DeliveryStatus.onDuty : DeliveryStatus.offDuty,
-      totalDeliveriesToday:
-          ((map['totalDeliveriesToday'] ?? 0) as num).toInt(),
+      totalDeliveriesToday: ((map['totalDeliveriesToday'] ?? 0) as num).toInt(),
       completedDeliveriesToday:
           ((map['completedDeliveriesToday'] ?? 0) as num).toInt(),
       earningsToday: ((map['earningsToday'] ?? 0.0) as num).toDouble(),
@@ -210,6 +209,14 @@ class DeliveryOrder {
   final String estimatedTime;
   final double? latitude;
   final double? longitude;
+  final String orderType;
+  final String? subscriptionId;
+  final DateTime? deliveryDate;
+  final String? deliverySlot;
+  final String paymentMethod;
+  final String? paymentStatus;
+  final String? productImageUrl;
+  final String? cancellationReason;
 
   const DeliveryOrder({
     required this.id,
@@ -232,7 +239,19 @@ class DeliveryOrder {
     required this.estimatedTime,
     this.latitude,
     this.longitude,
+    this.orderType = 'normal',
+    this.subscriptionId,
+    this.deliveryDate,
+    this.deliverySlot,
+    this.paymentMethod = 'Cash on Delivery',
+    this.paymentStatus,
+    this.productImageUrl,
+    this.cancellationReason,
   });
+
+  bool get isSubscription =>
+      orderType.toLowerCase() == 'subscription' ||
+      (subscriptionId != null && subscriptionId!.isNotEmpty);
 
   /// The customer-facing 6-character order code (e.g. "KRT482").
   String get displayCode => orderCode.isNotEmpty ? orderCode : orderId;
@@ -240,7 +259,10 @@ class DeliveryOrder {
   /// Returns true if valid, non-zero geographic coordinates are present.
   bool get hasValidCoordinates {
     if (latitude == null || longitude == null) return false;
-    if (latitude!.isNaN || longitude!.isNaN || latitude!.isInfinite || longitude!.isInfinite) return false;
+    if (latitude!.isNaN ||
+        longitude!.isNaN ||
+        latitude!.isInfinite ||
+        longitude!.isInfinite) return false;
     if (latitude! < -90.0 || latitude! > 90.0) return false;
     if (longitude! < -180.0 || longitude! > 180.0) return false;
     if (latitude! == 0.0 && longitude! == 0.0) return false;
@@ -268,6 +290,14 @@ class DeliveryOrder {
     String? estimatedTime,
     double? latitude,
     double? longitude,
+    String? orderType,
+    String? subscriptionId,
+    DateTime? deliveryDate,
+    String? deliverySlot,
+    String? paymentMethod,
+    String? paymentStatus,
+    String? productImageUrl,
+    String? cancellationReason,
   }) {
     return DeliveryOrder(
       id: id ?? this.id,
@@ -290,6 +320,14 @@ class DeliveryOrder {
       estimatedTime: estimatedTime ?? this.estimatedTime,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      orderType: orderType ?? this.orderType,
+      subscriptionId: subscriptionId ?? this.subscriptionId,
+      deliveryDate: deliveryDate ?? this.deliveryDate,
+      deliverySlot: deliverySlot ?? this.deliverySlot,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
+      productImageUrl: productImageUrl ?? this.productImageUrl,
+      cancellationReason: cancellationReason ?? this.cancellationReason,
     );
   }
 }
@@ -311,6 +349,13 @@ class DeliveryRequest {
   final DateTime requestTime;
   final int countdownSeconds;
   final DeliveryRequestStatus status;
+  final String orderType;
+  final String? subscriptionId;
+  final DateTime? deliveryDate;
+  final String? deliverySlot;
+  final String paymentMethod;
+  final String? paymentStatus;
+  final String? productImageUrl;
 
   const DeliveryRequest({
     required this.id,
@@ -329,7 +374,18 @@ class DeliveryRequest {
     required this.requestTime,
     required this.countdownSeconds,
     this.status = DeliveryRequestStatus.pending,
+    this.orderType = 'normal',
+    this.subscriptionId,
+    this.deliveryDate,
+    this.deliverySlot,
+    this.paymentMethod = 'Cash on Delivery',
+    this.paymentStatus,
+    this.productImageUrl,
   });
+
+  bool get isSubscription =>
+      orderType.toLowerCase() == 'subscription' ||
+      (subscriptionId != null && subscriptionId!.isNotEmpty);
 
   /// The customer-facing 6-character order code (e.g. "KRT482").
   String get displayCode => orderCode.isNotEmpty ? orderCode : orderId;
@@ -351,6 +407,13 @@ class DeliveryRequest {
     DateTime? requestTime,
     int? countdownSeconds,
     DeliveryRequestStatus? status,
+    String? orderType,
+    String? subscriptionId,
+    DateTime? deliveryDate,
+    String? deliverySlot,
+    String? paymentMethod,
+    String? paymentStatus,
+    String? productImageUrl,
   }) {
     return DeliveryRequest(
       id: id ?? this.id,
@@ -369,6 +432,13 @@ class DeliveryRequest {
       requestTime: requestTime ?? this.requestTime,
       countdownSeconds: countdownSeconds ?? this.countdownSeconds,
       status: status ?? this.status,
+      orderType: orderType ?? this.orderType,
+      subscriptionId: subscriptionId ?? this.subscriptionId,
+      deliveryDate: deliveryDate ?? this.deliveryDate,
+      deliverySlot: deliverySlot ?? this.deliverySlot,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
+      productImageUrl: productImageUrl ?? this.productImageUrl,
     );
   }
 }

@@ -11,7 +11,7 @@ import '../../providers/subscription_provider.dart';
 import '../subscription/edit_subscription_screen.dart';
 
 /// Sawariya Dairy — Subscriptions Home Screen
-/// Now backed by Firestore persistent subscription storage.
+/// Displays and manages multiple recurring product subscriptions with Firestore live sync.
 class SubscriptionsScreen extends ConsumerWidget {
   const SubscriptionsScreen({super.key});
 
@@ -47,9 +47,9 @@ class SubscriptionsScreen extends ConsumerWidget {
           const SizedBox(width: 8),
         ],
       ),
-      body: state.loading
+      body: state.loading && state.subscriptions.isEmpty
           ? const Center(child: CircularProgressIndicator())
-          : state.hasError
+          : state.hasError && state.subscriptions.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -73,15 +73,13 @@ class SubscriptionsScreen extends ConsumerWidget {
   }
 
   Widget _buildBody(BuildContext context, SubscriptionState state) {
-    final sub = state.subscription;
-
-    if (sub == null) {
+    if (state.subscriptions.isEmpty) {
       return _buildEmptyState(context);
     }
 
-    final isActive = state.hasActiveSubscription ?? false;
-    final isExpired = state.hasExpiredSubscription ?? false;
-    final isCancelled = state.hasCancelledSubscription ?? false;
+    final activeCount = state.activeSubscriptions.length;
+    final totalMonthly = state.activeSubscriptions.fold<double>(
+        0.0, (acc, s) => acc + s.monthlyCost);
 
     return SingleChildScrollView(
       padding: EdgeInsets.symmetric(
@@ -91,147 +89,123 @@ class SubscriptionsScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSubscriptionSummary(
+          _buildSubscriptionsOverview(
             context,
-            sub,
-            isActive: isActive,
-            isExpired: isExpired,
-            isCancelled: isCancelled,
+            totalCount: state.subscriptions.length,
+            activeCount: activeCount,
+            totalMonthly: totalMonthly,
           ),
           const SizedBox(height: AppSizes.p16),
-          ..._buildSubscriptionCards(
-              context, sub, isActive, isExpired, isCancelled),
+          ...state.subscriptions.map(
+            (sub) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSizes.p16),
+              child: _SubscriptionCard(
+                subscription: sub,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => EditSubscriptionScreen(subscription: sub),
+                    ),
+                  );
+                },
+                statusColor: _statusColor(sub.status),
+                isActive: sub.isActiveAndValid,
+                isExpired: !sub.isActiveAndValid && !sub.isCancelled,
+                isCancelled: sub.isCancelled,
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildSubscriptionSummary(
-    BuildContext context,
-    Subscription sub, {
-    required bool isActive,
-    required bool isExpired,
-    required bool isCancelled,
+  Widget _buildSubscriptionsOverview(
+    BuildContext context, {
+    required int totalCount,
+    required int activeCount,
+    required double totalMonthly,
   }) {
-    final statusColor = _statusColor(sub.status);
-    final planName = sub.planName ?? 'Unknown Plan';
-    final finalEndDate = sub.endDate;
-    final finalStartDate = sub.startDate;
-
     return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppSizes.p12, vertical: AppSizes.p8),
+      padding: const EdgeInsets.all(AppSizes.p16),
       decoration: BoxDecoration(
-        color: isActive
-            ? AppColors.freshGreen.withValues(alpha: 0.1)
-            : AppColors.surface,
+        color: AppColors.surface,
         borderRadius: AppSizes.borderLarge,
         border: Border.all(
-          color: isActive
-              ? AppColors.freshGreen.withValues(alpha: 0.35)
-              : isExpired
-                  ? AppColors.error.withValues(alpha: 0.35)
-                  : AppColors.textSecondary.withValues(alpha: 0.2),
+          color: AppColors.primaryBlue.withValues(alpha: 0.2),
           width: 1.0,
         ),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
-                decoration: const BoxDecoration(
-                  color: AppColors.lightBlue,
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue.withValues(alpha: 0.1),
                   borderRadius: AppSizes.borderSmall,
                 ),
-                child: Center(
-                  child: ProductImage(
-                    imageUrl: sub.product.imageUrl,
-                    categoryKey: sub.product.categoryId,
-                    title: sub.product.title,
-                    size: 38,
-                    radius: 8,
-                    fit: BoxFit.contain,
-                  ),
+                child: const Icon(
+                  Icons.all_inbox_rounded,
+                  color: AppColors.primaryBlue,
+                  size: 24,
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      planName,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$activeCount Active ($totalCount Total)',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
                     ),
-                    Text(
-                      'Plan: ${sub.planId ?? 'N/A'}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                  border:
-                      Border.all(color: statusColor.withValues(alpha: 0.35)),
-                ),
-                child: Text(
-                  sub.status.label,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: statusColor,
                   ),
-                ),
+                  const Text(
+                    'Daily & recurring doorstep deliveries',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          if (isActive || isExpired) ...[
-            const SizedBox(height: AppSizes.p8),
-            _buildDetailRow(
-              Icons.calendar_today_rounded,
-              'Start date',
-              DateFormat.yMMMd().format(finalStartDate),
+          if (activeCount > 0)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '₹${totalMonthly.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryBlue,
+                  ),
+                ),
+                const Text(
+                  'Est. monthly',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 4),
-            _buildDetailRow(
-              Icons.event_rounded,
-              'End date',
-              finalEndDate != null
-                  ? DateFormat.yMMMd().format(finalEndDate)
-                  : 'No end date',
-            ),
-            const SizedBox(height: 4),
-            _buildDetailRow(
-              Icons.autorenew_rounded,
-              'Auto-renew',
-              sub.autoRenew == true ? 'Enabled' : 'Disabled',
-            ),
-          ] else if (isCancelled) ...[
-            const SizedBox(height: AppSizes.p8),
-            _buildDetailRow(
-              Icons.calendar_today_rounded,
-              'Cancelled on',
-              DateFormat.yMMMd().format(finalEndDate ?? DateTime.now()),
-            ),
-          ],
         ],
       ),
     );
@@ -270,7 +244,7 @@ class SubscriptionsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: AppSizes.p8),
             const Text(
-              'Subscribe to your favourite dairy products and get them delivered fresh daily with a 10% recurring discount.',
+              'Subscribe to your favourite dairy products (Milk, Ghee, Paneer, Lassi, Makhan) and get them delivered fresh with a 10% recurring discount.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
@@ -309,34 +283,6 @@ class SubscriptionsScreen extends ConsumerWidget {
     );
   }
 
-  List<Widget> _buildSubscriptionCards(
-    BuildContext context,
-    Subscription sub,
-    bool isActive,
-    bool isExpired,
-    bool isCancelled,
-  ) {
-    final statusColor = _statusColor(sub.status);
-
-    return [
-      _SubscriptionCard(
-        subscription: sub,
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => EditSubscriptionScreen(subscription: sub),
-            ),
-          );
-        },
-        statusColor: statusColor,
-        isActive: isActive,
-        isExpired: isExpired,
-        isCancelled: isCancelled,
-      ),
-    ];
-  }
-
   Color _statusColor(SubscriptionStatus status) {
     switch (status) {
       case SubscriptionStatus.active:
@@ -346,34 +292,6 @@ class SubscriptionsScreen extends ConsumerWidget {
       case SubscriptionStatus.cancelled:
         return AppColors.error;
     }
-  }
-
-  Widget _buildDetailRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: AppColors.textSecondary),
-        const SizedBox(width: 8),
-        Text(
-          '$label:',
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondary,
-          ),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
   }
 }
 
@@ -396,8 +314,6 @@ class _SubscriptionCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isCancelled = subscription.isCancelled;
-
     return Dismissible(
       key: ValueKey(subscription.id),
       direction: isCancelled
@@ -412,10 +328,32 @@ class _SubscriptionCard extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: AppSizes.p16),
         child: const Icon(Icons.delete_rounded, color: Colors.white, size: 22),
       ),
+      confirmDismiss: (_) async {
+        return await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Cancel Subscription?'),
+                content: Text(
+                    'Are you sure you want to cancel your ${subscription.product.title} subscription?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('Keep Active'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                    child: const Text('Cancel Subscription'),
+                  ),
+                ],
+              ),
+            ) ??
+            false;
+      },
       onDismissed: (_) {
-        ref.read(subscriptionProvider.notifier).cancelSubscription();
+        ref.read(subscriptionProvider.notifier).cancelSubscription(subscription.id);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Subscription cancelled')),
+          SnackBar(content: Text('${subscription.product.title} subscription cancelled')),
         );
       },
       child: Container(
@@ -534,7 +472,7 @@ class _SubscriptionCard extends ConsumerWidget {
                           _buildDetailRow(
                             Icons.numbers_rounded,
                             'Qty per delivery',
-                            '${subscription.quantity} ${subscription.product.unit}',
+                            '${subscription.quantity}',
                           ),
                           const SizedBox(height: 6),
                           () {
@@ -595,13 +533,57 @@ class _SubscriptionCard extends ConsumerWidget {
                         if (subscription.status ==
                             SubscriptionStatus.active) ...[
                           OutlinedButton.icon(
+                            onPressed: () async {
+                              try {
+                                await ref
+                                    .read(subscriptionProvider.notifier)
+                                    .skipNextDelivery(subscription.id);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text(
+                                            'Next ${subscription.product.title} delivery skipped')),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text('Failed to skip: $e')),
+                                  );
+                                }
+                              }
+                            },
+                            icon: const Icon(Icons.skip_next_rounded,
+                                size: 16, color: Color(0xFFE65100)),
+                            label: const Text(
+                              'Skip',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFE65100),
+                              ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0, 32),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
+                              side: const BorderSide(
+                                  color: Color(0xFFE65100)),
+                              shape: const RoundedRectangleBorder(
+                                  borderRadius: AppSizes.borderMedium),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                          ),
+                          OutlinedButton.icon(
                             onPressed: () {
                               ref
                                   .read(subscriptionProvider.notifier)
-                                  .pauseSubscription();
+                                  .pauseSubscription(subscription.id);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Subscription paused')),
+                                SnackBar(
+                                    content: Text(
+                                        '${subscription.product.title} subscription paused')),
                               );
                             },
                             icon: const Icon(Icons.pause_rounded,
@@ -629,10 +611,11 @@ class _SubscriptionCard extends ConsumerWidget {
                             onPressed: () {
                               ref
                                   .read(subscriptionProvider.notifier)
-                                  .cancelSubscription();
+                                  .cancelSubscription(subscription.id);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Subscription cancelled')),
+                                SnackBar(
+                                    content: Text(
+                                        '${subscription.product.title} subscription cancelled')),
                               );
                             },
                             icon: const Icon(Icons.cancel_outlined,
@@ -662,10 +645,11 @@ class _SubscriptionCard extends ConsumerWidget {
                             onPressed: () {
                               ref
                                   .read(subscriptionProvider.notifier)
-                                  .resumeSubscription();
+                                  .resumeSubscription(subscription.id);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Subscription resumed')),
+                                SnackBar(
+                                    content: Text(
+                                        '${subscription.product.title} subscription resumed')),
                               );
                             },
                             icon: const Icon(Icons.play_arrow_rounded,
@@ -693,10 +677,11 @@ class _SubscriptionCard extends ConsumerWidget {
                             onPressed: () {
                               ref
                                   .read(subscriptionProvider.notifier)
-                                  .cancelSubscription();
+                                  .cancelSubscription(subscription.id);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Subscription cancelled')),
+                                SnackBar(
+                                    content: Text(
+                                        '${subscription.product.title} subscription cancelled')),
                               );
                             },
                             icon: const Icon(Icons.cancel_outlined,
@@ -720,40 +705,6 @@ class _SubscriptionCard extends ConsumerWidget {
                             ),
                           ),
                         ],
-                        if (subscription.status ==
-                                SubscriptionStatus.cancelled ||
-                            isExpired)
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              ref
-                                  .read(subscriptionProvider.notifier)
-                                  .renewSubscription();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Subscription renewed')),
-                              );
-                            },
-                            icon: const Icon(Icons.autorenew_rounded,
-                                size: 16, color: AppColors.freshGreen),
-                            label: const Text(
-                              'Renew',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.freshGreen,
-                              ),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(0, 32),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 6),
-                              side:
-                                  const BorderSide(color: AppColors.freshGreen),
-                              shape: const RoundedRectangleBorder(
-                                  borderRadius: AppSizes.borderMedium),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                          ),
                       ],
                     ),
                   ],

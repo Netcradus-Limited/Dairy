@@ -19,6 +19,7 @@ import 'payments/payments_screen.dart';
 import 'products/products_screen.dart';
 import 'profile/admin_profile_screen.dart';
 import 'staff/staff_roles_screen.dart';
+import 'subscriptions/admin_subscriptions_screen.dart';
 import 'support/support_screen.dart';
 
 class AdminMainShell extends ConsumerWidget {
@@ -100,25 +101,27 @@ class AdminMainShell extends ConsumerWidget {
         case 1:
           return const CustomersScreen();
         case 2:
-          return const ProductsScreen();
+          return const AdminSubscriptionsScreen();
         case 3:
-          return const CategoriesScreen();
+          return const ProductsScreen();
         case 4:
-          return const OrdersScreen();
+          return const CategoriesScreen();
         case 5:
-          return const DeliveryManagementScreen();
+          return const OrdersScreen();
         case 6:
-          return const DeliveryStaffScreen();
+          return const DeliveryManagementScreen();
         case 7:
-          return const PaymentsScreen();
+          return const DeliveryStaffScreen();
         case 8:
-          return const NotificationsScreen();
+          return const PaymentsScreen();
         case 9:
-          return const SupportScreen();
+          return const NotificationsScreen();
         case 10:
-          return const StaffRolesScreen();
+          return const SupportScreen();
         case 11:
           return const AdminProfileScreen();
+        case 12:
+          return const StaffRolesScreen();
         default:
           return const DashboardScreen();
       }

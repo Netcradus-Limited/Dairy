@@ -353,6 +353,110 @@ describe('Sawariya Dairy — Firestore Security Rules Unit Tests', function () {
   });
 
   // =========================================================================
+  // 4b. SUBSCRIPTIONS ROOT COLLECTION (/subscriptions/{subscriptionId})
+  // =========================================================================
+  describe('4b. Subscriptions Root Collection (/subscriptions/{subscriptionId})', () => {
+    beforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'subscriptions', 'sub_cust1_milk'), {
+          id: 'sub_cust1_milk',
+          userId: 'customer1_uid',
+          productId: 'prod_milk',
+          productName: 'Sawariya Fresh Cow Milk',
+          quantity: 1,
+          frequency: 'Daily',
+          status: 'Active',
+          pricePerDelivery: 60.0,
+          estimatedMonthlyPrice: 1800.0,
+          createdAt: new Date().toISOString(),
+        });
+        await setDoc(doc(context.firestore(), 'subscriptions', 'sub_cust2_ghee'), {
+          id: 'sub_cust2_ghee',
+          userId: 'customer2_uid',
+          productId: 'prod_ghee',
+          productName: 'Sawariya Pure Desi Ghee',
+          quantity: 1,
+          frequency: 'Weekly',
+          status: 'Active',
+          pricePerDelivery: 650.0,
+          estimatedMonthlyPrice: 2600.0,
+          createdAt: new Date().toISOString(),
+        });
+      });
+    });
+
+    it('Allows customer to create subscription for themselves', async () => {
+      const db = customer1Db();
+      await assertSucceeds(setDoc(doc(db, 'subscriptions', 'sub_cust1_paneer'), {
+        id: 'sub_cust1_paneer',
+        userId: 'customer1_uid',
+        productId: 'prod_paneer',
+        productName: 'Sawariya Paneer',
+        quantity: 2,
+        frequency: 'Alternate Day',
+        status: 'Active',
+      }));
+    });
+
+    it('Denies customer from forging a subscription owned by another user', async () => {
+      const db = customer1Db();
+      await assertFails(setDoc(doc(db, 'subscriptions', 'sub_fake_cust2'), {
+        id: 'sub_fake_cust2',
+        userId: 'customer2_uid',
+        productId: 'prod_milk',
+        status: 'Active',
+      }));
+    });
+
+    it('Allows customer to read own subscription', async () => {
+      const db = customer1Db();
+      await assertSucceeds(getDoc(doc(db, 'subscriptions', 'sub_cust1_milk')));
+    });
+
+    it('Denies customer from reading another customer subscription', async () => {
+      const db = customer1Db();
+      await assertFails(getDoc(doc(db, 'subscriptions', 'sub_cust2_ghee')));
+    });
+
+    it('Allows customer to update own subscription', async () => {
+      const db = customer1Db();
+      await assertSucceeds(updateDoc(doc(db, 'subscriptions', 'sub_cust1_milk'), {
+        quantity: 2,
+        status: 'Paused',
+        userId: 'customer1_uid',
+      }));
+    });
+
+    it('Denies customer from changing subscription ownership to another user', async () => {
+      const db = customer1Db();
+      await assertFails(updateDoc(doc(db, 'subscriptions', 'sub_cust1_milk'), {
+        userId: 'customer2_uid',
+      }));
+    });
+
+    it('Denies delivery agent from creating or modifying subscriptions', async () => {
+      const db = deliveryDb();
+      await assertFails(setDoc(doc(db, 'subscriptions', 'sub_agent_fake'), {
+        userId: 'delivery_uid',
+        status: 'Active',
+      }));
+      await assertFails(updateDoc(doc(db, 'subscriptions', 'sub_cust1_milk'), {
+        status: 'Cancelled',
+      }));
+    });
+
+    it('Allows Admin to read, create, update, and delete any subscription', async () => {
+      const db = adminDb();
+      await assertSucceeds(getDoc(doc(db, 'subscriptions', 'sub_cust1_milk')));
+      await assertSucceeds(getDoc(doc(db, 'subscriptions', 'sub_cust2_ghee')));
+      await assertSucceeds(updateDoc(doc(db, 'subscriptions', 'sub_cust1_milk'), {
+        status: 'Cancelled',
+      }));
+      await assertSucceeds(deleteDoc(doc(db, 'subscriptions', 'sub_cust2_ghee')));
+    });
+  });
+
+  // =========================================================================
   // 5. PRODUCTS & CATEGORIES
   // =========================================================================
   describe('5. Products & Categories Collections', () => {

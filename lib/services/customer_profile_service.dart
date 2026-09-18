@@ -61,6 +61,12 @@ class CustomerProfileService {
     return _subscriptionService.streamCurrentSubscription(customerId.trim());
   }
 
+  /// Stream of all subscriptions for this customer
+  Stream<List<Subscription>> streamCustomerSubscriptions(String customerId) {
+    if (customerId.trim().isEmpty) return Stream.value([]);
+    return _subscriptionService.streamSubscriptionsForUser(customerId.trim());
+  }
+
   /// Stream of skipped subscription dates for this customer
   Stream<List<DateTime>> streamSkippedDates(String customerId) {
     if (customerId.trim().isEmpty) return Stream.value([]);

@@ -18,6 +18,7 @@ class Product {
   final bool isBestSeller;
   final bool isA2CowMilk;
   final bool inStock;
+  final bool subscriptionEnabled;
 
   const Product({
     required this.id,
@@ -35,6 +36,7 @@ class Product {
     this.isBestSeller = false,
     this.isA2CowMilk = false,
     this.inStock = true,
+    this.subscriptionEnabled = true,
   });
 
   bool get hasDiscount => originalPrice != null && originalPrice! > price;
@@ -71,6 +73,7 @@ class Product {
     bool? isBestSeller,
     bool? isA2CowMilk,
     bool? inStock,
+    bool? subscriptionEnabled,
   }) {
     return Product(
       id: id ?? this.id,
@@ -88,6 +91,7 @@ class Product {
       isBestSeller: isBestSeller ?? this.isBestSeller,
       isA2CowMilk: isA2CowMilk ?? this.isA2CowMilk,
       inStock: inStock ?? this.inStock,
+      subscriptionEnabled: subscriptionEnabled ?? this.subscriptionEnabled,
     );
   }
 
@@ -122,6 +126,25 @@ class Product {
       isBestSeller: (data['isBestSeller'] as bool?) ?? false,
       isA2CowMilk: (data['isA2CowMilk'] as bool?) ?? false,
       inStock: (data['inStock'] as bool?) ?? true,
+      subscriptionEnabled: (data['subscriptionEnabled'] as bool?) ??
+          (!(((data['categoryId'] as String?) ?? (data['category'] as String?) ?? '')
+                  .toLowerCase()
+                  .contains('uple') ||
+              ((data['categoryId'] as String?) ?? (data['category'] as String?) ?? '')
+                  .toLowerCase()
+                  .contains('water') ||
+              ((data['categoryId'] as String?) ?? (data['category'] as String?) ?? '')
+                  .toLowerCase()
+                  .contains('pooja') ||
+              ((data['title'] as String?) ?? (data['name'] as String?) ?? '')
+                  .toLowerCase()
+                  .contains('uple') ||
+              ((data['title'] as String?) ?? (data['name'] as String?) ?? '')
+                  .toLowerCase()
+                  .contains('water bottle') ||
+              ((data['title'] as String?) ?? (data['name'] as String?) ?? '')
+                  .toLowerCase()
+                  .contains('cow dung'))),
     );
   }
 
@@ -143,6 +166,7 @@ class Product {
         'isBestSeller': isBestSeller,
         'isA2CowMilk': isA2CowMilk,
         'inStock': inStock,
+        'subscriptionEnabled': subscriptionEnabled,
       };
 
   /// Restores a [Product] from a map produced by [toMap].
@@ -174,6 +198,25 @@ class Product {
       isBestSeller: (map['isBestSeller'] as bool?) ?? false,
       isA2CowMilk: (map['isA2CowMilk'] as bool?) ?? false,
       inStock: (map['inStock'] as bool?) ?? true,
+      subscriptionEnabled: (map['subscriptionEnabled'] as bool?) ??
+          (!(((map['categoryId'] as String?) ?? (map['category'] as String?) ?? '')
+                  .toLowerCase()
+                  .contains('uple') ||
+              ((map['categoryId'] as String?) ?? (map['category'] as String?) ?? '')
+                  .toLowerCase()
+                  .contains('water') ||
+              ((map['categoryId'] as String?) ?? (map['category'] as String?) ?? '')
+                  .toLowerCase()
+                  .contains('pooja') ||
+              ((map['title'] as String?) ?? (map['name'] as String?) ?? '')
+                  .toLowerCase()
+                  .contains('uple') ||
+              ((map['title'] as String?) ?? (map['name'] as String?) ?? '')
+                  .toLowerCase()
+                  .contains('water bottle') ||
+              ((map['title'] as String?) ?? (map['name'] as String?) ?? '')
+                  .toLowerCase()
+                  .contains('cow dung'))),
     );
   }
 
@@ -193,6 +236,7 @@ class Product {
         'isBestSeller': isBestSeller,
         'isA2CowMilk': isA2CowMilk,
         'inStock': inStock,
+        'subscriptionEnabled': subscriptionEnabled,
       };
 
   DairyProduct toDairyProduct() => DairyProduct(
@@ -218,5 +262,11 @@ class Product {
         description: dp.subtitle,
         inStock: dp.inStock,
         isBestSeller: dp.isBestSeller,
+        subscriptionEnabled: !(dp.category.toLowerCase().contains('uple') ||
+            dp.category.toLowerCase().contains('water') ||
+            dp.category.toLowerCase().contains('pooja') ||
+            dp.name.toLowerCase().contains('uple') ||
+            dp.name.toLowerCase().contains('water bottle') ||
+            dp.name.toLowerCase().contains('cow dung')),
       );
 }

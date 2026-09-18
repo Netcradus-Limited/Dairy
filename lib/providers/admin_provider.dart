@@ -15,10 +15,12 @@ import '../models/order.dart' as order;
 import '../models/order_model.dart';
 import '../models/product_model.dart';
 import '../repositories/firestore_product_repository.dart';
+import '../models/subscription.dart';
 import '../services/complaint_service.dart';
 import '../services/delivery_management_service.dart';
 import '../services/order_service.dart';
 import '../services/payment_service.dart';
+import '../services/subscription_service.dart';
 
 class AdminProvider extends ChangeNotifier {
   final FirestoreProductRepository _repo;
@@ -26,6 +28,7 @@ class AdminProvider extends ChangeNotifier {
   final ComplaintService _complaintService;
   final PaymentService _paymentService;
   final DeliveryManagementService _deliveryService;
+  final SubscriptionService _subscriptionService;
 
   int _selectedNavIndex = 2;
   String _searchQuery = '';
@@ -42,6 +45,10 @@ class AdminProvider extends ChangeNotifier {
   List<order.Order> _rawOrders = [];
   bool _ordersLoading = true;
   String? _ordersError;
+
+  List<Subscription> _subscriptions = [];
+  bool _subscriptionsLoading = true;
+  String? _subscriptionsError;
 
   List<complaint_model.CustomerComplaint> _complaints = [];
   bool _complaintsLoading = true;
@@ -67,6 +74,7 @@ class AdminProvider extends ChangeNotifier {
   StreamSubscription<List<Map<String, dynamic>>>? _productsSub;
   StreamSubscription<List<Map<String, dynamic>>>? _categoriesSub;
   StreamSubscription<List<order.Order>>? _ordersSub;
+  StreamSubscription<List<Subscription>>? _subscriptionsSub;
   StreamSubscription<List<complaint_model.CustomerComplaint>>? _complaintsSub;
   StreamSubscription<List<DairyPayment>>? _paymentsSub;
   StreamSubscription<List<DeliveryBatch>>? _batchesSub;
@@ -79,6 +87,34 @@ class AdminProvider extends ChangeNotifier {
   String get orderStatusTimeFilter => _orderStatusTimeFilter;
   int get unreadNotifications => _unreadNotifications;
   bool get isDarkMode => _isDarkMode;
+
+  List<Subscription> get subscriptions => _subscriptions;
+  bool get subscriptionsLoading => _subscriptionsLoading;
+  String? get subscriptionsError => _subscriptionsError;
+
+  int get totalSubscriptionsCount => _subscriptions.length;
+  int get activeSubscriptionsCount =>
+      _subscriptions.where((s) => s.status == SubscriptionStatus.active).length;
+  int get pausedSubscriptionsCount =>
+      _subscriptions.where((s) => s.status == SubscriptionStatus.paused).length;
+  int get cancelledSubscriptionsCount =>
+      _subscriptions.where((s) => s.status == SubscriptionStatus.cancelled).length;
+
+  int get todaySubscriptionDeliveriesCount {
+    final now = DateTime.now();
+    return _subscriptions.where((s) {
+      if (s.status != SubscriptionStatus.active) return false;
+      final next = s.nextDeliveryDate;
+      if (next == null) return false;
+      return next.year == now.year &&
+          next.month == now.month &&
+          next.day == now.day;
+    }).length;
+  }
+
+  double get estimatedMonthlySubscriptionRevenue => _subscriptions
+      .where((s) => s.status == SubscriptionStatus.active)
+      .fold(0.0, (sum, s) => sum + s.monthlyCost);
 
   List<DairyPayment> get payments => _payments;
   bool get paymentsLoading => _paymentsLoading;
@@ -158,25 +194,77 @@ class AdminProvider extends ChangeNotifier {
     ComplaintService? complaintService,
     PaymentService? paymentService,
     DeliveryManagementService? deliveryService,
+    SubscriptionService? subscriptionService,
   })  : _repo = repo ?? FirestoreProductRepository(),
         _orderService = orderService ?? OrderService(),
         _complaintService = complaintService ?? ComplaintService(),
         _paymentService = paymentService ?? PaymentService(),
-        _deliveryService = deliveryService ?? DeliveryManagementService() {
-    if (_canAccessFirestore) {
-      _listenToProducts();
-      _listenToCategories();
-      _listenToOrders();
-      _listenToComplaints();
-      _listenToPayments();
-      _listenToUsers();
-      _listenToDeliveryAgents();
-      _listenToDeliveryBatches();
-      _listenToDeliveryRoutes();
-    }
+        _deliveryService = deliveryService ?? DeliveryManagementService(),
+        _subscriptionService =
+            subscriptionService ?? SubscriptionService() {
+    _listenToProducts();
+    _listenToCategories();
+    _listenToOrders();
+    _listenToSubscriptions();
+    _listenToComplaints();
+    _listenToPayments();
+    _listenToUsers();
+    _listenToDeliveryAgents();
+    _listenToDeliveryBatches();
+    _listenToDeliveryRoutes();
   }
 
   // ─── Firestore listeners ───────────────────────────────────────────────
+
+  void _listenToSubscriptions() {
+    try {
+      _subscriptionsSub = _subscriptionService.streamAllSubscriptions().listen(
+        (subs) {
+          _subscriptions = subs;
+          _subscriptionsLoading = false;
+          _subscriptionsError = null;
+          notifyListeners();
+        },
+        onError: (e) {
+          debugPrint('AdminProvider: subscriptions stream error: $e');
+          _subscriptionsError = 'Failed to load subscriptions: $e';
+          _subscriptionsLoading = false;
+          notifyListeners();
+        },
+      );
+    } catch (e) {
+      debugPrint('AdminProvider: subscriptions stream error: $e');
+      _subscriptionsError = 'Failed to load subscriptions: $e';
+      _subscriptionsLoading = false;
+    }
+  }
+
+  /// Admin Subscription Actions
+  Future<void> pauseSubscription(String subscriptionId) async {
+    await _subscriptionService.adminPauseSubscription(subscriptionId);
+  }
+
+  Future<void> resumeSubscription(String subscriptionId) async {
+    await _subscriptionService.adminResumeSubscription(subscriptionId);
+  }
+
+  Future<void> cancelSubscription(String subscriptionId) async {
+    await _subscriptionService.adminCancelSubscription(subscriptionId);
+  }
+
+  Future<void> updateSubscription(Subscription subscription) async {
+    await _subscriptionService.adminUpdateSubscription(subscription);
+  }
+
+  /// Resolve customer information safely by user ID
+  DairyCustomer? getCustomerById(String? userId) {
+    if (userId == null || userId.trim().isEmpty) return null;
+    final cleanId = userId.trim();
+    return _customers.cast<DairyCustomer?>().firstWhere(
+          (c) => c?.id == cleanId,
+          orElse: () => null,
+        );
+  }
 
   void _listenToProducts() {
     try {
@@ -278,6 +366,8 @@ class AdminProvider extends ChangeNotifier {
       paymentMode: o.paymentMethod,
       assignedAgentId: agentId,
       assignedAgentName: agentName,
+      orderType: o.orderType,
+      subscriptionId: o.subscriptionId,
     );
   }
 
@@ -580,7 +670,8 @@ class AdminProvider extends ChangeNotifier {
   /// Checks whether any existing products are linked to the given category ID or name.
   bool hasLinkedProducts(String categoryId) {
     final catIndex = _categories.indexWhere((c) => c.id == categoryId);
-    final catName = catIndex != -1 ? _categories[catIndex].name.trim().toLowerCase() : '';
+    final catName =
+        catIndex != -1 ? _categories[catIndex].name.trim().toLowerCase() : '';
     return _products.any((p) {
       final pCatId = _categoryIdForName(p.category);
       return pCatId == categoryId ||
@@ -591,7 +682,8 @@ class AdminProvider extends ChangeNotifier {
   /// Counts the number of active/existing products belonging to a category.
   int countLinkedProducts(String categoryId) {
     final catIndex = _categories.indexWhere((c) => c.id == categoryId);
-    final catName = catIndex != -1 ? _categories[catIndex].name.trim().toLowerCase() : '';
+    final catName =
+        catIndex != -1 ? _categories[catIndex].name.trim().toLowerCase() : '';
     return _products.where((p) {
       final pCatId = _categoryIdForName(p.category);
       return pCatId == categoryId ||
@@ -622,7 +714,8 @@ class AdminProvider extends ChangeNotifier {
     if (isDuplicate) {
       _error = 'A category with the name "$trimmedName" already exists.';
       notifyListeners();
-      throw Exception('A category with the name "$trimmedName" already exists.');
+      throw Exception(
+          'A category with the name "$trimmedName" already exists.');
     }
 
     try {
@@ -652,7 +745,8 @@ class AdminProvider extends ChangeNotifier {
     if (isDuplicate) {
       _error = 'A category with the name "$trimmedName" already exists.';
       notifyListeners();
-      throw Exception('A category with the name "$trimmedName" already exists.');
+      throw Exception(
+          'A category with the name "$trimmedName" already exists.');
     }
 
     try {
@@ -1328,7 +1422,8 @@ class AdminProvider extends ChangeNotifier {
     _staffList = staff;
 
     if (_selectedCustomer != null) {
-      final matchIdx = custList.indexWhere((c) => c.id == _selectedCustomer!.id);
+      final matchIdx =
+          custList.indexWhere((c) => c.id == _selectedCustomer!.id);
       if (matchIdx != -1) {
         _selectedCustomer = custList[matchIdx];
       }
@@ -1344,8 +1439,7 @@ class AdminProvider extends ChangeNotifier {
   static bool _isLegacyMockName(String? val) {
     if (val == null) return false;
     final s = val.trim().toLowerCase();
-    return s == 'rajesh kumar' ||
-        s == 'delivery agent mock';
+    return s == 'rajesh kumar' || s == 'delivery agent mock';
   }
 
   static bool _isLegacyMockPhone(String? val) {
@@ -1376,8 +1470,7 @@ class AdminProvider extends ChangeNotifier {
   static bool _isLegacyMockZone(String? val) {
     if (val == null) return false;
     final s = val.trim().toLowerCase();
-    return s == 'delivery zone' ||
-        s == 'noida express zone';
+    return s == 'delivery zone' || s == 'noida express zone';
   }
 
   void _rebuildRidersCombined() {
@@ -1454,8 +1547,9 @@ class AdminProvider extends ChangeNotifier {
       final data = entry.value;
 
       final rawName = (data['name'] as String?)?.trim() ?? '';
-      final name =
-          _isLegacyMockName(rawName) || rawName == 'Guest Customer' ? '' : rawName;
+      final name = _isLegacyMockName(rawName) || rawName == 'Guest Customer'
+          ? ''
+          : rawName;
 
       final rawPhone = (data['phone'] as String?)?.trim() ?? '';
       final phone = _isLegacyMockPhone(rawPhone) ? '' : rawPhone;
@@ -1581,6 +1675,7 @@ class AdminProvider extends ChangeNotifier {
     _productsSub?.cancel();
     _categoriesSub?.cancel();
     _ordersSub?.cancel();
+    _subscriptionsSub?.cancel();
     _complaintsSub?.cancel();
     _paymentsSub?.cancel();
     _batchesSub?.cancel();

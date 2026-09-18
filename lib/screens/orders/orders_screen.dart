@@ -158,8 +158,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         style: TextStyle(color: textPrimary, fontSize: 13),
                         decoration: InputDecoration(
                           hintText: 'Search agent by name, phone, or zone...',
-                          hintStyle:
-                              TextStyle(color: textMuted, fontSize: 13),
+                          hintStyle: TextStyle(color: textMuted, fontSize: 13),
                           prefixIcon: Icon(Icons.search,
                               size: 20, color: textSecondary),
                           isDense: true,
@@ -243,7 +242,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                             height: 38,
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
-                                              color: AppColors.deliveriesPurpleBg,
+                                              color:
+                                                  AppColors.deliveriesPurpleBg,
                                               border: Border.all(
                                                 color: isSelected
                                                     ? AppColors.primary
@@ -270,13 +270,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                                         style: const TextStyle(
                                                           fontSize: 14,
                                                           fontWeight:
-                                                               FontWeight.bold,
+                                                              FontWeight.bold,
                                                           color: AppColors
                                                               .deliveriesPurple,
                                                         ),
                                                       ),
                                                     ),
-                                              ),
+                                            ),
                                           ),
                                           const SizedBox(width: 12),
                                           // Name & details
@@ -305,10 +305,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                                     if (isCurrentlyAssigned) ...[
                                                       const SizedBox(width: 6),
                                                       Container(
-                                                        padding: const EdgeInsets
-                                                            .symmetric(
-                                                            horizontal: 6,
-                                                            vertical: 2),
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                horizontal: 6,
+                                                                vertical: 2),
                                                         decoration:
                                                             BoxDecoration(
                                                           color: AppColors
@@ -424,8 +425,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               onPressed: isSubmitting
                                   ? null
                                   : () async {
-                                      setDialogState(
-                                          () => isSubmitting = true);
+                                      setDialogState(() => isSubmitting = true);
                                       try {
                                         await provider.assignDeliveryAgent(
                                           order.id,
@@ -581,6 +581,386 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
+  Future<void> _showOrderDetailsDialog(
+    BuildContext context,
+    AdminProvider provider,
+    DairyOrder order,
+  ) async {
+    final cardBg = AppColors.cardBgOf(context);
+    final cardBorder = AppColors.cardBorderOf(context);
+    final textPrimary = AppColors.textPrimaryOf(context);
+    final textSecondary = AppColors.textSecondaryOf(context);
+    final textMuted = AppColors.textMutedOf(context);
+    final currencyFormatter = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: cardBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: cardBorder),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 540),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'Order #${order.displayCode}',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  if (order.isSubscription)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF6366F1)
+                                            .withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: const Color(0xFF6366F1),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.autorenew_rounded,
+                                            size: 13,
+                                            color: Color(0xFF6366F1),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'SUBSCRIPTION',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w800,
+                                              color: const Color(0xFF6366F1),
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Placed at: ${order.time}',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  color: textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 20),
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          color: textMuted,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Divider(color: cardBorder, height: 1),
+                    const SizedBox(height: 16),
+
+                    // Subscription Info Box if applicable
+                    if (order.isSubscription) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6366F1).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.repeat_rounded,
+                                  size: 16,
+                                  color: Color(0xFF6366F1),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Subscription Generated Order',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF6366F1),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            SelectableText(
+                              'Subscription ID: ${order.subscriptionId ?? "N/A"}',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Customer Details
+                    Text(
+                      'CUSTOMER INFORMATION',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: textMuted,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.bgOf(context),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: cardBorder),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            order.customerName,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
+                            ),
+                          ),
+                          if (order.customerPhone.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              order.customerPhone,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                color: textSecondary,
+                              ),
+                            ),
+                          ],
+                          if (order.address.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              order.address,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                color: textSecondary,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Order Summary
+                    Text(
+                      'ORDER DETAILS',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: textMuted,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.bgOf(context),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: cardBorder),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Items',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  color: textSecondary,
+                                ),
+                              ),
+                              Flexible(
+                                child: Text(
+                                  order.itemsSummary,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: textPrimary,
+                                  ),
+                                  textAlign: TextAlign.right,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Delivery Slot',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  color: textSecondary,
+                                ),
+                              ),
+                              Text(
+                                order.deliverySlot,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Payment Mode',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  color: textSecondary,
+                                ),
+                              ),
+                              Text(
+                                order.paymentMode,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Assigned Agent',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  color: textSecondary,
+                                ),
+                              ),
+                              Text(
+                                order.isAssigned
+                                    ? (order.assignedAgentName ?? order.assignedAgentId ?? 'Assigned')
+                                    : 'Not Assigned',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: order.isAssigned
+                                      ? AppColors.primary
+                                      : textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Divider(color: cardBorder, height: 1),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Total Amount',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: textPrimary,
+                                ),
+                              ),
+                              Text(
+                                currencyFormatter.format(order.amount),
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Status & Actions
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Status: ',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: textSecondary,
+                              ),
+                            ),
+                            StatusBadge.fromOrderStatus(order.status),
+                          ],
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          child: const Text('Close'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildAgentAssignmentCell(
     BuildContext context,
     AdminProvider provider,
@@ -591,15 +971,15 @@ class _OrdersScreenState extends State<OrdersScreen> {
     Color cardBorder,
   ) {
     if (order.isAssigned) {
-      final assignedName = order.assignedAgentName != null &&
-              order.assignedAgentName!.isNotEmpty
-          ? order.assignedAgentName!
-          : (provider.riders
-                  .cast<DeliveryRider?>()
-                  .firstWhere((r) => r?.id == order.assignedAgentId,
-                      orElse: () => null)
-                  ?.name ??
-              'Agent (${order.assignedAgentId})');
+      final assignedName =
+          order.assignedAgentName != null && order.assignedAgentName!.isNotEmpty
+              ? order.assignedAgentName!
+              : (provider.riders
+                      .cast<DeliveryRider?>()
+                      .firstWhere((r) => r?.id == order.assignedAgentId,
+                          orElse: () => null)
+                      ?.name ??
+                  'Agent (${order.assignedAgentId})');
 
       return InkWell(
         borderRadius: BorderRadius.circular(8),
@@ -891,290 +1271,370 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
         if (isDesktop) {
           // Desktop Table Row
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Order ID & Time
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Order #${order.displayCode}',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        order.time,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          color: textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Customer & Items
-                Expanded(
-                  flex: 3,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        order.customerName,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        order.itemsSummary,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          color: textSecondary,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                // Delivery Slot & Payment Mode
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        order.deliverySlot,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: textPrimary,
-                        ),
-                      ),
-                      Text(
-                        order.paymentMode,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          color: textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Delivery Agent Column
-                Expanded(
-                  flex: 3,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: _buildAgentAssignmentCell(
-                      context,
-                      provider,
-                      order,
-                      textPrimary,
-                      textSecondary,
-                      textMuted,
-                      cardBorder,
-                    ),
-                  ),
-                ),
-                // Amount
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    currencyFormatter.format(order.amount),
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: textPrimary,
-                    ),
-                  ),
-                ),
-                // Status Action Dropdown
-                Expanded(
-                  flex: 2,
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: PopupMenuButton<OrderStatus>(
-                      initialValue: order.status,
-                      color: cardBg,
-                      onSelected: (newStatus) => _updateStatus(
-                        context,
-                        provider,
-                        order.id,
-                        newStatus,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _showOrderDetailsDialog(context, provider, order),
+              hoverColor: AppColors.primary.withValues(alpha: 0.04),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Order ID & Time
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          StatusBadge.fromOrderStatus(order.status),
-                          const SizedBox(width: 4),
-                          Icon(Icons.arrow_drop_down,
-                              size: 18, color: textSecondary),
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 6,
+                            runSpacing: 2,
+                            children: [
+                              Text(
+                                'Order #${order.displayCode}',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: order.isSubscription
+                                      ? const Color(0xFF6366F1).withValues(alpha: 0.12)
+                                      : AppColors.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: order.isSubscription
+                                        ? const Color(0xFF6366F1)
+                                        : AppColors.primary.withValues(alpha: 0.4),
+                                  ),
+                                ),
+                                child: Text(
+                                  order.isSubscription ? 'SUBSCRIPTION' : 'NORMAL',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.3,
+                                    color: order.isSubscription
+                                        ? const Color(0xFF6366F1)
+                                        : AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            order.time,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              color: textMuted,
+                            ),
+                          ),
                         ],
                       ),
-                      itemBuilder: (ctx) => OrderStatus.values.map((s) {
-                        return PopupMenuItem(
-                          value: s,
-                          child: Text(
-                            s.displayName,
-                            style: GoogleFonts.plusJakartaSans(
-                                fontSize: 13, color: textPrimary),
-                          ),
-                        );
-                      }).toList(),
                     ),
-                  ),
+                    // Customer & Items
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            order.customerName,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            order.itemsSummary,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              color: textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Delivery Slot & Payment Mode
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            order.deliverySlot,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: textPrimary,
+                            ),
+                          ),
+                          Text(
+                            order.paymentMode,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              color: textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Delivery Agent Column
+                    Expanded(
+                      flex: 3,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: _buildAgentAssignmentCell(
+                          context,
+                          provider,
+                          order,
+                          textPrimary,
+                          textSecondary,
+                          textMuted,
+                          cardBorder,
+                        ),
+                      ),
+                    ),
+                    // Amount
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        currencyFormatter.format(order.amount),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: textPrimary,
+                        ),
+                      ),
+                    ),
+                    // Status Action Dropdown
+                    Expanded(
+                      flex: 2,
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: PopupMenuButton<OrderStatus>(
+                          initialValue: order.status,
+                          color: cardBg,
+                          onSelected: (newStatus) => _updateStatus(
+                            context,
+                            provider,
+                            order.id,
+                            newStatus,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              StatusBadge.fromOrderStatus(order.status),
+                              const SizedBox(width: 4),
+                              Icon(Icons.arrow_drop_down,
+                                  size: 18, color: textSecondary),
+                            ],
+                          ),
+                          itemBuilder: (ctx) => OrderStatus.values.map((s) {
+                            return PopupMenuItem(
+                              value: s,
+                              child: Text(
+                                s.displayName,
+                                style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 13, color: textPrimary),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           );
         }
 
         // Mobile / Compact Card View
-        return Padding(
-          padding: const EdgeInsets.all(14.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Row: Order ID & Status Dropdown
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Order #${order.displayCode}',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          order.time,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
-                            color: textMuted,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  PopupMenuButton<OrderStatus>(
-                    initialValue: order.status,
-                    color: cardBg,
-                    onSelected: (newStatus) => _updateStatus(
-                      context,
-                      provider,
-                      order.id,
-                      newStatus,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        StatusBadge.fromOrderStatus(order.status),
-                        const SizedBox(width: 2),
-                        Icon(Icons.arrow_drop_down,
-                            size: 16, color: textSecondary),
-                      ],
-                    ),
-                    itemBuilder: (ctx) => OrderStatus.values.map((s) {
-                      return PopupMenuItem(
-                        value: s,
-                        child: Text(
-                          s.displayName,
-                          style: GoogleFonts.plusJakartaSans(
-                              fontSize: 13, color: textPrimary),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Customer & Items & Amount
-              Row(
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _showOrderDetailsDialog(context, provider, order),
+            hoverColor: AppColors.primary.withValues(alpha: 0.04),
+            child: Padding(
+              padding: const EdgeInsets.all(14.0),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          order.customerName,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: textPrimary,
-                          ),
+                  // Header Row: Order ID & Status Dropdown
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    'Order #${order.displayCode}',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.primary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: order.isSubscription
+                                        ? const Color(0xFF6366F1).withValues(alpha: 0.12)
+                                        : AppColors.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: order.isSubscription
+                                          ? const Color(0xFF6366F1)
+                                          : AppColors.primary.withValues(alpha: 0.4),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    order.isSubscription ? 'SUBSCRIPTION' : 'NORMAL',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.3,
+                                      color: order.isSubscription
+                                          ? const Color(0xFF6366F1)
+                                          : AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              order.time,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                color: textMuted,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          order.itemsSummary,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
-                            color: textSecondary,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(width: 8),
+                      PopupMenuButton<OrderStatus>(
+                        initialValue: order.status,
+                        color: cardBg,
+                        onSelected: (newStatus) => _updateStatus(
+                          context,
+                          provider,
+                          order.id,
+                          newStatus,
                         ),
-                      ],
-                    ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            StatusBadge.fromOrderStatus(order.status),
+                            const SizedBox(width: 2),
+                            Icon(Icons.arrow_drop_down,
+                                size: 16, color: textSecondary),
+                          ],
+                        ),
+                        itemBuilder: (ctx) => OrderStatus.values.map((s) {
+                          return PopupMenuItem(
+                            value: s,
+                            child: Text(
+                              s.displayName,
+                              style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13, color: textPrimary),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    currencyFormatter.format(order.amount),
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: textPrimary,
+                  const SizedBox(height: 8),
+
+                  // Customer & Items & Amount
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              order.customerName,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              order.itemsSummary,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                color: textSecondary,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        currencyFormatter.format(order.amount),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+
+                  // Address
+                  if (order.address.isNotEmpty)
+                    Text(
+                      order.address,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: textMuted,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                  const SizedBox(height: 10),
+
+                  // Delivery Agent Assignment
+                  _buildAgentAssignmentCell(
+                    context,
+                    provider,
+                    order,
+                    textPrimary,
+                    textSecondary,
+                    textMuted,
+                    cardBorder,
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
-
-              // Address
-              if (order.address.isNotEmpty)
-                Text(
-                  order.address,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    color: textMuted,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              const SizedBox(height: 10),
-
-              // Delivery Agent Assignment
-              _buildAgentAssignmentCell(
-                context,
-                provider,
-                order,
-                textPrimary,
-                textSecondary,
-                textMuted,
-                cardBorder,
-              ),
-            ],
+            ),
           ),
         );
       },

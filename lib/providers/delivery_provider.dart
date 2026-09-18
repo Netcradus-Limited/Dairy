@@ -39,6 +39,12 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
       status = DeliveryOrderStatus.cancelled;
   }
 
+  String? productImageUrl;
+  if (order.items.isNotEmpty) {
+    final p = order.items.first.product;
+    productImageUrl = p.resolvedImageUrl.isNotEmpty ? p.resolvedImageUrl : p.imageUrl;
+  }
+
   return DeliveryOrder(
     id: order.id,
     orderId: order.id,
@@ -71,6 +77,14 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
                 order.deliveryAddress.longitude))
         ? order.deliveryAddress.longitude
         : null,
+    orderType: order.orderType,
+    subscriptionId: order.subscriptionId,
+    deliveryDate: order.deliveryDate,
+    deliverySlot: order.deliverySlot ?? (order.isSubscription ? order.estimatedDeliveryTime : null),
+    paymentMethod: order.paymentMethod,
+    paymentStatus: order.paymentStatus,
+    productImageUrl: productImageUrl,
+    cancellationReason: order.cancellationReason,
   );
 }
 
@@ -245,8 +259,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
   static bool _isLegacyMockName(String? val) {
     if (val == null) return false;
     final s = val.trim().toLowerCase();
-    return s == 'rajesh kumar' ||
-        s == 'delivery agent mock';
+    return s == 'rajesh kumar' || s == 'delivery agent mock';
   }
 
   static bool _isLegacyMockPhone(String? val) {
@@ -277,8 +290,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
   static bool _isLegacyMockZone(String? val) {
     if (val == null) return false;
     final s = val.trim().toLowerCase();
-    return s == 'delivery zone' ||
-        s == 'noida express zone';
+    return s == 'delivery zone' || s == 'noida express zone';
   }
 
   void _listenToAgentDoc([String? targetUid]) {
@@ -308,12 +320,15 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
         .listen((snapshot) async {
       final authUser = _auth?.currentUser;
 
-      debugPrint('DeliveryNotifier: Agent document path = delivery_agents/$uid');
-      debugPrint('DeliveryNotifier: Agent document exists = ${snapshot.exists}');
+      debugPrint(
+          'DeliveryNotifier: Agent document path = delivery_agents/$uid');
+      debugPrint(
+          'DeliveryNotifier: Agent document exists = ${snapshot.exists}');
 
       if (snapshot.exists) {
         final data = snapshot.data() ?? {};
-        debugPrint('DeliveryNotifier: Agent document fields = ${data.keys.toList()}');
+        debugPrint(
+            'DeliveryNotifier: Agent document fields = ${data.keys.toList()}');
         final isOnline = data['isOnline'] == true || data['isOnDuty'] == true;
 
         // 1. Name: Check agent doc -> user provider -> authUser displayName
@@ -429,10 +444,10 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
                 }
               }
               if (realVehicle.isEmpty) {
-                final uVeh = ((uData['vehicle'] ?? uData['vehicleType'])
-                        as String?)
-                    ?.trim() ??
-                    '';
+                final uVeh =
+                    ((uData['vehicle'] ?? uData['vehicleType']) as String?)
+                            ?.trim() ??
+                        '';
                 if (uVeh.isNotEmpty && !_isLegacyMockVehicle(uVeh)) {
                   realVehicle = uVeh;
                 }
@@ -440,8 +455,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
               if (realVehicleNumber.isEmpty) {
                 final uPlate =
                     (uData['vehicleNumber'] as String?)?.trim() ?? '';
-                if (uPlate.isNotEmpty &&
-                    !_isLegacyMockVehicleNumber(uPlate)) {
+                if (uPlate.isNotEmpty && !_isLegacyMockVehicleNumber(uPlate)) {
                   realVehicleNumber = uPlate;
                 }
               }
@@ -472,10 +486,13 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
         debugPrint('DeliveryNotifier: Loaded name = $realName');
         debugPrint('DeliveryNotifier: Loaded phone = $realPhone');
         debugPrint('DeliveryNotifier: Loaded vehicle = $realVehicle');
-        debugPrint('DeliveryNotifier: Loaded vehicleType = ${(data['vehicleType'] as String?)?.trim() ?? realVehicle}');
-        debugPrint('DeliveryNotifier: Loaded vehicleNumber = $realVehicleNumber');
+        debugPrint(
+            'DeliveryNotifier: Loaded vehicleType = ${(data['vehicleType'] as String?)?.trim() ?? realVehicle}');
+        debugPrint(
+            'DeliveryNotifier: Loaded vehicleNumber = $realVehicleNumber');
         debugPrint('DeliveryNotifier: Loaded assignedZone = $realZone');
-        debugPrint('DeliveryNotifier: Loaded profileImageUrl = $realProfileImage');
+        debugPrint(
+            'DeliveryNotifier: Loaded profileImageUrl = $realProfileImage');
 
         if (!mounted) return;
         state = DeliveryAgent(
@@ -498,7 +515,8 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
         );
       } else {
         // Doc in delivery_agents doesn't exist yet; check users/{uid}
-        debugPrint('DeliveryNotifier: Doc in delivery_agents does not exist; checking users/$uid');
+        debugPrint(
+            'DeliveryNotifier: Doc in delivery_agents does not exist; checking users/$uid');
         try {
           final userDoc = await firestore.collection('users').doc(uid).get();
           if (userDoc.exists) {
@@ -509,7 +527,9 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
             final uVehicle = (uData['vehicle'] as String? ?? '').trim();
             final uVehicleNumber =
                 (uData['vehicleNumber'] as String? ?? '').trim();
-            final uZone = ((uData['assignedZone'] ?? uData['zone']) as String? ?? '').trim();
+            final uZone =
+                ((uData['assignedZone'] ?? uData['zone']) as String? ?? '')
+                    .trim();
             final double? uRating = (uData['rating'] as num?)?.toDouble();
             final uProfileImage = ((uData['profileImageUrl'] ??
                     uData['photoUrl'] ??
@@ -523,17 +543,20 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
                 : uName;
             final cleanPhone = _isLegacyMockPhone(uPhone) ? '' : uPhone;
             final cleanVehicle = _isLegacyMockVehicle(uVehicle) ? '' : uVehicle;
-            final cleanVehicleNum =
-                _isLegacyMockVehicleNumber(uVehicleNumber) ? '' : uVehicleNumber;
+            final cleanVehicleNum = _isLegacyMockVehicleNumber(uVehicleNumber)
+                ? ''
+                : uVehicleNumber;
             final cleanZone = _isLegacyMockZone(uZone) ? '' : uZone;
 
             debugPrint('DeliveryNotifier: Loaded name = $cleanName');
             debugPrint('DeliveryNotifier: Loaded phone = $cleanPhone');
             debugPrint('DeliveryNotifier: Loaded vehicle = $cleanVehicle');
             debugPrint('DeliveryNotifier: Loaded vehicleType = $cleanVehicle');
-            debugPrint('DeliveryNotifier: Loaded vehicleNumber = $cleanVehicleNum');
+            debugPrint(
+                'DeliveryNotifier: Loaded vehicleNumber = $cleanVehicleNum');
             debugPrint('DeliveryNotifier: Loaded assignedZone = $cleanZone');
-            debugPrint('DeliveryNotifier: Loaded profileImageUrl = $uProfileImage');
+            debugPrint(
+                'DeliveryNotifier: Loaded profileImageUrl = $uProfileImage');
 
             if (!mounted) return;
             state = DeliveryAgent(
@@ -758,11 +781,12 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
     final authUser = FirebaseAuth.instance.currentUser;
     final uid = authUser?.uid ?? _effectiveUid;
     if (uid.isEmpty || authUser == null) {
-      throw StateError('Authentication required: please log in to upload a profile photo.');
+      throw StateError(
+          'Authentication required: please log in to upload a profile photo.');
     }
 
-    final downloadUrl = await FirebaseStorageService.instance
-        .uploadDeliveryAgentProfileImage(
+    final downloadUrl =
+        await FirebaseStorageService.instance.uploadDeliveryAgentProfileImage(
       uid: uid,
       bytes: bytes,
       contentType: contentType,
