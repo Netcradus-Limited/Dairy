@@ -84,8 +84,13 @@ class OrderService {
     required Address deliveryAddress,
     String paymentMethod = 'Cash on Delivery',
   }) async {
-    final currentAuthUser = FirebaseAuth.instance.currentUser;
-    final authoritativeUid = currentAuthUser?.uid ??
+    String? currentAuthUid;
+    try {
+      currentAuthUid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      currentAuthUid = null;
+    }
+    final authoritativeUid = currentAuthUid ??
         (userId != null && userId.isNotEmpty ? userId : null);
     if (authoritativeUid == null) {
       throw StateError(
@@ -283,6 +288,29 @@ class OrderService {
   /// Cancels an order by setting its status to [OrderStatus.cancelled].
   Future<void> cancelOrder(String orderId) =>
       updateOrderStatus(orderId, OrderStatus.cancelled);
+
+  /// Fails / cancels delivery with a reason (e.g. 'Customer unavailable' or 'Unable to deliver')
+  Future<void> failDelivery(String orderId, String reason) async {
+    try {
+      await _firestore.collection('orders').doc(orderId).update({
+        'status': 'cancelled',
+        'cancellationReason': reason,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      try {
+        final paymentDoc =
+            _firestore.collection('payments').doc('PAY_$orderId');
+        await paymentDoc.update({
+          'status': 'Cancelled',
+          'paymentStatus': 'Cancelled',
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } catch (_) {}
+    } catch (e) {
+      throw Exception('Failed to record delivery failure for $orderId: $e');
+    }
+  }
 
   /// Live stream of active (accepted / in-progress) orders from the `orders`
   /// collection, used by the delivery panel Active tab and the tracking map.

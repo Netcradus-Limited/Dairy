@@ -67,6 +67,7 @@ class Subscription {
   final double discountRate;
 
   /// Firestore-backed subscription plan fields
+  final String? userId;
   final String? planId;
   final String? planName;
   final bool? autoRenew;
@@ -85,6 +86,7 @@ class Subscription {
     this.deliveryTimeSlot = 'Morning (6:00 AM - 9:00 AM)',
     this.includeIcePack = true,
     this.discountRate = 0.10,
+    this.userId,
     this.planId,
     this.planName,
     this.autoRenew,
@@ -193,10 +195,21 @@ class Subscription {
             isFreshDeal: data['isFreshDeal'] ?? false,
           );
 
+    final rawQty = data['quantity'];
+    int parsedQuantity = 1;
+    if (rawQty is num) {
+      parsedQuantity = rawQty.toInt();
+    } else if (rawQty is String) {
+      parsedQuantity = int.tryParse(rawQty) ?? 1;
+    }
+    if (parsedQuantity < 1) parsedQuantity = 1;
+
+    final userId = (data['userId'] as String?) ?? (data['uid'] as String?);
+
     return Subscription(
-      id: id ?? data['id'] ?? '',
+      id: id ?? (data['id'] as String?) ?? (data['subscriptionId'] as String?) ?? '',
       product: product,
-      quantity: data['quantity'] ?? 1,
+      quantity: parsedQuantity,
       frequency: freq,
       status: status,
       startDate: parseDate(data['startDate']) ??
@@ -208,6 +221,7 @@ class Subscription {
           data['deliveryTimeSlot'] ?? 'Morning (6:00 AM - 9:00 AM)',
       includeIcePack: data['includeIcePack'] ?? true,
       discountRate: (data['discountRate'] ?? 0.10).toDouble(),
+      userId: userId,
       planId: data['planId'],
       planName: data['planName'],
       autoRenew: data['autoRenew'] ?? false,
@@ -219,8 +233,12 @@ class Subscription {
   Map<String, dynamic> toFirestore() {
     final map = <String, dynamic>{
       'id': id,
+      'subscriptionId': id,
+      'userId': userId ?? '',
+      'uid': userId ?? '',
       'product': product.toMap(),
       'productId': product.id,
+      'productName': product.title,
       'productTitle': product.title,
       'productCategoryId': product.categoryId,
       'productCategoryName': product.categoryName,
@@ -237,8 +255,11 @@ class Subscription {
       'quantity': quantity,
       'frequency': frequency.label,
       'status': status.label,
-      'startDate': Timestamp.fromDate(startDate),
+      'deliverySlot': deliveryTimeSlot,
       'deliveryTimeSlot': deliveryTimeSlot,
+      'pricePerDelivery': priceAfterDiscountPerDelivery,
+      'estimatedMonthlyPrice': monthlyCost,
+      'startDate': Timestamp.fromDate(startDate),
       'includeIcePack': includeIcePack,
       'discountRate': discountRate,
       'planId': planId ?? 'plan_${product.id}',
@@ -253,9 +274,13 @@ class Subscription {
     }
     if (createdAt != null) {
       map['createdAt'] = Timestamp.fromDate(createdAt!);
+    } else {
+      map['createdAt'] = Timestamp.fromDate(startDate);
     }
     if (updatedAt != null) {
       map['updatedAt'] = Timestamp.fromDate(updatedAt!);
+    } else {
+      map['updatedAt'] = Timestamp.fromDate(startDate);
     }
     return map;
   }
@@ -263,6 +288,9 @@ class Subscription {
   Map<String, dynamic> toMap() {
     final map = <String, dynamic>{
       'id': id,
+      'subscriptionId': id,
+      'userId': userId ?? '',
+      'uid': userId ?? '',
       'product': product.toMap(),
       'productId': product.id,
       'productTitle': product.title,
@@ -305,6 +333,7 @@ class Subscription {
     String? deliveryTimeSlot,
     bool? includeIcePack,
     double? discountRate,
+    String? userId,
     String? planId,
     String? planName,
     bool? autoRenew,
@@ -323,6 +352,7 @@ class Subscription {
       deliveryTimeSlot: deliveryTimeSlot ?? this.deliveryTimeSlot,
       includeIcePack: includeIcePack ?? this.includeIcePack,
       discountRate: discountRate ?? this.discountRate,
+      userId: userId ?? this.userId,
       planId: planId ?? this.planId,
       planName: planName ?? this.planName,
       autoRenew: autoRenew ?? this.autoRenew,

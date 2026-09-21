@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +11,7 @@ import '../../core/widgets/app_text_field.dart';
 import '../../core/widgets/product_image.dart';
 import '../../models/product.dart';
 import '../../models/subscription.dart';
+import '../../providers/product_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../repositories/product_repository.dart';
 
@@ -33,24 +35,17 @@ class _EditSubscriptionScreenState
   late bool _includeIcePack;
 
   late final bool _isNew;
-  late final List<Product> _availableProducts;
-  late final Product _baseProduct;
   Product? _chosenProduct;
 
   @override
   void initState() {
     super.initState();
-    final repo = ProductRepository();
-    _availableProducts =
-        _dedupe([...repo.getFreshDeals(), ...repo.getA2MilkProducts()]);
-
     final s = widget.subscription;
     if (s != null) {
       _isNew = false;
       _selectedFrequency = s.frequency;
       _deliveryTimeSlot = s.deliveryTimeSlot;
       _includeIcePack = s.includeIcePack;
-      _baseProduct = s.product;
       _chosenProduct = s.product;
       _quantityController.text = s.quantity.toString();
       _deliverySlotController.text = s.deliveryTimeSlot;
@@ -59,8 +54,6 @@ class _EditSubscriptionScreenState
       _selectedFrequency = SubscriptionFrequency.daily;
       _deliveryTimeSlot = 'Morning (6:00 AM - 9:00 AM)';
       _includeIcePack = true;
-      _baseProduct = _availableProducts.first;
-      _chosenProduct = _availableProducts.first;
       _quantityController.text = '1';
       _deliverySlotController.text = 'Morning (6:00 AM - 9:00 AM)';
     }
@@ -73,6 +66,27 @@ class _EditSubscriptionScreenState
       if (seen.add(p.id)) out.add(p);
     }
     return out;
+  }
+
+  List<Product> _getFallbackProducts() {
+    final repo = ProductRepository();
+    return _dedupe([
+      ...repo.getA2MilkProducts(),
+      ...repo.getFreshDeals(),
+      ...repo.getBestSellers(),
+    ]).where((p) => p.subscriptionEnabled && p.inStock).toList();
+  }
+
+  List<Product> _resolveAvailableProducts(List<Product> streamedProducts) {
+    final baseList = streamedProducts.isNotEmpty
+        ? streamedProducts
+        : _getFallbackProducts();
+
+    final filtered = baseList
+        .where((p) => p.subscriptionEnabled && p.inStock)
+        .toList();
+
+    return _dedupe(filtered.isNotEmpty ? filtered : _getFallbackProducts());
   }
 
   @override
@@ -95,21 +109,79 @@ class _EditSubscriptionScreenState
     }
   }
 
-  Future<void> _onSave() async {
+  Future<void> _onSave(List<Product> availableProducts) async {
     if (!_formKey.currentState!.validate()) return;
 
-    final quantity = int.tryParse(_quantityController.text) ?? 1;
+    final quantity = int.tryParse(_quantityController.text.trim()) ?? 1;
     if (quantity < 1) return;
 
     _deliveryTimeSlot = _deliverySlotController.text.trim().isNotEmpty
         ? _deliverySlotController.text.trim()
         : _deliveryTimeSlot;
-    final Product product = _chosenProduct ?? _baseProduct;
+
+    final authUser = FirebaseAuth.instance.currentUser;
+    if (authUser == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please log in with OTP before creating a subscription.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final defaultProduct = availableProducts.isNotEmpty
+        ? availableProducts.first
+        : _getFallbackProducts().first;
+    final Product product = _chosenProduct ?? defaultProduct;
     final now = DateTime.now();
+
+    // Check duplicate active subscription for exact same product when creating new
+    if (_isNew) {
+      final existingSubs = ref.read(subscriptionProvider).subscriptions;
+      final duplicate = existingSubs.where(
+        (s) => s.product.id == product.id && s.isActiveAndValid,
+      ).toList();
+
+      if (duplicate.isNotEmpty) {
+        final shouldEdit = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Active Subscription Exists'),
+            content: Text(
+                'You already have an active subscription for "${product.title}". Would you like to edit your existing subscription instead?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Edit Existing'),
+              ),
+            ],
+          ),
+        );
+        if (shouldEdit == true && mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => EditSubscriptionScreen(subscription: duplicate.first),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
+    final uniqueDocId = _isNew
+        ? 'sub_${now.millisecondsSinceEpoch}_${now.microsecond}'
+        : widget.subscription!.id;
 
     final subscription = _isNew
         ? Subscription(
-            id: 'sub_${now.millisecondsSinceEpoch}',
+            id: uniqueDocId,
             product: product,
             quantity: quantity,
             frequency: _selectedFrequency,
@@ -148,8 +220,8 @@ class _EditSubscriptionScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_isNew
-              ? 'New subscription created successfully!'
-              : 'Subscription updated successfully!'),
+              ? 'New subscription for ${product.title} created successfully!'
+              : '${product.title} subscription updated successfully!'),
           backgroundColor: AppColors.freshGreen,
         ),
       );
@@ -168,8 +240,14 @@ class _EditSubscriptionScreenState
   @override
   Widget build(BuildContext context) {
     final isDesktop = context.isDesktop;
-    final product = _chosenProduct ?? _baseProduct;
-    final quantity = int.tryParse(_quantityController.text) ?? 1;
+    final streamedProducts = ref.watch(allProductsProvider);
+    final availableProducts = _resolveAvailableProducts(streamedProducts);
+
+    final defaultProduct = availableProducts.isNotEmpty
+        ? availableProducts.first
+        : _getFallbackProducts().first;
+    final product = _chosenProduct ?? defaultProduct;
+    final quantity = int.tryParse(_quantityController.text.trim()) ?? 1;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -193,7 +271,7 @@ class _EditSubscriptionScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildProductSelector(),
+                  _buildProductSelector(availableProducts, product),
                   const SizedBox(height: AppSizes.p20),
                   _buildFrequencySelector(),
                   const SizedBox(height: AppSizes.p20),
@@ -204,10 +282,17 @@ class _EditSubscriptionScreenState
                     keyboardType: TextInputType.number,
                     prefixIcon: const Icon(Icons.numbers_rounded,
                         color: AppColors.primaryBlue),
+                    onChanged: (_) {
+                      setState(() {});
+                    },
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'Quantity is required';
-                      final n = int.tryParse(v);
-                      if (n == null || n < 1) return 'Enter a valid quantity';
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Quantity is required';
+                      }
+                      final n = int.tryParse(v.trim());
+                      if (n == null || n < 1) {
+                        return 'Enter a valid positive number';
+                      }
                       return null;
                     },
                   ),
@@ -240,7 +325,7 @@ class _EditSubscriptionScreenState
                   const SizedBox(height: AppSizes.p24),
                   AppButton(
                     text: _isNew ? 'Create Subscription' : 'Save Changes',
-                    onPressed: _onSave,
+                    onPressed: () => _onSave(availableProducts),
                   ),
                   const SizedBox(height: AppSizes.p24),
                 ],
@@ -252,8 +337,11 @@ class _EditSubscriptionScreenState
     );
   }
 
-  Widget _buildProductSelector() {
-    final product = _chosenProduct ?? _baseProduct;
+  Widget _buildProductSelector(List<Product> products, Product currentProduct) {
+    final selectedId = products.any((p) => p.id == currentProduct.id)
+        ? currentProduct.id
+        : products.first.id;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -268,7 +356,7 @@ class _EditSubscriptionScreenState
         const SizedBox(height: AppSizes.p8),
         Container(
           padding: const EdgeInsets.symmetric(
-              horizontal: AppSizes.p12, vertical: AppSizes.p8),
+              horizontal: AppSizes.p12, vertical: AppSizes.p4),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: AppSizes.borderLarge,
@@ -277,10 +365,8 @@ class _EditSubscriptionScreenState
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               isExpanded: true,
-              value: _availableProducts.any((p) => p.id == product.id)
-                  ? product.id
-                  : _availableProducts.first.id,
-              items: _availableProducts
+              value: selectedId,
+              items: products
                   .map((p) => DropdownMenuItem<String>(
                         value: p.id,
                         child: Row(
@@ -289,26 +375,46 @@ class _EditSubscriptionScreenState
                               imageUrl: p.imageUrl,
                               categoryKey: p.categoryId,
                               title: p.title,
-                              size: 22,
-                              radius: 5,
+                              size: 32,
+                              radius: 6,
+                              fit: BoxFit.contain,
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 10),
                             Expanded(
-                              child: Text(
-                                p.title,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textPrimary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    p.title,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${p.unit.isNotEmpty ? p.unit : "1 pc"} • ${p.categoryName.isNotEmpty ? p.categoryName : p.categoryId}',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
                               ),
                             ),
-                            Text('Rs.${p.price.toInt()}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary,
-                                )),
+                            Text(
+                              '₹${p.price.toStringAsFixed(p.price.truncateToDouble() == p.price ? 0 : 2)}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryBlue,
+                              ),
+                            ),
                           ],
                         ),
                       ))
@@ -316,9 +422,9 @@ class _EditSubscriptionScreenState
               onChanged: (id) {
                 if (id != null) {
                   setState(() {
-                    _chosenProduct = _availableProducts.firstWhere(
+                    _chosenProduct = products.firstWhere(
                       (p) => p.id == id,
-                      orElse: () => _baseProduct,
+                      orElse: () => products.first,
                     );
                   });
                 }
@@ -365,8 +471,10 @@ class _EditSubscriptionScreenState
   }
 
   Widget _buildPricingPreview(Product product, int quantity) {
-    final perDelivery = product.price * quantity;
-    final discount = perDelivery * product.discountPercentage / 100;
+    final validQty = quantity > 0 ? quantity : 1;
+    final perDelivery = product.price * validQty;
+    final discountRate = 0.10; // Standard 10% subscription recurring discount
+    final discount = perDelivery * discountRate;
     final afterDiscount = (perDelivery - discount).clamp(0.0, double.infinity);
     final monthly = afterDiscount * _selectedFrequency.deliveriesPerMonth;
 
@@ -389,23 +497,33 @@ class _EditSubscriptionScreenState
             ),
           ),
           const SizedBox(height: AppSizes.p12),
-          _pricingRow('Per delivery', 'Rs.${perDelivery.toStringAsFixed(2)}'),
-          if (discount > 0)
-            _pricingRow(
-              'Subscription discount (10%)',
-              '-Rs.${discount.toStringAsFixed(2)}',
-              valueColor: AppColors.freshGreen,
-            ),
+          _pricingRow(
+            'Unit price (${product.unit.isNotEmpty ? product.unit : "1 pc"})',
+            '₹${product.price.toStringAsFixed(product.price.truncateToDouble() == product.price ? 0 : 2)}',
+          ),
+          _pricingRow(
+            'Qty per delivery',
+            '$validQty',
+          ),
+          _pricingRow(
+            'Subtotal per delivery',
+            '₹${perDelivery.toStringAsFixed(2)}',
+          ),
+          _pricingRow(
+            'Subscription discount (10%)',
+            '-₹${discount.toStringAsFixed(2)}',
+            valueColor: AppColors.freshGreen,
+          ),
           _pricingRow(
             'After discount',
-            'Rs.${afterDiscount.toStringAsFixed(2)}',
+            '₹${afterDiscount.toStringAsFixed(2)}',
             valueColor: AppColors.primaryBlue,
             bold: true,
           ),
           const SizedBox(height: AppSizes.p8),
           _pricingRow(
             'Est. monthly (${_selectedFrequency.label})',
-            'Rs.${monthly.toStringAsFixed(0)}',
+            '₹${monthly.toStringAsFixed(0)}',
             valueColor: AppColors.textPrimary,
             bold: true,
           ),

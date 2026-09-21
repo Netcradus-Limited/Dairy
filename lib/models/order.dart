@@ -72,6 +72,12 @@ class Order {
   final String? pickupPhone;
   final double? pickupLatitude;
   final double? pickupLongitude;
+  final String orderType;
+  final String? subscriptionId;
+  final String? deliverySlot;
+  final String? paymentStatus;
+  final DateTime? deliveredAt;
+  final String? cancellationReason;
 
   const Order({
     required this.id,
@@ -94,7 +100,17 @@ class Order {
     this.pickupPhone,
     this.pickupLatitude,
     this.pickupLongitude,
+    this.orderType = 'normal',
+    this.subscriptionId,
+    this.deliverySlot,
+    this.paymentStatus,
+    this.deliveredAt,
+    this.cancellationReason,
   });
+
+  bool get isSubscription =>
+      orderType.toLowerCase() == 'subscription' ||
+      (subscriptionId != null && subscriptionId!.isNotEmpty);
 
   /// The customer-facing 6-character order code (e.g. "KRT482").
   /// Format: LLLNNN (3 uppercase letters + 3 digits).
@@ -146,6 +162,12 @@ class Order {
     String? pickupPhone,
     double? pickupLatitude,
     double? pickupLongitude,
+    String? orderType,
+    String? subscriptionId,
+    String? deliverySlot,
+    String? paymentStatus,
+    DateTime? deliveredAt,
+    String? cancellationReason,
   }) {
     return Order(
       id: id ?? this.id,
@@ -169,6 +191,12 @@ class Order {
       pickupPhone: pickupPhone ?? this.pickupPhone,
       pickupLatitude: pickupLatitude ?? this.pickupLatitude,
       pickupLongitude: pickupLongitude ?? this.pickupLongitude,
+      orderType: orderType ?? this.orderType,
+      subscriptionId: subscriptionId ?? this.subscriptionId,
+      deliverySlot: deliverySlot ?? this.deliverySlot,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
+      deliveredAt: deliveredAt ?? this.deliveredAt,
+      cancellationReason: cancellationReason ?? this.cancellationReason,
     );
   }
 
@@ -261,10 +289,17 @@ class Order {
         topLng = topLoc.longitude;
       } else if (topLoc is Map) {
         topLat = ((topLoc['latitude'] ?? topLoc['lat']) as num?)?.toDouble();
-        topLng = ((topLoc['longitude'] ?? topLoc['lng'] ?? topLoc['lon']) as num?)?.toDouble();
+        topLng =
+            ((topLoc['longitude'] ?? topLoc['lng'] ?? topLoc['lon']) as num?)
+                ?.toDouble();
       } else {
-        topLat = ((data['latitude'] ?? data['lat'] ?? data['customerLatitude']) as num?)?.toDouble();
-        topLng = ((data['longitude'] ?? data['lng'] ?? data['customerLongitude']) as num?)?.toDouble();
+        topLat = ((data['latitude'] ?? data['lat'] ?? data['customerLatitude'])
+                as num?)
+            ?.toDouble();
+        topLng = ((data['longitude'] ??
+                data['lng'] ??
+                data['customerLongitude']) as num?)
+            ?.toDouble();
       }
       if (topLat != null &&
           topLng != null &&
@@ -275,7 +310,8 @@ class Order {
           topLng >= -180.0 &&
           topLng <= 180.0 &&
           !(topLat == 0.0 && topLng == 0.0)) {
-        deliveryAddress = deliveryAddress.copyWith(latitude: topLat, longitude: topLng);
+        deliveryAddress =
+            deliveryAddress.copyWith(latitude: topLat, longitude: topLng);
       }
     }
 
@@ -298,9 +334,15 @@ class Order {
         ? accepted.toDate()
         : (accepted is String ? DateTime.tryParse(accepted) : null);
 
+    final delivered = data['deliveredAt'];
+    final deliveredAt = delivered is Timestamp
+        ? delivered.toDate()
+        : (delivered is String ? DateTime.tryParse(delivered) : null);
+
     final rawOrderCode = (data['orderCode'] as String?)?.trim() ?? '';
-    final orderCode =
-        rawOrderCode.isNotEmpty ? rawOrderCode : formatFallbackOrderCode(id);
+    final resolvedOrderCode = rawOrderCode.isNotEmpty
+        ? rawOrderCode
+        : Order.formatFallbackOrderCode(id);
 
     // Pickup / Store / Hub information extraction
     String? pickupLocation;
@@ -408,7 +450,7 @@ class Order {
 
     return Order(
       id: id,
-      orderCode: orderCode,
+      orderCode: resolvedOrderCode,
       items: items,
       subtotal: (data['subtotal'] as num?)?.toDouble() ?? 0.0,
       deliveryCharge: (data['deliveryCharge'] as num?)?.toDouble() ?? 0.0,
@@ -427,6 +469,12 @@ class Order {
       pickupPhone: pickupPhone,
       pickupLatitude: pickupLatitude,
       pickupLongitude: pickupLongitude,
+      orderType: (data['orderType'] as String?) ?? 'normal',
+      subscriptionId: (data['subscriptionId'] as String?),
+      deliverySlot: (data['deliverySlot'] as String?),
+      paymentStatus: (data['paymentStatus'] as String?),
+      deliveredAt: deliveredAt,
+      cancellationReason: (data['cancellationReason'] as String?),
     );
   }
 
@@ -435,6 +483,12 @@ class Order {
         'orderCode': orderCode.isNotEmpty ? orderCode : displayOrderCode,
         'status': orderStatusToString(status),
         if (userId.isNotEmpty) 'userId': userId,
+        'orderType': orderType,
+        if (subscriptionId != null) 'subscriptionId': subscriptionId,
+        if (deliverySlot != null) 'deliverySlot': deliverySlot,
+        if (paymentStatus != null) 'paymentStatus': paymentStatus,
+        if (deliveredAt != null) 'deliveredAt': Timestamp.fromDate(deliveredAt!),
+        if (cancellationReason != null) 'cancellationReason': cancellationReason,
         'items': items
             .map((item) => {
                   'productId': item.product.id,
@@ -478,6 +532,8 @@ class Order {
         'orderDate': orderDate.toIso8601String(),
         if (deliveryDate != null)
           'deliveryDate': Timestamp.fromDate(deliveryDate!),
+        if (deliveredAt != null)
+          'deliveredAt': deliveredAt!.toIso8601String(),
       };
 
   factory Order.fromMap(Map<String, dynamic> map, String id) =>

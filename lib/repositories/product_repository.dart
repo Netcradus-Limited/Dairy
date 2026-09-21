@@ -143,6 +143,7 @@ class ProductRepository {
         rating: 4.9,
         reviewCount: 150,
         isBestSeller: true,
+        subscriptionEnabled: false,
       ),
       Product(
         id: 'p10',
@@ -156,6 +157,7 @@ class ProductRepository {
         rating: 4.8,
         reviewCount: 98,
         isBestSeller: true,
+        subscriptionEnabled: false,
       ),
     ];
   }

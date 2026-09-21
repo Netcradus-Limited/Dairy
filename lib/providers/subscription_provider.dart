@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart' hide User;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/subscription.dart';
@@ -21,6 +22,7 @@ class SubscriptionState {
   final bool loading;
   final bool hasError;
   final String? errorMessage;
+  final List<Subscription> subscriptions;
   final Subscription? subscription;
   final bool? hasActiveSubscription;
   final bool? hasExpiredSubscription;
@@ -30,16 +32,25 @@ class SubscriptionState {
     this.loading = false,
     this.hasError = false,
     this.errorMessage,
+    this.subscriptions = const [],
     this.subscription,
     this.hasActiveSubscription,
     this.hasExpiredSubscription,
     this.hasCancelledSubscription,
   });
 
+  List<Subscription> get activeSubscriptions =>
+      subscriptions.where((s) => s.isActiveAndValid).toList();
+  List<Subscription> get pausedSubscriptions =>
+      subscriptions.where((s) => s.isPaused).toList();
+  List<Subscription> get cancelledSubscriptions =>
+      subscriptions.where((s) => s.isCancelled).toList();
+
   SubscriptionState copyWith({
     bool? loading,
     bool? hasError,
     String? errorMessage,
+    List<Subscription>? subscriptions,
     Subscription? subscription,
     bool? hasActiveSubscription,
     bool? hasExpiredSubscription,
@@ -49,6 +60,7 @@ class SubscriptionState {
       loading: loading ?? this.loading,
       hasError: hasError ?? this.hasError,
       errorMessage: errorMessage ?? this.errorMessage,
+      subscriptions: subscriptions ?? this.subscriptions,
       subscription: subscription ?? this.subscription,
       hasActiveSubscription:
           hasActiveSubscription ?? this.hasActiveSubscription,
@@ -60,10 +72,11 @@ class SubscriptionState {
   }
 }
 
-/// Subscription notifier that connects to Firestore
+/// Subscription notifier that connects to Firestore and manages multi-subscription lifecycle
 class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
   final SubscriptionService _service;
   final User _user;
+  StreamSubscription<List<Subscription>>? _streamSub;
 
   SubscriptionNotifier({
     required SubscriptionService service,
@@ -73,16 +86,54 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
         super(const SubscriptionState()) {
     if (_effectiveUid.isNotEmpty) {
       loadSubscription();
+      _listenToSubscriptions();
     }
   }
 
   String get _effectiveUid {
-    final authUid = FirebaseAuth.instance.currentUser?.uid;
-    if (authUid != null && authUid.isNotEmpty) return authUid;
+    try {
+      final authUid = FirebaseAuth.instance.currentUser?.uid;
+      if (authUid != null && authUid.isNotEmpty) return authUid;
+    } catch (_) {}
     return _user.id;
   }
 
-  /// Load the current user's subscription from Firestore
+  void _listenToSubscriptions() {
+    final uid = _effectiveUid;
+    if (uid.isEmpty) return;
+
+    _streamSub?.cancel();
+    _streamSub = _service.streamSubscriptionsForUser(uid).listen(
+      (subs) {
+        final hasActive = subs.any((s) => s.isActiveAndValid);
+        final hasExpired = subs.any((s) => !s.isActiveAndValid && !s.isCancelled);
+        final hasCancelled = subs.any((s) => s.isCancelled);
+        final primary = subs.isNotEmpty
+            ? subs.firstWhere((s) => s.isActiveAndValid, orElse: () => subs.first)
+            : null;
+
+        state = state.copyWith(
+          loading: false,
+          subscriptions: subs,
+          subscription: primary,
+          hasActiveSubscription: hasActive,
+          hasExpiredSubscription: hasExpired,
+          hasCancelledSubscription: hasCancelled,
+          hasError: false,
+          errorMessage: null,
+        );
+      },
+      onError: (err) {
+        state = state.copyWith(
+          loading: false,
+          hasError: true,
+          errorMessage: err.toString(),
+        );
+      },
+    );
+  }
+
+  /// Load the current user's subscriptions from Firestore
   Future<void> loadSubscription() async {
     final uid = _effectiveUid;
     if (uid.isEmpty) {
@@ -96,19 +147,18 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
 
     state = state.copyWith(loading: true);
     try {
-      final sub = await _service.getCurrentSubscription(uid);
-      final isActive = await _service.isSubscriptionActive(uid);
-      final status = await _service.getSubscriptionStatus(uid);
-
-      final hasActive = isActive && status == SubscriptionStatus.active;
-      final hasExpired = !isActive && status != SubscriptionStatus.cancelled;
-      final hasCancelled = status == SubscriptionStatus.cancelled;
-
-      final Subscription? displaySub = sub;
+      final subs = await _service.getSubscriptionsForUser(uid);
+      final hasActive = subs.any((s) => s.isActiveAndValid);
+      final hasExpired = subs.any((s) => !s.isActiveAndValid && !s.isCancelled);
+      final hasCancelled = subs.any((s) => s.isCancelled);
+      final primary = subs.isNotEmpty
+          ? subs.firstWhere((s) => s.isActiveAndValid, orElse: () => subs.first)
+          : null;
 
       state = state.copyWith(
         loading: false,
-        subscription: displaySub,
+        subscriptions: subs,
+        subscription: primary,
         hasActiveSubscription: hasActive,
         hasExpiredSubscription: hasExpired,
         hasCancelledSubscription: hasCancelled,
@@ -139,8 +189,13 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
     state = state.copyWith(loading: true);
     try {
       final created = await _service.createSubscription(uid, subscription);
+      final updatedList = [
+        created,
+        ...state.subscriptions.where((s) => s.id != created.id),
+      ];
       state = state.copyWith(
         loading: false,
+        subscriptions: updatedList,
         subscription: created,
         hasActiveSubscription: true,
         hasError: false,
@@ -166,10 +221,17 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
     state = state.copyWith(loading: true);
     try {
       final updated = await _service.updateSubscription(uid, subscription);
+      final updatedList = state.subscriptions
+          .map((s) => s.id == updated.id ? updated : s)
+          .toList();
+      if (!updatedList.any((s) => s.id == updated.id)) {
+        updatedList.insert(0, updated);
+      }
       state = state.copyWith(
         loading: false,
+        subscriptions: updatedList,
         subscription: updated,
-        hasActiveSubscription: updated.isActiveAndValid,
+        hasActiveSubscription: updatedList.any((s) => s.isActiveAndValid),
         hasError: false,
         errorMessage: null,
       );
@@ -183,21 +245,62 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
     }
   }
 
-  /// Cancel the subscription in Firestore
-  Future<void> cancelSubscription() async {
+  /// Cancel the subscription in Firestore (sets status to cancelled, preserves doc)
+  Future<void> cancelSubscription([String? subscriptionId]) async {
     final uid = _effectiveUid;
     if (uid.isEmpty) {
       throw Exception('No authenticated user found to cancel subscription.');
     }
 
+    final targetId = subscriptionId ?? state.subscription?.id;
+    if (targetId == null || targetId.isEmpty) {
+      throw Exception('No subscription found to cancel.');
+    }
+
     state = state.copyWith(loading: true);
     try {
-      final cancelled = await _service.cancelSubscription(uid);
+      final cancelled = await _service.cancelSubscription(uid, subscriptionId: targetId);
+      final updatedList = state.subscriptions
+          .map((s) => s.id == targetId ? cancelled : s)
+          .toList();
       state = state.copyWith(
         loading: false,
+        subscriptions: updatedList,
         subscription: cancelled,
         hasCancelledSubscription: true,
-        hasActiveSubscription: false,
+        hasActiveSubscription: updatedList.any((s) => s.isActiveAndValid),
+        hasError: false,
+        errorMessage: null,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        loading: false,
+        hasError: true,
+        errorMessage: e.toString(),
+      );
+      rethrow;
+    }
+  }
+
+  /// Skip the next scheduled delivery
+  Future<void> skipNextDelivery([String? subscriptionId]) async {
+    final uid = _effectiveUid;
+    if (uid.isEmpty) {
+      throw Exception('No authenticated user found to skip delivery.');
+    }
+
+    final targetId = subscriptionId ?? state.subscription?.id;
+    state = state.copyWith(loading: true);
+    try {
+      final updated = await _service.skipNextDelivery(uid, subscriptionId: targetId);
+      final updatedList = state.subscriptions
+          .map((s) => s.id == updated.id ? updated : s)
+          .toList();
+      state = state.copyWith(
+        loading: false,
+        subscriptions: updatedList,
+        subscription: updated,
+        hasActiveSubscription: updatedList.any((s) => s.isActiveAndValid),
         hasError: false,
         errorMessage: null,
       );
@@ -212,26 +315,24 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
   }
 
   /// Pause the subscription (status -> paused)
-  Future<void> pauseSubscription() async {
+  Future<void> pauseSubscription([String? subscriptionId]) async {
     final uid = _effectiveUid;
     if (uid.isEmpty) {
       throw Exception('No authenticated user found to pause subscription.');
     }
-    final sub = state.subscription;
-    if (sub == null) return;
 
+    final targetId = subscriptionId ?? state.subscription?.id;
     state = state.copyWith(loading: true);
     try {
-      final updated = await _service.updateSubscription(
-          uid,
-          sub.copyWith(
-            status: SubscriptionStatus.paused,
-            updatedAt: DateTime.now(),
-          ));
+      final updated = await _service.pauseSubscription(uid, subscriptionId: targetId);
+      final updatedList = state.subscriptions
+          .map((s) => s.id == updated.id ? updated : s)
+          .toList();
       state = state.copyWith(
         loading: false,
+        subscriptions: updatedList,
         subscription: updated,
-        hasActiveSubscription: updated.isActiveAndValid,
+        hasActiveSubscription: updatedList.any((s) => s.isActiveAndValid),
         hasError: false,
         errorMessage: null,
       );
@@ -246,26 +347,24 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
   }
 
   /// Resume the subscription (status -> active)
-  Future<void> resumeSubscription() async {
+  Future<void> resumeSubscription([String? subscriptionId]) async {
     final uid = _effectiveUid;
     if (uid.isEmpty) {
       throw Exception('No authenticated user found to resume subscription.');
     }
-    final sub = state.subscription;
-    if (sub == null) return;
 
+    final targetId = subscriptionId ?? state.subscription?.id;
     state = state.copyWith(loading: true);
     try {
-      final updated = await _service.updateSubscription(
-          uid,
-          sub.copyWith(
-            status: SubscriptionStatus.active,
-            updatedAt: DateTime.now(),
-          ));
+      final updated = await _service.resumeSubscription(uid, subscriptionId: targetId);
+      final updatedList = state.subscriptions
+          .map((s) => s.id == updated.id ? updated : s)
+          .toList();
       state = state.copyWith(
         loading: false,
+        subscriptions: updatedList,
         subscription: updated,
-        hasActiveSubscription: updated.isActiveAndValid,
+        hasActiveSubscription: updatedList.any((s) => s.isActiveAndValid),
         hasError: false,
         errorMessage: null,
       );
@@ -280,19 +379,25 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
   }
 
   /// Renew the subscription in Firestore
-  Future<void> renewSubscription({Duration? duration}) async {
+  Future<void> renewSubscription({String? subscriptionId, Duration? duration}) async {
     final uid = _effectiveUid;
     if (uid.isEmpty) {
       throw Exception('No authenticated user found to renew subscription.');
     }
 
+    final targetId = subscriptionId ?? state.subscription?.id;
     state = state.copyWith(loading: true);
     try {
-      final renewed = await _service.renewSubscription(uid, duration: duration);
+      final renewed = await _service.renewSubscription(uid,
+          subscriptionId: targetId, duration: duration);
+      final updatedList = state.subscriptions
+          .map((s) => s.id == renewed.id ? renewed : s)
+          .toList();
       state = state.copyWith(
         loading: false,
+        subscriptions: updatedList,
         subscription: renewed,
-        hasActiveSubscription: renewed.isActiveAndValid,
+        hasActiveSubscription: updatedList.any((s) => s.isActiveAndValid),
         hasError: false,
         errorMessage: null,
       );
@@ -304,5 +409,11 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
       );
       rethrow;
     }
+  }
+
+  @override
+  void dispose() {
+    _streamSub?.cancel();
+    super.dispose();
   }
 }

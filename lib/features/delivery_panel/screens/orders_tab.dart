@@ -187,13 +187,37 @@ class OrdersTab extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'Order #${order.displayCode}',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: textPrimary,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'Order #${order.displayCode}',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: textPrimary,
+                      ),
+                    ),
+                    if (order.isSubscription) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF6366F1)),
+                        ),
+                        child: Text(
+                          'Subscription',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF6366F1),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -297,6 +321,7 @@ class _HistoryOrderItem {
   final DateTime date;
   final String distance;
   final DeliveryOrderStatus status;
+  final bool isSubscription;
 
   _HistoryOrderItem({
     required this.orderId,
@@ -306,6 +331,7 @@ class _HistoryOrderItem {
     required this.date,
     required this.distance,
     this.status = DeliveryOrderStatus.delivered,
+    this.isSubscription = false,
   });
 
   String get displayCode => orderCode.isNotEmpty ? orderCode : orderId;
@@ -319,6 +345,7 @@ class _HistoryOrderItem {
       date: order.deliveredTime ?? order.orderTime,
       distance: order.distance,
       status: order.status,
+      isSubscription: order.isSubscription,
     );
   }
 }

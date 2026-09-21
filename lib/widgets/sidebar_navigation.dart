@@ -25,6 +25,7 @@ class SidebarNavigation extends ConsumerWidget {
   static const List<NavItemData> navItems = [
     NavItemData(title: 'Dashboard', icon: Icons.dashboard_rounded),
     NavItemData(title: 'Customers', icon: Icons.people_alt_outlined),
+    NavItemData(title: 'Subscriptions', icon: Icons.calendar_month_rounded),
     NavItemData(title: 'Products', icon: Icons.inventory_2_outlined),
     NavItemData(title: 'Categories', icon: Icons.grid_view_rounded),
     NavItemData(title: 'Orders', icon: Icons.receipt_long_rounded),
@@ -35,8 +36,8 @@ class SidebarNavigation extends ConsumerWidget {
     NavItemData(title: 'Notifications', icon: Icons.notifications_none_rounded),
     NavItemData(
         title: 'Support / Complaints', icon: Icons.chat_bubble_outline_rounded),
-    NavItemData(title: 'Staff & Roles', icon: Icons.manage_accounts_outlined),
     NavItemData(title: 'Admin Profile', icon: Icons.account_circle_outlined),
+    NavItemData(title: 'Staff & Roles', icon: Icons.manage_accounts_outlined),
   ];
 
   @override
@@ -173,6 +174,24 @@ class SidebarNavigation extends ConsumerWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (item.title == 'Subscriptions' &&
+                              provider.activeSubscriptionsCount > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.freshGreen,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${provider.activeSubscriptionsCount}',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),

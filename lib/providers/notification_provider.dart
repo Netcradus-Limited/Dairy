@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,31 +14,33 @@ final notificationRepositoryProvider = Provider<NotificationRepository>(
 
 // ─── Firestore-backed stream provider (real data) ──────────────────────────
 
+/// Resolves the current authoritative UID (Firebase Auth UID with fallback to local User profile).
+final effectiveUserIdProvider = Provider<String>((ref) {
+  final user = ref.watch(userProvider);
+  String? authUid;
+  try {
+    if (Firebase.apps.isNotEmpty) {
+      authUid = FirebaseAuth.instance.currentUser?.uid;
+    }
+  } catch (_) {
+    // Firebase uninitialized in test environment
+  }
+  return (authUid != null && authUid.isNotEmpty) ? authUid : user.id;
+});
+
 /// Streams all notifications for the currently authenticated user from Firestore.
 /// Uses the `users/{uid}/notifications` subcollection (rules-compliant).
 
 final userNotificationsStreamProvider =
     StreamProvider.autoDispose<List<NotificationItem>>((ref) {
-  final user = ref.watch(userProvider);
-  String? authUid;
-  try {
-    authUid = FirebaseAuth.instance.currentUser?.uid;
-  } catch (_) {
-    // Firebase uninitialized in test environment
-  }
-  final effectiveUid =
-      (authUid != null && authUid.isNotEmpty) ? authUid : user.id;
+  final effectiveUid = ref.watch(effectiveUserIdProvider);
 
   if (effectiveUid.isEmpty) {
     return const Stream.empty();
   }
-  try {
-    return ref
-        .watch(notificationRepositoryProvider)
-        .streamUserNotifications(effectiveUid);
-  } catch (_) {
-    return const Stream.empty();
-  }
+  return ref
+      .watch(notificationRepositoryProvider)
+      .streamUserNotifications(effectiveUid);
 });
 
 /// Streams notifications for a specific [userId] — used by admin panel.

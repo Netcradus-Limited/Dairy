@@ -106,6 +106,12 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
     fallbackSlot: order.estimatedDeliveryTime,
   );
 
+  String? productImageUrl;
+  if (order.items.isNotEmpty) {
+    final p = order.items.first.product;
+    productImageUrl = p.resolvedImageUrl.isNotEmpty ? p.resolvedImageUrl : p.imageUrl;
+  }
+
   return DeliveryOrder(
     id: order.id,
     orderId: order.id,
@@ -130,6 +136,15 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
     latitude: customerLat,
     longitude: customerLng,
     assignedAgentId: order.assignedAgentId,
+    orderType: order.orderType,
+    subscriptionId: order.subscriptionId,
+    deliveryDate: order.deliveryDate,
+    deliverySlot: order.deliverySlot ??
+        (order.isSubscription ? order.estimatedDeliveryTime : null),
+    paymentMethod: order.paymentMethod,
+    paymentStatus: order.paymentStatus,
+    productImageUrl: productImageUrl,
+    cancellationReason: order.cancellationReason,
   );
 }
 

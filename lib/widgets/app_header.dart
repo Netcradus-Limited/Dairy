@@ -1,22 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider_pkg;
 import '../core/constants/app_assets.dart';
 import '../core/constants/app_colors.dart';
 import '../core/responsive/responsive_layout.dart';
 import '../core/widgets/category_image.dart';
 import '../providers/admin_provider.dart';
+import '../providers/notification_provider.dart';
+import 'admin_notification_dropdown.dart';
 
-class AppHeader extends StatelessWidget {
+class AppHeader extends ConsumerWidget {
   final VoidCallback? onOpenDrawer;
 
   const AppHeader({super.key, this.onOpenDrawer});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDesktop = ResponsiveLayout.isDesktop(context);
-    final provider = context.watch<AdminProvider>();
+    final provider = provider_pkg.Provider.of<AdminProvider>(context);
+    final unreadCountAsync = ref.watch(firestoreUnreadCountProvider);
+    final unreadCount = unreadCountAsync.value ?? provider.unreadNotifications;
     final formattedDate = DateFormat('d MMMM yyyy').format(DateTime.now());
 
     return Container(
@@ -25,8 +30,8 @@ class AppHeader extends StatelessWidget {
         vertical: isDesktop ? 24 : 16,
       ),
       child: isDesktop
-          ? _buildDesktopHeader(context, provider, formattedDate)
-          : _buildMobileHeader(context, provider, formattedDate),
+          ? _buildDesktopHeader(context, provider, unreadCount, formattedDate)
+          : _buildMobileHeader(context, provider, unreadCount, formattedDate),
     );
   }
 
@@ -42,7 +47,7 @@ class AppHeader extends StatelessWidget {
   }
 
   Widget _buildDesktopHeader(
-      BuildContext context, AdminProvider provider, String formattedDate) {
+      BuildContext context, AdminProvider provider, int unreadCount, String formattedDate) {
     final cardBg = AppColors.cardBgOf(context);
     final cardBorder = AppColors.cardBorderOf(context);
     final textPrimary = AppColors.textPrimaryOf(context);
@@ -149,14 +154,15 @@ class AppHeader extends StatelessWidget {
             ),
           ),
         ),
+        const SizedBox(width: 12),
         // Notifications Bell
-        _buildNotificationBell(context, provider),
+        _buildNotificationBell(context, provider, unreadCount, isMobile: false),
       ],
     );
   }
 
   Widget _buildMobileHeader(
-      BuildContext context, AdminProvider provider, String formattedDate) {
+      BuildContext context, AdminProvider provider, int unreadCount, String formattedDate) {
     final cardBg = AppColors.cardBgOf(context);
     final cardBorder = AppColors.cardBorderOf(context);
     final textPrimary = AppColors.textPrimaryOf(context);
@@ -225,8 +231,7 @@ class AppHeader extends StatelessWidget {
                 ],
               ),
             ),
-            // Mobile Theme Toggle removed
-            _buildNotificationBell(context, provider),
+            _buildNotificationBell(context, provider, unreadCount, isMobile: true),
           ],
         ),
         const SizedBox(height: 12),
@@ -257,13 +262,18 @@ class AppHeader extends StatelessWidget {
     );
   }
 
-  Widget _buildNotificationBell(BuildContext context, AdminProvider provider) {
+  Widget _buildNotificationBell(
+    BuildContext context,
+    AdminProvider provider,
+    int unreadCount, {
+    required bool isMobile,
+  }) {
     final cardBg = AppColors.cardBgOf(context);
     final cardBorder = AppColors.cardBorderOf(context);
     final textSecondary = AppColors.textSecondaryOf(context);
-    final textPrimary = AppColors.textPrimaryOf(context);
 
     return Stack(
+      clipBehavior: Clip.none,
       alignment: Alignment.topRight,
       children: [
         Container(
@@ -276,76 +286,53 @@ class AppHeader extends StatelessWidget {
             boxShadow: AppColors.cardShadow,
           ),
           child: IconButton(
-            icon: Icon(Icons.notifications_none_rounded,
-                size: 20, color: textSecondary),
+            icon: Icon(
+              unreadCount > 0
+                  ? Icons.notifications_active_rounded
+                  : Icons.notifications_none_rounded,
+              size: 20,
+              color: unreadCount > 0 ? AppColors.primary : textSecondary,
+            ),
             onPressed: () {
-              provider.clearNotifications();
-              showModalBottomSheet(
-                context: context,
-                backgroundColor: cardBg,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                ),
-                builder: (ctx) => Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Recent Alerts & Updates',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: AppColors.ordersBlueBg,
-                          child: Icon(Icons.local_shipping,
-                              color: AppColors.primary, size: 20),
-                        ),
-                        title: Text('Morning Dispatch Complete'),
-                        subtitle:
-                            Text('486 milk packets delivered successfully.'),
-                      ),
-                      const ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: AppColors.customersOrangeBg,
-                          child: Icon(Icons.person_add,
-                              color: AppColors.customersOrange, size: 20),
-                        ),
-                        title: Text('New Subscription Added'),
-                        subtitle:
-                            Text('Rahul Sharma subscribed to 2L A2 Cow Milk.'),
-                      ),
-                    ],
-                  ),
-                ),
+              AdminNotificationDropdown.show(
+                context,
+                provider: provider,
+                isMobile: isMobile,
               );
             },
           ),
         ),
-        if (provider.unreadNotifications > 0)
+        if (unreadCount > 0)
           Positioned(
-            top: 6,
-            right: 6,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: Color(0xFFEF4444),
-                shape: BoxShape.circle,
-              ),
-              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-              alignment: Alignment.center,
-              child: Text(
-                '${provider.unreadNotifications}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
+            top: -3,
+            right: -3,
+            child: IgnorePointer(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: cardBg, width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.4),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                constraints:
+                    const BoxConstraints(minWidth: 18, minHeight: 18),
+                alignment: Alignment.center,
+                child: Text(
+                  unreadCount > 99 ? '99+' : '$unreadCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                    height: 1.0,
+                  ),
                 ),
               ),
             ),

@@ -8,6 +8,9 @@ enum NotificationType {
   promotional,
   subscription,
   system,
+  customer,
+  payment,
+  support,
 }
 
 extension NotificationTypeExtension on NotificationType {
@@ -20,9 +23,15 @@ extension NotificationTypeExtension on NotificationType {
       case NotificationType.promotional:
         return Icons.local_offer_outlined;
       case NotificationType.subscription:
-        return Icons.subscriptions_outlined;
+        return Icons.calendar_month_rounded;
       case NotificationType.system:
         return Icons.info_outline_rounded;
+      case NotificationType.customer:
+        return Icons.person_outline_rounded;
+      case NotificationType.payment:
+        return Icons.credit_card_rounded;
+      case NotificationType.support:
+        return Icons.support_agent_rounded;
     }
   }
 
@@ -38,19 +47,48 @@ extension NotificationTypeExtension on NotificationType {
         return 'subscription';
       case NotificationType.system:
         return 'system';
+      case NotificationType.customer:
+        return 'customer';
+      case NotificationType.payment:
+        return 'payment';
+      case NotificationType.support:
+        return 'support';
     }
   }
 
   static NotificationType fromString(String? value) {
-    switch (value) {
+    switch (value?.toLowerCase().trim()) {
       case 'order':
+      case 'orders':
         return NotificationType.order;
       case 'delivery':
+      case 'deliveries':
+      case 'dispatch':
         return NotificationType.delivery;
       case 'promotional':
+      case 'promotion':
+      case 'promo':
+      case 'offer':
+      case 'marketing':
         return NotificationType.promotional;
       case 'subscription':
+      case 'subscriptions':
         return NotificationType.subscription;
+      case 'customer':
+      case 'user':
+      case 'account':
+      case 'profile':
+        return NotificationType.customer;
+      case 'payment':
+      case 'payments':
+      case 'invoice':
+      case 'billing':
+        return NotificationType.payment;
+      case 'support':
+      case 'complaint':
+      case 'ticket':
+      case 'help':
+        return NotificationType.support;
       default:
         return NotificationType.system;
     }
@@ -95,33 +133,74 @@ class NotificationItem {
     this.metadata,
   });
 
-  /// Deserialize from a map and ID.
+  /// Deserialize from a map and ID, tolerating variations in field naming and types.
   factory NotificationItem.fromMap(Map<String, dynamic> data, String id) {
-    final ts = data['timestamp'];
+    final rawTs = data['timestamp'] ??
+        data['createdAt'] ??
+        data['created_at'] ??
+        data['date'] ??
+        data['time'] ??
+        data['updatedAt'];
+
     final DateTime parsedTime;
-    if (ts is Timestamp) {
-      parsedTime = ts.toDate();
-    } else if (ts is DateTime) {
-      parsedTime = ts;
-    } else if (ts is String) {
-      parsedTime = DateTime.tryParse(ts) ?? DateTime.now();
+    if (rawTs is Timestamp) {
+      parsedTime = rawTs.toDate();
+    } else if (rawTs is DateTime) {
+      parsedTime = rawTs;
+    } else if (rawTs is String) {
+      parsedTime = DateTime.tryParse(rawTs) ?? DateTime.now();
+    } else if (rawTs is int) {
+      parsedTime = rawTs > 1000000000000
+          ? DateTime.fromMillisecondsSinceEpoch(rawTs)
+          : DateTime.fromMillisecondsSinceEpoch(rawTs * 1000);
     } else {
       parsedTime = DateTime.now();
     }
+
+    final rawType = (data['type'] ?? data['notificationType'] ?? data['category']) as String?;
+    final title = (data['title'] ?? data['subject'] ?? data['heading'] ?? '') as String;
+    final body = (data['body'] ??
+        data['message'] ??
+        data['description'] ??
+        data['text'] ??
+        data['content'] ??
+        '') as String;
+
+    final rawIsRead = data['isRead'] ?? data['read'] ?? data['is_read'] ?? data['seen'];
+    final isRead = rawIsRead is bool
+        ? rawIsRead
+        : (rawIsRead is String ? rawIsRead.toLowerCase() == 'true' : false);
+
+    final rawActionable = data['isActionable'] ?? data['actionable'] ?? data['is_actionable'];
+    final isActionable = rawActionable is bool
+        ? rawActionable
+        : (rawActionable is String ? rawActionable.toLowerCase() == 'true' : false);
+
+    final orderId = (data['orderId'] ?? data['order_id'] ?? data['orderID'])?.toString();
+    final assignedAgentId = (data['assignedAgentId'] ??
+            data['assigned_agent_id'] ??
+            data['agentId'] ??
+            data['agent_id'])
+        ?.toString();
+    final route = (data['route'] ?? data['targetRoute'] ?? data['path'])?.toString();
+    final createdBy = (data['createdBy'] ?? data['created_by'] ?? data['adminId'] ?? data['senderId'])?.toString();
+    final userId = (data['userId'] ?? data['uid'] ?? data['user_id'] ?? data['recipientId'])?.toString();
+    final metadata = data['metadata'] as Map<String, dynamic>?;
+
     return NotificationItem(
       id: id,
-      type: NotificationTypeExtension.fromString(data['type'] as String?),
-      title: (data['title'] as String?) ?? '',
-      body: (data['body'] as String?) ?? (data['message'] as String?) ?? '',
+      type: NotificationTypeExtension.fromString(rawType),
+      title: title,
+      body: body,
       timestamp: parsedTime,
-      orderId: (data['orderId'] ?? data['order_id']) as String?,
-      assignedAgentId: (data['assignedAgentId'] ?? data['assigned_agent_id']) as String?,
-      route: data['route'] as String?,
-      isRead: (data['isRead'] as bool?) ?? false,
-      isActionable: (data['isActionable'] as bool?) ?? false,
-      createdBy: data['createdBy'] as String?,
-      userId: data['userId'] as String?,
-      metadata: data['metadata'] as Map<String, dynamic>?,
+      orderId: orderId,
+      assignedAgentId: assignedAgentId,
+      route: route,
+      isRead: isRead,
+      isActionable: isActionable,
+      createdBy: createdBy,
+      userId: userId,
+      metadata: metadata,
     );
   }
 
