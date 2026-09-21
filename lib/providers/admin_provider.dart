@@ -33,7 +33,7 @@ class AdminProvider extends ChangeNotifier {
   int _selectedNavIndex = 2;
   String _searchQuery = '';
   String _orderStatusTimeFilter = 'Today';
-  int _unreadNotifications = 5;
+  int _unreadNotifications = 0;
   bool _isDarkMode = false;
 
   List<DairyProduct> _products = [];

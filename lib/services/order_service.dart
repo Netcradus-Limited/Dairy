@@ -86,7 +86,9 @@ class OrderService {
   }) async {
     String? currentAuthUid;
     try {
-      currentAuthUid = FirebaseAuth.instance.currentUser?.uid;
+      if (Firebase.apps.isNotEmpty) {
+        currentAuthUid = FirebaseAuth.instance.currentUser?.uid;
+      }
     } catch (_) {
       currentAuthUid = null;
     }
@@ -357,8 +359,9 @@ class OrderService {
       }
       final Query<Map<String, dynamic>> query;
       if (agentId.isEmpty) {
-        query =
-            _firestore.collection('orders').where('status', isEqualTo: 'Pending');
+        query = _firestore
+            .collection('orders')
+            .where('status', isEqualTo: 'Pending');
       } else {
         query = _firestore.collection('orders').where(
               Filter.or(

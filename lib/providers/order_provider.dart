@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/address.dart';
@@ -169,7 +170,12 @@ final userOrdersStreamProvider =
 /// The currently authenticated Firebase user's uid, or null for guests.
 final currentUserIdProvider = Provider<String?>((ref) {
   final user = ref.watch(userProvider);
-  final authUid = FirebaseAuth.instance.currentUser?.uid;
+  String? authUid;
+  try {
+    if (Firebase.apps.isNotEmpty) {
+      authUid = FirebaseAuth.instance.currentUser?.uid;
+    }
+  } catch (_) {}
   if (authUid != null && authUid.isNotEmpty) return authUid;
   return user.id.isEmpty ? null : user.id;
 });
