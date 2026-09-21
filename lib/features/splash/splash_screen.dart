@@ -2,10 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants/app_assets.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_sizes.dart';
 import '../../providers/onboarding_provider.dart';
 import '../../providers/user_provider.dart';
 import '../auth/services/auth_video_service.dart';
@@ -43,7 +43,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       curve: Curves.easeIn,
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.88, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
         curve: Curves.easeOutBack,
@@ -62,8 +62,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (!mounted) return;
 
     // If a session already exists, go straight to the relevant home screen
-    // (the login-on-every-launch bug). The router redirect also handles this,
-    // this branch is the deterministic splash-level decision.
     final user = ref.read(userProvider);
     if (user.id.isNotEmpty) {
       if (user.isAdmin) {
@@ -94,6 +92,46 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     super.dispose();
   }
 
+  Widget _buildFeatureItem({
+    required IconData icon,
+    required String label,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          icon,
+          size: 34,
+          color: Colors.white,
+          shadows: const [
+            Shadow(
+              color: Colors.black38,
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+            letterSpacing: 0.2,
+            shadows: const [
+              Shadow(
+                color: Colors.black38,
+                blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -107,35 +145,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               fit: BoxFit.cover,
             ),
           ),
-          // Ambient overlay
+          // Subtle ambient contrast overlay
           Positioned.fill(
             child: Container(
-              color: Colors.black.withValues(alpha: 0.1),
-            ),
-          ),
-          // Background Gradient Bubbles
-          Positioned(
-            top: -60,
-            left: -60,
-            child: Container(
-              width: 240,
-              height: 240,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.lightBlue.withValues(alpha: 0.5),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -80,
-            right: -60,
-            child: Container(
-              width: 280,
-              height: 280,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.lightBlue.withValues(alpha: 0.6),
-              ),
+              color: Colors.black.withValues(alpha: 0.10),
             ),
           ),
 
@@ -146,76 +159,105 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               child: ScaleTransition(
                 scale: _scaleAnimation,
                 child: Padding(
-                  padding: const EdgeInsets.all(AppSizes.p24),
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       // Dairy Fresh Visual Icon Badge
                       Container(
-                        width: 110,
-                        height: 110,
+                        width: 124,
+                        height: 124,
                         decoration: BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
+                              color: Colors.black.withValues(alpha: 0.16),
                               blurRadius: 24,
-                              offset: const Offset(0, 10),
+                              offset: const Offset(0, 8),
                             ),
                           ],
                         ),
                         child: Center(
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(52),
+                            borderRadius: BorderRadius.circular(62),
                             child: Image.asset(
                               'assets/images/nicon.png',
-                              width: 104,
-                              height: 104,
-                              fit: BoxFit.cover,
+                              width: 112,
+                              height: 112,
+                              fit: BoxFit.contain,
                             ),
                           ),
                         ),
                       ),
 
-                      const SizedBox(height: AppSizes.p24),
+                      const SizedBox(height: 24),
 
                       // Brand Title
-                      const Text(
+                      Text(
                         'Sawariya Dairy',
-                        style: TextStyle(
-                          fontSize: 32,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 36,
                           fontWeight: FontWeight.w800,
                           color: Colors.white,
-                          letterSpacing: 0.5,
+                          letterSpacing: -0.3,
+                          shadows: const [
+                            Shadow(
+                              color: Colors.black38,
+                              blurRadius: 10,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
                         ),
                       ),
 
-                      const SizedBox(height: AppSizes.p8),
+                      const SizedBox(height: 8),
 
                       // Tagline
-                      const Text(
+                      Text(
                         'Pure by Nature, Trusted by You.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
                           color: Colors.white,
-                          letterSpacing: 0.2,
+                          letterSpacing: 0.1,
+                          shadows: const [
+                            Shadow(
+                              color: Colors.black38,
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
                         ),
                       ),
 
-                      const SizedBox(height: AppSizes.p48),
+                      const SizedBox(height: 38),
 
-                      // Minimal Loading Indicator
-                      const SizedBox(
-                        width: 28,
-                        height: 28,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            AppColors.primaryBlue,
-                          ),
+                      // 4 Features Row (Fresh, Pure, Healthy, On Time)
+                      Container(
+                        constraints: const BoxConstraints(maxWidth: 380),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildFeatureItem(
+                              icon: Icons.eco_outlined,
+                              label: 'Fresh',
+                            ),
+                            _buildFeatureItem(
+                              icon: Icons.gpp_good_outlined,
+                              label: 'Pure',
+                            ),
+                            _buildFeatureItem(
+                              icon: Icons.favorite_border_rounded,
+                              label: 'Healthy',
+                            ),
+                            _buildFeatureItem(
+                              icon: Icons.local_shipping_outlined,
+                              label: 'On Time',
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -229,3 +271,4 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
   }
 }
+
