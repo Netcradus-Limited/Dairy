@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import '../models/complaint_model.dart';
 
 /// Service for managing customer complaints and support tickets in Cloud Firestore.
@@ -10,8 +11,9 @@ class ComplaintService {
   FirebaseFirestore get _firestore =>
       _customFirestore ?? FirebaseFirestore.instance;
 
-  ComplaintService({FirebaseFirestore? firestore})
-      : _customFirestore = firestore;
+  ComplaintService({
+    FirebaseFirestore? firestore,
+  })  : _customFirestore = firestore;
 
   CollectionReference<Map<String, dynamic>> get _complaintsRef =>
       _firestore.collection('complaints');
@@ -69,6 +71,11 @@ class ComplaintService {
     };
 
     await docRef.set(data);
+
+    debugPrint('[COMPLAINT NOTIFY] complaint saved id=${docRef.id}');
+    debugPrint('[COMPLAINT NOTIFY] customer uid=$effectiveCustomerId');
+    debugPrint(
+        '[COMPLAINT NOTIFY] backend trigger notifyAdminsOnComplaint handles secure admin notification');
 
     return CustomerComplaint(
       id: docRef.id,

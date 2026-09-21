@@ -30,6 +30,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   String? _selectedOrderId;
   String _deliveryTarget = 'orderCustomer'; // orderCustomer, assignedDriver, both, allFleet
   String _audienceFilter = 'allUsers'; // allUsers, customersOnly, activeSubscribers, deliveryFleet
+  String _historyFilter = 'All'; // All, Unread, Read
 
   @override
   void dispose() {
@@ -144,6 +145,51 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 'Easily pause your daily milk deliveries anytime through the Calendar tab in the app.'
           ),
         ];
+      case NotificationType.customer:
+        return [
+          (
+            label: 'Welcome',
+            title: 'Welcome to Sawariya Dairy! 🥛',
+            body:
+                'Thank you for joining Sawariya Dairy. Explore fresh farm milk, paneer, and pure ghee.'
+          ),
+          (
+            label: 'Profile Verified',
+            title: 'Profile Verified Successfully ✅',
+            body:
+                'Your account and delivery address details have been verified.'
+          ),
+        ];
+      case NotificationType.payment:
+        return [
+          (
+            label: 'Payment Received',
+            title: 'Payment Confirmed 💳',
+            body:
+                'We have received your payment. Your balance has been updated.'
+          ),
+          (
+            label: 'Payment Due',
+            title: 'Monthly Bill Reminder ⚠️',
+            body:
+                'Your monthly dairy invoice is due. Please settle via UPI or card.'
+          ),
+        ];
+      case NotificationType.support:
+        return [
+          (
+            label: 'Ticket Resolved',
+            title: 'Support Request Resolved 🎧',
+            body:
+                'Your recent inquiry or issue has been resolved. Let us know if you need anything else.'
+          ),
+          (
+            label: 'Ticket Update',
+            title: 'Support Update 💬',
+            body:
+                'Our support executive has updated your ticket with new information.'
+          ),
+        ];
       case NotificationType.system:
         return [
           (
@@ -208,7 +254,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     setState(() => _isSending = true);
 
     try {
-      final adminUid = ref.read(userProvider).id;
+      final adminUid = ref.read(effectiveUserIdProvider);
       if (adminUid.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Admin session not found.')),
@@ -419,10 +465,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final textPrimary = AppColors.textPrimaryOf(context);
     final textSecondary = AppColors.textSecondaryOf(context);
 
-    final adminUid = ref.watch(userProvider).id;
-    final asyncHistory = adminUid.isNotEmpty
-        ? ref.watch(notificationsForUserStreamProvider(adminUid))
-        : const AsyncValue<List<NotificationItem>>.data([]);
+    final asyncHistory = ref.watch(userNotificationsStreamProvider);
 
     final templates = _getTemplatesForType(_selectedType);
 
@@ -667,31 +710,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           const SizedBox(height: 24),
 
           // ── Notification History Panel ──
-          Row(
-            children: [
-              Text(
-                'Notification History',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: textPrimary,
-                ),
-              ),
-              const Spacer(),
-              asyncHistory.whenOrNull(
-                    data: (list) => Text(
-                      '${list.length} logged',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        color: textSecondary,
-                      ),
-                    ),
-                  ) ??
-                  const SizedBox.shrink(),
-            ],
-          ),
-          const SizedBox(height: 12),
-
           asyncHistory.when(
             loading: () => Container(
               height: 120,
@@ -727,48 +745,243 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               ),
             ),
             data: (history) {
-              if (history.isEmpty) {
-                return Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: cardBg,
-                    borderRadius: BorderRadius.circular(12),
-                    border:
-                        Border.all(color: cardBorder, style: BorderStyle.solid),
-                  ),
-                  child: Center(
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.notifications_none_rounded,
-                          size: 40,
-                          color: textSecondary.withValues(alpha: 0.5),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'No notifications dispatched yet',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            color: textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
+              final unreadCount = history.where((n) => !n.isRead).length;
+              final readCount = history.where((n) => n.isRead).length;
+              final effectiveUid = ref.watch(effectiveUserIdProvider);
+
+              final filteredHistory = history.where((n) {
+                if (_historyFilter == 'Unread') return !n.isRead;
+                if (_historyFilter == 'Read') return n.isRead;
+                return true;
+              }).toList();
 
               return Column(
-                children: history
-                    .map((notif) =>
-                        _AdminNotifHistoryTile(notif: notif, context: context))
-                    .toList(),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header with Filters & Bulk Actions
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 10,
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Notification History',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${history.length} logged',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Filter Segment Pills
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildFilterChip('All', history.length, cardBg,
+                              cardBorder, textPrimary, textSecondary),
+                          const SizedBox(width: 6),
+                          _buildFilterChip('Unread', unreadCount, cardBg,
+                              cardBorder, textPrimary, textSecondary),
+                          const SizedBox(width: 6),
+                          _buildFilterChip('Read', readCount, cardBg,
+                              cardBorder, textPrimary, textSecondary),
+                        ],
+                      ),
+                      // Bulk Actions
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (unreadCount > 0)
+                            TextButton.icon(
+                              onPressed: () async {
+                                final unreadIds = history
+                                    .where((n) => !n.isRead)
+                                    .map((n) => n.id)
+                                    .toList();
+                                if (unreadIds.isNotEmpty &&
+                                    effectiveUid.isNotEmpty) {
+                                  try {
+                                    await ref
+                                        .read(notificationRepositoryProvider)
+                                        .markAllRead(effectiveUid, unreadIds);
+                                  } catch (e) {
+                                    debugPrint(
+                                        '[NOTIFICATION READ ERROR] NotificationsScreen markAllRead failed: $e');
+                                  }
+                                }
+                              },
+                              icon: const Icon(Icons.done_all_rounded,
+                                  size: 16),
+                              label: const Text('Mark all read'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.primary,
+                                textStyle: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          if (history.isNotEmpty)
+                            TextButton.icon(
+                              onPressed: () async {
+                                final allIds =
+                                    history.map((n) => n.id).toList();
+                                if (allIds.isNotEmpty &&
+                                    effectiveUid.isNotEmpty) {
+                                  try {
+                                    await ref
+                                        .read(notificationRepositoryProvider)
+                                        .clearAll(effectiveUid, allIds);
+                                  } catch (e) {
+                                    debugPrint(
+                                        '[NOTIFICATION READ ERROR] NotificationsScreen clearAll failed: $e');
+                                  }
+                                }
+                              },
+                              icon: const Icon(Icons.clear_all_rounded,
+                                  size: 16),
+                              label: const Text('Clear all'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.textSecondary,
+                                textStyle: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  if (filteredHistory.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: cardBorder),
+                      ),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.notifications_none_rounded,
+                              size: 40,
+                              color: textSecondary.withValues(alpha: 0.5),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _historyFilter == 'Unread'
+                                  ? 'No unread notifications'
+                                  : (_historyFilter == 'Read'
+                                      ? 'No read notifications'
+                                      : 'No notifications dispatched yet'),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                color: textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    Column(
+                      children: filteredHistory
+                          .map((notif) => _AdminNotifHistoryTile(
+                                notif: notif,
+                                effectiveUid: effectiveUid,
+                              ))
+                          .toList(),
+                    ),
+                ],
               );
             },
           ),
 
           const SizedBox(height: 24),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(
+    String filter,
+    int count,
+    Color cardBg,
+    Color cardBorder,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
+    final isSelected = _historyFilter == filter;
+    return InkWell(
+      onTap: () => setState(() => _historyFilter = filter),
+      borderRadius: BorderRadius.circular(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : cardBg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : cardBorder,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              filter,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? Colors.white : textSecondary,
+              ),
+            ),
+            const SizedBox(width: 5),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? Colors.white.withValues(alpha: 0.25)
+                    : textSecondary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$count',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? Colors.white : textSecondary,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1009,19 +1222,19 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
 // ─── Admin notification history tile ─────────────────────────────────────────
 
-class _AdminNotifHistoryTile extends StatelessWidget {
+class _AdminNotifHistoryTile extends ConsumerWidget {
   final NotificationItem notif;
-  final BuildContext context;
+  final String effectiveUid;
 
   const _AdminNotifHistoryTile({
     required this.notif,
-    required this.context,
+    required this.effectiveUid,
   });
 
   String _formatTimestamp(DateTime ts) {
     final now = DateTime.now();
     final diff = now.difference(ts);
-    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inSeconds < 45) return 'Just now';
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     if (diff.inDays < 2) return 'Yesterday';
@@ -1038,123 +1251,213 @@ class _AdminNotifHistoryTile extends StatelessWidget {
         return const Color(0xFFF59E0B);
       case NotificationType.subscription:
         return const Color(0xFF7C3AED);
+      case NotificationType.customer:
+        return const Color(0xFF10B981);
+      case NotificationType.payment:
+        return const Color(0xFF059669);
+      case NotificationType.support:
+        return const Color(0xFFE11D48);
       case NotificationType.system:
         return AppColors.textSecondary;
     }
   }
 
   @override
-  Widget build(BuildContext ctx) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cardBg = AppColors.cardBgOf(context);
     final cardBorder = AppColors.cardBorderOf(context);
     final textPrimary = AppColors.textPrimaryOf(context);
     final textSecondary = AppColors.textSecondaryOf(context);
     final typeColor = _typeColor(notif.type);
+    final isUnread = !notif.isRead;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: cardBg,
+        color: isUnread
+            ? AppColors.primary.withValues(alpha: 0.04)
+            : cardBg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cardBorder),
+        border: Border.all(
+          color: isUnread
+              ? AppColors.primary.withValues(alpha: 0.3)
+              : cardBorder,
+        ),
         boxShadow: AppColors.cardShadow,
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: typeColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(notif.type.icon, size: 18, color: typeColor),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () async {
+            if (isUnread && effectiveUid.isNotEmpty) {
+              try {
+                await ref
+                    .read(notificationRepositoryProvider)
+                    .markAsRead(effectiveUid, notif.id);
+              } catch (e) {
+                debugPrint(
+                    '[NOTIFICATION READ ERROR] HistoryTile markAsRead failed: $e');
+              }
+            }
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        notif.title,
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: typeColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(notif.type.icon, size: 18, color: typeColor),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              notif.title,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: isUnread ? FontWeight.w700 : FontWeight.w600,
+                                color: textPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isUnread) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              width: 7,
+                              height: 7,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: typeColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              notif.type.value[0].toUpperCase() +
+                                  notif.type.value.substring(1),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: typeColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        notif.body,
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: textPrimary,
+                          fontSize: 12,
+                          color: textSecondary,
+                          height: 1.4,
                         ),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: typeColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        notif.type.value[0].toUpperCase() +
-                            notif.type.value.substring(1),
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: typeColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  notif.body,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    color: textSecondary,
-                    height: 1.4,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(Icons.access_time_rounded,
-                        size: 11, color: textSecondary),
-                    const SizedBox(width: 3),
-                    Text(
-                      _formatTimestamp(notif.timestamp),
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        color: textSecondary,
-                      ),
-                    ),
-                    if (notif.orderId != null) ...[
-                      const SizedBox(width: 10),
-                      Icon(Icons.receipt_long_rounded,
-                          size: 11, color: textSecondary),
-                      const SizedBox(width: 3),
-                      Text(
-                        notif.orderId!,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.access_time_rounded,
+                              size: 11, color: textSecondary),
+                          const SizedBox(width: 3),
+                          Text(
+                            _formatTimestamp(notif.timestamp),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              color: textSecondary,
+                            ),
+                          ),
+                          if (notif.orderId != null) ...[
+                            const SizedBox(width: 10),
+                            Icon(Icons.receipt_long_rounded,
+                                size: 11, color: textSecondary),
+                            const SizedBox(width: 3),
+                            Text(
+                              notif.orderId!,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                          const Spacer(),
+                          if (isUnread)
+                            IconButton(
+                              tooltip: 'Mark as read',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                  minWidth: 28, minHeight: 28),
+                              icon: const Icon(
+                                Icons.mark_email_read_outlined,
+                                size: 16,
+                                color: AppColors.primary,
+                              ),
+                              onPressed: () async {
+                                if (effectiveUid.isNotEmpty) {
+                                  try {
+                                    await ref
+                                        .read(notificationRepositoryProvider)
+                                        .markAsRead(effectiveUid, notif.id);
+                                  } catch (e) {
+                                    debugPrint(
+                                        '[NOTIFICATION READ ERROR] HistoryTile markAsRead button failed: $e');
+                                  }
+                                }
+                              },
+                            ),
+                          IconButton(
+                            tooltip: 'Dismiss',
+                            padding: EdgeInsets.zero,
+                            constraints:
+                                const BoxConstraints(minWidth: 28, minHeight: 28),
+                            icon: Icon(Icons.delete_outline_rounded,
+                                size: 16, color: textSecondary),
+                            onPressed: () async {
+                              if (effectiveUid.isNotEmpty) {
+                                try {
+                                  await ref
+                                      .read(notificationRepositoryProvider)
+                                      .dismiss(effectiveUid, notif.id);
+                                } catch (e) {
+                                  debugPrint(
+                                      '[NOTIFICATION READ ERROR] HistoryTile dismiss failed: $e');
+                                }
+                              }
+                            },
+                          ),
+                        ],
                       ),
                     ],
-                  ],
+                  ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

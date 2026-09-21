@@ -325,3 +325,144 @@ exports.sendPushNotificationOnNewDoc = onDocumentCreated(
 );
 
 exports.processSendPushNotification = processSendPushNotification;
+
+/**
+ * Core business logic for creating Admin notifications when a new customer complaint is filed.
+ * Uses Firebase Admin SDK to query the `users` collection for valid Admin accounts
+ * (roles: admin, owner, superadmin or isAdmin: true) and writes an idempotent notification document
+ * under `users/{adminUid}/notifications/complaint_{complaintId}`.
+ *
+ * @param {FirebaseFirestore.Firestore} db - Firestore database instance
+ * @param {object|null} complaintData - Document data from complaints/{complaintId}
+ * @param {string} complaintId - Document ID of the complaint
+ * @returns {Promise<{status: string, reason?: string, count?: number, adminUids?: string[], notificationId?: string}>}
+ */
+async function processComplaintCreatedNotification(db, complaintData, complaintId) {
+  if (!complaintData) {
+    console.warn(`[Complaint Notify] Complaint ${complaintId} has no data; skipping.`);
+    return { status: "skipped", reason: "no_data" };
+  }
+
+  const cleanComplaintId = String(complaintId || "").trim();
+  if (!cleanComplaintId) {
+    console.warn("[Complaint Notify] Missing complaint ID; skipping.");
+    return { status: "skipped", reason: "missing_complaint_id" };
+  }
+
+  // Discover genuine Admin accounts from the users collection by role / flag.
+  // Note: Only genuine user document IDs (Firebase Auth UIDs) are collected.
+  // Role strings like "owner" or "admin" are NEVER used as UIDs.
+  const adminUids = new Set();
+  const validAdminRoles = ["admin", "owner", "superadmin", "Admin", "ADMIN", "Owner", "Superadmin"];
+
+  try {
+    const roleSnap = await db.collection("users").where("role", "in", validAdminRoles).get();
+    for (const doc of roleSnap.docs) {
+      if (doc.id && doc.id.trim()) {
+        adminUids.add(doc.id.trim());
+      }
+    }
+  } catch (err) {
+    console.warn(`[Complaint Notify] Error querying users by role: ${err.message}`);
+  }
+
+  try {
+    const isAdminSnap = await db.collection("users").where("isAdmin", "==", true).get();
+    for (const doc of isAdminSnap.docs) {
+      if (doc.id && doc.id.trim()) {
+        adminUids.add(doc.id.trim());
+      }
+    }
+  } catch (err) {
+    console.warn(`[Complaint Notify] Error querying users by isAdmin: ${err.message}`);
+  }
+
+  if (adminUids.size === 0) {
+    console.warn(`[Complaint Notify] No admin accounts found in users collection for complaint ${cleanComplaintId}.`);
+    return { status: "skipped", reason: "no_admins_found", count: 0, adminUids: [] };
+  }
+
+  const customerName = String(complaintData.customerName || "Customer").trim();
+  const subject = String(complaintData.subject || "").trim();
+  const description = String(complaintData.description || "").trim();
+  const previewText = description || subject || "New support request";
+  const body = `${customerName}: ${previewText}`;
+  const category = String(complaintData.category || complaintData.issueType || "Support").trim();
+  const ticketId = String(complaintData.ticketId || `CMP-${cleanComplaintId.substring(0, 6)}`).trim();
+  const customerId = String(complaintData.customerId || complaintData.userId || "customer").trim();
+  const orderId = complaintData.orderId ? String(complaintData.orderId).trim() : null;
+
+  // Deterministic notification ID prevents duplicate notifications during Cloud Function retries
+  const notifDocId = `complaint_${cleanComplaintId}`;
+  const uidsList = Array.from(adminUids);
+  let writeCount = 0;
+
+  for (const adminUid of uidsList) {
+    const notifRef = db.collection("users").doc(adminUid).collection("notifications").doc(notifDocId);
+
+    const payload = {
+      title: "New Customer Complaint",
+      body: body,
+      type: "support",
+      timestamp: FieldValue.serverTimestamp(),
+      isRead: false,
+      isActionable: true,
+      route: "/support",
+      createdBy: customerId,
+      userId: adminUid,
+      metadata: {
+        source: "complaint",
+        complaintId: cleanComplaintId,
+        ticketId: ticketId,
+        category: category,
+        customerId: customerId,
+      },
+    };
+
+    if (orderId) {
+      payload.orderId = orderId;
+    }
+
+    try {
+      await notifRef.set(payload, { merge: true });
+      writeCount++;
+      console.log(`[Complaint Notify] Created admin notification at users/${adminUid}/notifications/${notifDocId}`);
+    } catch (writeErr) {
+      console.error(`[Complaint Notify] Failed to write notification for admin ${adminUid}: ${writeErr.message}`);
+    }
+  }
+
+  return {
+    status: "created",
+    count: writeCount,
+    adminUids: uidsList,
+    notificationId: notifDocId,
+  };
+}
+
+/**
+ * Triggered whenever a new complaint document is created in complaints/{complaintId}.
+ * Discovers active Admin users and creates an idempotent Admin notification under
+ * users/{adminUid}/notifications/complaint_{complaintId}.
+ */
+exports.notifyAdminsOnComplaint = onDocumentCreated(
+  {
+    region: "asia-south2",
+    document: "complaints/{complaintId}",
+  },
+  async (event) => {
+    if (!event.data) {
+      console.warn("No document data found in complaint event; skipping.");
+      return;
+    }
+
+    const complaintData = event.data.data();
+    const complaintId = event.params.complaintId;
+
+    const db = getFirestore();
+    await processComplaintCreatedNotification(db, complaintData, complaintId);
+  }
+);
+
+exports.processComplaintCreatedNotification = processComplaintCreatedNotification;
+

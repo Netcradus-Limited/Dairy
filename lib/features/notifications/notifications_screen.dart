@@ -27,17 +27,22 @@ class NotificationsScreen extends ConsumerWidget {
     return DateFormat.MMMd().format(timestamp);
   }
 
-  void _openNotification(
-      BuildContext context, WidgetRef ref, NotificationItem item) {
-    // Mark read in Firestore
-    final userId = ref.read(currentUserIdProvider);
-    if (userId != null && userId.isNotEmpty) {
-      ref
-          .read(notificationRepositoryProvider)
-          .markRead(userId, item.id)
-          .catchError((_) {});
+  Future<void> _openNotification(
+      BuildContext context, WidgetRef ref, NotificationItem item) async {
+    // 1. Mark read in Firestore if unread
+    final userId = ref.read(effectiveUserIdProvider);
+    if (!item.isRead && userId.isNotEmpty) {
+      try {
+        await ref
+            .read(notificationRepositoryProvider)
+            .markAsRead(userId, item.id);
+      } catch (e) {
+        debugPrint(
+            '[NOTIFICATION READ ERROR] CustomerScreen markAsRead failed: $e');
+      }
     }
 
+    // 2. Navigate only if actionable or has valid route/orderId
     final rawOrderId = item.orderId?.trim();
     if (rawOrderId != null && rawOrderId.isNotEmpty) {
       Navigator.push(
@@ -440,6 +445,12 @@ class _NotificationTile extends StatelessWidget {
         return const Color(0xFFF59E0B);
       case NotificationType.subscription:
         return const Color(0xFF7C3AED);
+      case NotificationType.customer:
+        return const Color(0xFF10B981);
+      case NotificationType.payment:
+        return const Color(0xFF059669);
+      case NotificationType.support:
+        return const Color(0xFFE11D48);
       case NotificationType.system:
         return AppColors.textSecondary;
     }
