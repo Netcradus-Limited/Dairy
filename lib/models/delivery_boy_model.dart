@@ -210,6 +210,8 @@ class DeliveryOrder {
   final String estimatedTime;
   final double? latitude;
   final double? longitude;
+  final double? pickupLatitude;
+  final double? pickupLongitude;
   final String? assignedAgentId;
 
   const DeliveryOrder({
@@ -233,6 +235,8 @@ class DeliveryOrder {
     required this.estimatedTime,
     this.latitude,
     this.longitude,
+    this.pickupLatitude,
+    this.pickupLongitude,
     this.assignedAgentId,
   });
 
@@ -246,6 +250,29 @@ class DeliveryOrder {
     if (latitude! < -90.0 || latitude! > 90.0) return false;
     if (longitude! < -180.0 || longitude! > 180.0) return false;
     if (latitude! == 0.0 && longitude! == 0.0) return false;
+    return true;
+  }
+
+  /// Returns true if valid, non-zero geographic pickup coordinates are present.
+  bool get hasValidPickupCoordinates {
+    if (pickupLatitude == null || pickupLongitude == null) {
+      return false;
+    }
+    if (pickupLatitude!.isNaN ||
+        pickupLongitude!.isNaN ||
+        pickupLatitude!.isInfinite ||
+        pickupLongitude!.isInfinite) {
+      return false;
+    }
+    if (pickupLatitude! < -90.0 || pickupLatitude! > 90.0) {
+      return false;
+    }
+    if (pickupLongitude! < -180.0 || pickupLongitude! > 180.0) {
+      return false;
+    }
+    if (pickupLatitude! == 0.0 && pickupLongitude! == 0.0) {
+      return false;
+    }
     return true;
   }
 
@@ -272,6 +299,8 @@ class DeliveryOrder {
     String? estimatedTime,
     double? latitude,
     double? longitude,
+    double? pickupLatitude,
+    double? pickupLongitude,
     Object? assignedAgentId = _sentinel,
   }) {
     return DeliveryOrder(
@@ -295,6 +324,8 @@ class DeliveryOrder {
       estimatedTime: estimatedTime ?? this.estimatedTime,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      pickupLatitude: pickupLatitude ?? this.pickupLatitude,
+      pickupLongitude: pickupLongitude ?? this.pickupLongitude,
       assignedAgentId: identical(assignedAgentId, _sentinel)
           ? this.assignedAgentId
           : assignedAgentId as String?,

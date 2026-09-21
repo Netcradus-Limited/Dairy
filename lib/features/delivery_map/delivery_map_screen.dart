@@ -23,6 +23,14 @@ class _MapConstants {
     }
     return null;
   }
+
+  /// Extracts pickup coordinates from a [DeliveryOrder] only if valid real coordinates exist.
+  static LatLng? pickupLocationForOrder(DeliveryOrder order) {
+    if (order.hasValidPickupCoordinates) {
+      return LatLng(order.pickupLatitude!, order.pickupLongitude!);
+    }
+    return null;
+  }
 }
 
 /// Live delivery tracking map built on OpenStreetMap tiles.
@@ -66,19 +74,53 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen> {
   }
 
   List<Marker> _buildMarkers(List<DeliveryOrder> orders, LatLng? agentPos) {
-    final markers = <Marker>[
-      // Hub marker (always at physical dairy hub)
-      const Marker(
-        point: _MapConstants.pickupHub,
-        width: 40,
-        height: 40,
-        child: _MapPin(
-          color: AppColors.primaryBlue,
-          icon: Icons.store_rounded,
-          label: 'Hub',
+    final markers = <Marker>[];
+
+    // Hub / Pickup markers:
+    // If orders have explicit dynamic pickup coordinates, render their distinct pickup locations.
+    // If no order provides custom pickup coordinates, render the standard physical dairy hub marker.
+    final pickupPoints = <String, LatLng>{};
+    for (final order in orders) {
+      final pickupLoc = _MapConstants.pickupLocationForOrder(order);
+      if (pickupLoc != null) {
+        final label = (order.pickupLocation.isNotEmpty &&
+                order.pickupLocation != 'Not specified' &&
+                order.pickupLocation != '—')
+            ? order.pickupLocation
+            : 'Hub';
+        pickupPoints[label] = pickupLoc;
+      }
+    }
+
+    if (pickupPoints.isEmpty) {
+      markers.add(
+        const Marker(
+          point: _MapConstants.pickupHub,
+          width: 40,
+          height: 40,
+          child: _MapPin(
+            color: AppColors.primaryBlue,
+            icon: Icons.store_rounded,
+            label: 'Hub',
+          ),
         ),
-      ),
-    ];
+      );
+    } else {
+      for (final entry in pickupPoints.entries) {
+        markers.add(
+          Marker(
+            point: entry.value,
+            width: 40,
+            height: 40,
+            child: _MapPin(
+              color: AppColors.primaryBlue,
+              icon: Icons.store_rounded,
+              label: entry.key,
+            ),
+          ),
+        );
+      }
+    }
 
     // Agent live marker: rendered ONLY if real agent coordinates are streamed from Firestore.
     if (agentPos != null) {
@@ -198,7 +240,9 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen> {
           if (_selectedOrder != null) {
             final orderLoc = _MapConstants.locationForOrder(_selectedOrder!);
             if (orderLoc != null) {
-              route.add(_MapConstants.pickupHub);
+              final pickupLoc = _MapConstants.pickupLocationForOrder(_selectedOrder!) ??
+                  _MapConstants.pickupHub;
+              route.add(pickupLoc);
               if (agentPos != null) {
                 route.add(agentPos);
               }

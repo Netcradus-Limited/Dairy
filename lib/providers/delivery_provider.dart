@@ -16,11 +16,52 @@ import 'package:latlong2/latlong.dart';
 import 'user_provider.dart';
 
 /// Maps a Firestore [Order] into the delivery panel's [DeliveryOrder] view
-/// model. Active orders from the `orders` collection don't carry an assigned
-/// agent yet, so pickup defaults to the Sawariya Dairy hub.
+/// model. Resolves dynamic pickup hub/store information per order with
+/// graceful fallback to the legitimate default dairy hub.
 DeliveryOrder deliveryOrderFromOrder(Order order) {
-  const hub = 'Sawariya Dairy Hub, Vijay Nagar';
-  const hubPhone = '+91 731 400 5000';
+  const defaultHub = 'Sawariya Dairy Hub, Vijay Nagar';
+  const defaultHubPhone = '+91 731 400 5000';
+  const defaultHubLat = 22.7255;
+  const defaultHubLng = 75.8800;
+
+  final String resolvedPickupLocation;
+  final String resolvedPickupPhone;
+  final double? resolvedPickupLat;
+  final double? resolvedPickupLng;
+
+  if (order.pickupLocation == null) {
+    // Missing / null pickup data: use project's existing legitimate default hub
+    resolvedPickupLocation = defaultHub;
+    resolvedPickupPhone = defaultHubPhone;
+    resolvedPickupLat = defaultHubLat;
+    resolvedPickupLng = defaultHubLng;
+  } else if (order.pickupLocation!.trim().isEmpty) {
+    // Explicitly empty pickup data: do not display misleading information
+    resolvedPickupLocation = 'Not specified';
+    resolvedPickupPhone = (order.pickupPhone != null && order.pickupPhone!.trim().isNotEmpty)
+        ? order.pickupPhone!.trim()
+        : '—';
+    resolvedPickupLat = null;
+    resolvedPickupLng = null;
+  } else {
+    // Valid pickup data from order
+    resolvedPickupLocation = order.pickupLocation!.trim();
+    resolvedPickupPhone = (order.pickupPhone != null && order.pickupPhone!.trim().isNotEmpty)
+        ? order.pickupPhone!.trim()
+        : defaultHubPhone;
+
+    // Use order's pickup coordinates if available; do not invent coordinates if missing
+    if (order.pickupLatitude != null &&
+        order.pickupLongitude != null &&
+        DeliveryTrackingService.isValidCoordinates(
+            order.pickupLatitude, order.pickupLongitude)) {
+      resolvedPickupLat = order.pickupLatitude;
+      resolvedPickupLng = order.pickupLongitude;
+    } else {
+      resolvedPickupLat = null;
+      resolvedPickupLng = null;
+    }
+  }
 
   DeliveryOrderStatus status = DeliveryOrderStatus.pendingAcceptance;
   switch (order.status) {
@@ -46,8 +87,10 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
     customerName: order.deliveryAddress.fullName,
     customerPhone: order.deliveryAddress.mobileNumber,
     customerAddress: order.deliveryAddress.fullAddressText,
-    pickupLocation: hub,
-    pickupPhone: hubPhone,
+    pickupLocation: resolvedPickupLocation,
+    pickupPhone: resolvedPickupPhone,
+    pickupLatitude: resolvedPickupLat,
+    pickupLongitude: resolvedPickupLng,
     items: order.items
         .map((ci) => '${ci.product.title} ${ci.product.unit} x${ci.quantity}')
         .toList(),

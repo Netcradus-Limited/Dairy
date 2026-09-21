@@ -418,7 +418,7 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
             const SizedBox(width: 12),
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: () => _navigateToPickup(order.pickupLocation),
+                onPressed: () => _navigateToPickup(order),
                 icon: const Icon(Icons.navigation_rounded, size: 18),
                 label: const Text('Navigate to Pickup'),
                 style: ElevatedButton.styleFrom(
@@ -812,9 +812,28 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
     }
   }
 
-  void _navigateToPickup(String location) async {
-    final uri = Uri.parse(
-        'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(location)}');
+  void _navigateToPickup(DeliveryOrder order) async {
+    final location = order.pickupLocation.trim();
+    if (location.isEmpty || location == '—' || location == 'Not specified') {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pickup location not available for navigation'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+      return;
+    }
+
+    final Uri uri;
+    if (order.hasValidPickupCoordinates) {
+      uri = Uri.parse(
+          'https://www.google.com/maps/search/?api=1&query=${order.pickupLatitude},${order.pickupLongitude}');
+    } else {
+      uri = Uri.parse(
+          'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(location)}');
+    }
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }

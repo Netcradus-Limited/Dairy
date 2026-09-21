@@ -68,6 +68,10 @@ class Order {
   final String? assignedAgentId;
   final DateTime? acceptedAt;
   final String userId;
+  final String? pickupLocation;
+  final String? pickupPhone;
+  final double? pickupLatitude;
+  final double? pickupLongitude;
 
   const Order({
     required this.id,
@@ -86,6 +90,10 @@ class Order {
     this.assignedAgentId,
     this.acceptedAt,
     this.userId = '',
+    this.pickupLocation,
+    this.pickupPhone,
+    this.pickupLatitude,
+    this.pickupLongitude,
   });
 
   /// The customer-facing 6-character order code (e.g. "KRT482").
@@ -134,6 +142,10 @@ class Order {
     String? assignedAgentId,
     DateTime? acceptedAt,
     String? userId,
+    String? pickupLocation,
+    String? pickupPhone,
+    double? pickupLatitude,
+    double? pickupLongitude,
   }) {
     return Order(
       id: id ?? this.id,
@@ -153,6 +165,10 @@ class Order {
       assignedAgentId: assignedAgentId ?? this.assignedAgentId,
       acceptedAt: acceptedAt ?? this.acceptedAt,
       userId: userId ?? this.userId,
+      pickupLocation: pickupLocation ?? this.pickupLocation,
+      pickupPhone: pickupPhone ?? this.pickupPhone,
+      pickupLatitude: pickupLatitude ?? this.pickupLatitude,
+      pickupLongitude: pickupLongitude ?? this.pickupLongitude,
     );
   }
 
@@ -286,6 +302,110 @@ class Order {
     final orderCode =
         rawOrderCode.isNotEmpty ? rawOrderCode : formatFallbackOrderCode(id);
 
+    // Pickup / Store / Hub information extraction
+    String? pickupLocation;
+    String? pickupPhone;
+    double? pickupLatitude;
+    double? pickupLongitude;
+
+    // 1. Check nested map: 'pickup', 'store', or 'hub'
+    final pickupMap = (data['pickup'] is Map)
+        ? (data['pickup'] as Map)
+        : ((data['store'] is Map)
+            ? (data['store'] as Map)
+            : ((data['hub'] is Map) ? (data['hub'] as Map) : null));
+
+    if (pickupMap != null) {
+      final loc = (pickupMap['address'] ?? pickupMap['location'] ?? pickupMap['name'] ?? pickupMap['title'])?.toString().trim();
+      if (loc != null && loc.isNotEmpty) {
+        pickupLocation = loc;
+      }
+      final phone = (pickupMap['phone'] ?? pickupMap['phoneNumber'] ?? pickupMap['mobile'])?.toString().trim();
+      if (phone != null && phone.isNotEmpty) {
+        pickupPhone = phone;
+      }
+      final lat = ((pickupMap['latitude'] ?? pickupMap['lat']) as num?)?.toDouble();
+      final lng = ((pickupMap['longitude'] ?? pickupMap['lng'] ?? pickupMap['lon']) as num?)?.toDouble();
+      if (lat != null &&
+          lng != null &&
+          !lat.isNaN &&
+          !lng.isNaN &&
+          lat >= -90.0 &&
+          lat <= 90.0 &&
+          lng >= -180.0 &&
+          lng <= 180.0 &&
+          !(lat == 0.0 && lng == 0.0)) {
+        pickupLatitude = lat;
+        pickupLongitude = lng;
+      }
+    }
+
+    // 2. Check top-level fields
+    if (data['pickupLocation'] is Map) {
+      final pMap = data['pickupLocation'] as Map;
+      final loc = (pMap['address'] ?? pMap['location'] ?? pMap['name'] ?? pMap['title'])?.toString().trim();
+      if (loc != null && loc.isNotEmpty) {
+        pickupLocation = loc;
+      }
+      final phone = (pMap['phone'] ?? pMap['phoneNumber'] ?? pMap['mobile'])?.toString().trim();
+      if (phone != null && phone.isNotEmpty) {
+        pickupPhone = phone;
+      }
+      final lat = ((pMap['latitude'] ?? pMap['lat']) as num?)?.toDouble();
+      final lng = ((pMap['longitude'] ?? pMap['lng'] ?? pMap['lon']) as num?)?.toDouble();
+      if (lat != null &&
+          lng != null &&
+          !lat.isNaN &&
+          !lng.isNaN &&
+          lat >= -90.0 &&
+          lat <= 90.0 &&
+          lng >= -180.0 &&
+          lng <= 180.0 &&
+          !(lat == 0.0 && lng == 0.0)) {
+        pickupLatitude = lat;
+        pickupLongitude = lng;
+      }
+    } else if (data['pickupLocation'] is String) {
+      pickupLocation = data['pickupLocation'] as String;
+    }
+
+    if (pickupLocation == null) {
+      final alt = (data['pickupAddress'] ??
+          data['storeAddress'] ??
+          data['hubAddress'] ??
+          data['pickupName'] ??
+          data['storeName'] ??
+          data['hubName'] ??
+          data['pickupHub']);
+      if (alt is String) {
+        pickupLocation = alt;
+      }
+    }
+
+    if (pickupPhone == null) {
+      final phone = (data['pickupPhone'] ?? data['storePhone'] ?? data['hubPhone']);
+      if (phone is String) {
+        pickupPhone = phone;
+      }
+    }
+
+    if (pickupLatitude == null || pickupLongitude == null) {
+      final pLat = ((data['pickupLatitude'] ?? data['pickupLat']) as num?)?.toDouble();
+      final pLng = ((data['pickupLongitude'] ?? data['pickupLng'] ?? data['pickupLon']) as num?)?.toDouble();
+      if (pLat != null &&
+          pLng != null &&
+          !pLat.isNaN &&
+          !pLng.isNaN &&
+          pLat >= -90.0 &&
+          pLat <= 90.0 &&
+          pLng >= -180.0 &&
+          pLng <= 180.0 &&
+          !(pLat == 0.0 && pLng == 0.0)) {
+        pickupLatitude = pLat;
+        pickupLongitude = pLng;
+      }
+    }
+
     return Order(
       id: id,
       orderCode: orderCode,
@@ -303,6 +423,10 @@ class Order {
       assignedAgentId: (data['assignedAgentId'] as String?),
       acceptedAt: acceptedAt,
       userId: (data['userId'] as String?) ?? '',
+      pickupLocation: pickupLocation,
+      pickupPhone: pickupPhone,
+      pickupLatitude: pickupLatitude,
+      pickupLongitude: pickupLongitude,
     );
   }
 
@@ -341,6 +465,10 @@ class Order {
           'deliveryDate': Timestamp.fromDate(deliveryDate!),
         if (assignedAgentId != null) 'assignedAgentId': assignedAgentId,
         if (acceptedAt != null) 'acceptedAt': acceptedAt,
+        if (pickupLocation != null) 'pickupLocation': pickupLocation,
+        if (pickupPhone != null) 'pickupPhone': pickupPhone,
+        if (pickupLatitude != null) 'pickupLatitude': pickupLatitude,
+        if (pickupLongitude != null) 'pickupLongitude': pickupLongitude,
       };
 
   Map<String, dynamic> toMap() => {
