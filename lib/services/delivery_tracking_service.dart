@@ -57,6 +57,69 @@ class DeliveryTrackingService {
     return null;
   }
 
+  /// Calculates straight-line / geodesic coordinate distance in kilometers
+  /// between two points using [latlong2] [Distance].
+  ///
+  /// Returns `null` if either coordinate pair is null, out of bounds, NaN,
+  /// infinite, or zero placeholder (0.0, 0.0).
+  static double? calculateDistanceKm(
+    double? lat1,
+    double? lon1,
+    double? lat2,
+    double? lon2,
+  ) {
+    if (!isValidCoordinates(lat1, lon1) || !isValidCoordinates(lat2, lon2)) {
+      return null;
+    }
+    const distanceCalc = Distance();
+    final meters = distanceCalc.distance(
+      LatLng(lat1!, lon1!),
+      LatLng(lat2!, lon2!),
+    );
+    return meters / 1000.0;
+  }
+
+  /// Formats distance in kilometers as a human-readable string (e.g. "3.2 km").
+  /// Returns "—" when distance is null, negative, NaN, or infinite.
+  static String formatDistance(double? distanceKm) {
+    if (distanceKm == null ||
+        distanceKm.isNaN ||
+        distanceKm.isInfinite ||
+        distanceKm < 0) {
+      return '—';
+    }
+    return '${distanceKm.toStringAsFixed(1)} km';
+  }
+
+  /// Calculates an estimated delivery transit time (ETA) based on coordinate distance.
+  ///
+  /// Documented model assumptions:
+  /// - Coordinate-based geodesic distance with an urban street winding factor (~1.2x).
+  /// - Average urban two-wheeler delivery transit speed of ~20-25 km/h.
+  /// - Fixed buffer for pickup preparation/handover: ~2.5 minutes.
+  /// - Formula: `((distanceKm * 3.0) + 2.5).round().clamp(1, 180)` minutes.
+  ///   Example: 3.2 km -> (3.2 * 3.0) + 2.5 = 12.1 -> "~12 min".
+  /// - Returns "~X min" format when distance is valid.
+  /// - Returns [fallbackSlot] (or "—") when distance is null or invalid.
+  static String calculateEstimatedTime(
+    double? distanceKm, {
+    String? fallbackSlot,
+  }) {
+    if (distanceKm == null ||
+        distanceKm.isNaN ||
+        distanceKm.isInfinite ||
+        distanceKm < 0) {
+      if (fallbackSlot != null &&
+          fallbackSlot.trim().isNotEmpty &&
+          fallbackSlot.trim() != '—') {
+        return fallbackSlot.trim();
+      }
+      return '—';
+    }
+    final int minutes = ((distanceKm * 3.0) + 2.5).round().clamp(1, 180);
+    return '~$minutes min';
+  }
+
   /// Pushes the delivery agent's live position to Firestore as a `[latitude,
   /// longitude]` array, stamping `updatedAt`. Use [merge: true] so non-location
   /// fields (e.g. `isOnline`) are preserved across updates.

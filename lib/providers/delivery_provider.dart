@@ -80,6 +80,32 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
       status = DeliveryOrderStatus.cancelled;
   }
 
+  final double? customerLat = (order.deliveryAddress.hasCoordinates &&
+          DeliveryTrackingService.isValidCoordinates(
+              order.deliveryAddress.latitude,
+              order.deliveryAddress.longitude))
+      ? order.deliveryAddress.latitude
+      : null;
+  final double? customerLng = (order.deliveryAddress.hasCoordinates &&
+          DeliveryTrackingService.isValidCoordinates(
+              order.deliveryAddress.latitude,
+              order.deliveryAddress.longitude))
+      ? order.deliveryAddress.longitude
+      : null;
+
+  final double? distanceKm = DeliveryTrackingService.calculateDistanceKm(
+    resolvedPickupLat,
+    resolvedPickupLng,
+    customerLat,
+    customerLng,
+  );
+  final String formattedDistance =
+      DeliveryTrackingService.formatDistance(distanceKm);
+  final String formattedEta = DeliveryTrackingService.calculateEstimatedTime(
+    distanceKm,
+    fallbackSlot: order.estimatedDeliveryTime,
+  );
+
   return DeliveryOrder(
     id: order.id,
     orderId: order.id,
@@ -98,22 +124,11 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
     deliveryFee: order.deliveryCharge,
     status: status,
     orderTime: order.orderDate,
-    distance: '—',
-    estimatedTime: order.estimatedDeliveryTime.isNotEmpty
-        ? order.estimatedDeliveryTime
-        : '—',
-    latitude: (order.deliveryAddress.hasCoordinates &&
-            DeliveryTrackingService.isValidCoordinates(
-                order.deliveryAddress.latitude,
-                order.deliveryAddress.longitude))
-        ? order.deliveryAddress.latitude
-        : null,
-    longitude: (order.deliveryAddress.hasCoordinates &&
-            DeliveryTrackingService.isValidCoordinates(
-                order.deliveryAddress.latitude,
-                order.deliveryAddress.longitude))
-        ? order.deliveryAddress.longitude
-        : null,
+    distance: formattedDistance,
+    estimatedTime: formattedEta,
+    distanceKm: distanceKm,
+    latitude: customerLat,
+    longitude: customerLng,
     assignedAgentId: order.assignedAgentId,
   );
 }

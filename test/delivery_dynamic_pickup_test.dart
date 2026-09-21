@@ -1,8 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:dairy_app/models/address.dart';
 import 'package:dairy_app/models/cart_item.dart';
-import 'package:dairy_app/models/delivery_boy_model.dart';
 import 'package:dairy_app/models/order.dart';
 import 'package:dairy_app/models/product.dart';
 import 'package:dairy_app/providers/delivery_provider.dart';
@@ -22,7 +20,7 @@ void main() {
     longitude: 75.8577,
   );
 
-  final sampleProduct = Product(
+  const sampleProduct = Product(
     id: 'prod_milk_1',
     title: 'Fresh Cow Milk',
     categoryId: 'cat_dairy',

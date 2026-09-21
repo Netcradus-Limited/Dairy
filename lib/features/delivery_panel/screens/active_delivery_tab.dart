@@ -283,7 +283,9 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
                     ),
                   ),
                   Text(
-                    order.distance,
+                    (order.estimatedTime.isNotEmpty && order.estimatedTime != '—')
+                        ? '${order.distance} · ${order.estimatedTime}'
+                        : order.distance,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       color: textMuted,
@@ -612,6 +614,10 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
                   const SizedBox(height: 12),
                   _buildDetailRow('Location', order.pickupLocation),
                   _buildDetailRow('Phone', order.pickupPhone),
+                  if (order.distance.isNotEmpty && order.distance != '—')
+                    _buildDetailRow('Distance', order.distance),
+                  if (order.estimatedTime.isNotEmpty && order.estimatedTime != '—')
+                    _buildDetailRow('ETA', order.estimatedTime),
                 ],
               ),
             ),

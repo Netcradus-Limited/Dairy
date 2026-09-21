@@ -208,6 +208,7 @@ class DeliveryOrder {
   final DateTime? deliveredTime;
   final String distance;
   final String estimatedTime;
+  final double? distanceKm;
   final double? latitude;
   final double? longitude;
   final double? pickupLatitude;
@@ -233,6 +234,7 @@ class DeliveryOrder {
     this.deliveredTime,
     required this.distance,
     required this.estimatedTime,
+    this.distanceKm,
     this.latitude,
     this.longitude,
     this.pickupLatitude,
@@ -297,6 +299,7 @@ class DeliveryOrder {
     DateTime? deliveredTime,
     String? distance,
     String? estimatedTime,
+    double? distanceKm,
     double? latitude,
     double? longitude,
     double? pickupLatitude,
@@ -322,6 +325,7 @@ class DeliveryOrder {
       deliveredTime: deliveredTime ?? this.deliveredTime,
       distance: distance ?? this.distance,
       estimatedTime: estimatedTime ?? this.estimatedTime,
+      distanceKm: distanceKm ?? this.distanceKm,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       pickupLatitude: pickupLatitude ?? this.pickupLatitude,
