@@ -210,6 +210,7 @@ class DeliveryOrder {
   final String estimatedTime;
   final double? latitude;
   final double? longitude;
+  final String? assignedAgentId;
 
   const DeliveryOrder({
     required this.id,
@@ -232,6 +233,7 @@ class DeliveryOrder {
     required this.estimatedTime,
     this.latitude,
     this.longitude,
+    this.assignedAgentId,
   });
 
   /// The customer-facing 6-character order code (e.g. "KRT482").
@@ -246,6 +248,8 @@ class DeliveryOrder {
     if (latitude! == 0.0 && longitude! == 0.0) return false;
     return true;
   }
+
+  static const Object _sentinel = Object();
 
   DeliveryOrder copyWith({
     String? id,
@@ -268,6 +272,7 @@ class DeliveryOrder {
     String? estimatedTime,
     double? latitude,
     double? longitude,
+    Object? assignedAgentId = _sentinel,
   }) {
     return DeliveryOrder(
       id: id ?? this.id,
@@ -290,6 +295,9 @@ class DeliveryOrder {
       estimatedTime: estimatedTime ?? this.estimatedTime,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      assignedAgentId: identical(assignedAgentId, _sentinel)
+          ? this.assignedAgentId
+          : assignedAgentId as String?,
     );
   }
 }

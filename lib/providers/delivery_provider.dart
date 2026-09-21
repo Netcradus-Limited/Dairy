@@ -71,6 +71,7 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
                 order.deliveryAddress.longitude))
         ? order.deliveryAddress.longitude
         : null,
+    assignedAgentId: order.assignedAgentId,
   );
 }
 

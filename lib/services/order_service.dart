@@ -361,13 +361,47 @@ class OrderService {
     });
   }
 
-  /// Releases an order an agent had accepted: clears the assignment and returns
-  /// it to `pending` so it can be picked up by another agent.
+  /// Releases an order assigned to or accepted by an agent: verifies ownership,
+  /// clears the assignment, and returns it to `Pending` so it can be picked up
+  /// by another agent or reassigned by an admin.
+  ///
+  /// Concurrency protection: If the order was reassigned to another agent in the
+  /// interim, the decline operation aborts to prevent overwriting newer assignments.
   Future<void> declineOrder(String orderId, String agentId) async {
-    await _firestore.collection('orders').doc(orderId).update({
-      'status': 'pending',
-      'assignedAgentId': null,
-      'acceptedAt': null,
+    final cleanOrderId = orderId.trim();
+    final cleanAgentId = agentId.trim();
+    if (cleanOrderId.isEmpty) {
+      throw ArgumentError('orderId cannot be empty');
+    }
+
+    final docRef = _firestore.collection('orders').doc(cleanOrderId);
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(docRef);
+      if (!snapshot.exists) {
+        throw StateError('Order not found: $cleanOrderId');
+      }
+      final data = snapshot.data();
+      final currentAssignedAgentId = (data?['assignedAgentId'] as String?)?.trim();
+
+      // Concurrency guard: If the order is currently assigned to another agent,
+      // prevent this agent from blindly wiping out the newer assignment.
+      if (currentAssignedAgentId != null &&
+          currentAssignedAgentId.isNotEmpty &&
+          currentAssignedAgentId != cleanAgentId) {
+        throw StateError(
+            'Order is no longer assigned to delivery agent $cleanAgentId.');
+      }
+
+      // If assigned to this agent, clear the assignment and return to Pending
+      if (currentAssignedAgentId != null &&
+          currentAssignedAgentId.isNotEmpty &&
+          currentAssignedAgentId == cleanAgentId) {
+        transaction.update(docRef, {
+          'status': 'Pending',
+          'assignedAgentId': null,
+          'acceptedAt': null,
+        });
+      }
     });
   }
 

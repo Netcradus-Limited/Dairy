@@ -430,7 +430,7 @@ class _RequestsTabState extends ConsumerState<RequestsTab> {
       );
       // Switch to Active tab
       ref.read(deliveryPanelTabProvider.notifier).setTab(1);
-    } catch (e, st) {
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -453,16 +453,34 @@ class _RequestsTabState extends ConsumerState<RequestsTab> {
     }
   }
 
-  void _handleDecline(String requestId) {
-    // A pending request isn't assigned yet, so dismiss it locally so the card
-    // hides without affecting the order's Firestore status.
-    setState(() => _dismissed.add(requestId));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Order declined'),
-        backgroundColor: AppColors.error,
-      ),
-    );
+  void _handleDecline(String requestId) async {
+    final order = _findOrder(requestId);
+    if (order == null) return;
+    final agent = ref.read(deliveryAgentProvider);
+
+    try {
+      if (agent.id.isNotEmpty) {
+        await ref.read(orderServiceProvider).declineOrder(order.id, agent.id);
+      }
+      if (!mounted) return;
+      setState(() => _dismissed.add(requestId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Order #${order.displayCode} declined'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not decline order. Please try again.',
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   void _navigateToActiveTab() {
