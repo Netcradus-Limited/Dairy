@@ -15,7 +15,10 @@ void main() {
         child: MaterialApp(home: MainLayoutScreen()),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.byType(MainLayoutScreen), findsOneWidget);
     debugPrint('DONE - no exceptions');
   });
 }
