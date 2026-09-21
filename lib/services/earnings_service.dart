@@ -36,6 +36,9 @@ class EarningsService {
 
   /// Live stream of a specific agent's earnings, newest first.
   Stream<List<EarningModel>> getAgentEarnings(String agentId) {
+    if (agentId.trim().isEmpty) {
+      return Stream.value(const []);
+    }
     return _firestore
         .collection('earnings')
         .where('agentId', isEqualTo: agentId)
@@ -58,6 +61,9 @@ class EarningsService {
     DateTime? startDate,
     DateTime? endDate,
   }) async {
+    if (agentId.trim().isEmpty) {
+      return 0.0;
+    }
     try {
       final snap = await _firestore
           .collection('earnings')

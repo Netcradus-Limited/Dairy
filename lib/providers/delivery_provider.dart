@@ -133,24 +133,14 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
   );
 }
 
-/// Returns the signed-in delivery agent's Firebase Auth uid, or an empty
-/// string when unauthenticated (so agent-scoped streams fall back to only the
-/// public pending orders).
-String get _currentAgentId {
-  try {
-    return FirebaseAuth.instance.currentUser?.uid ?? '';
-  } catch (_) {
-    return '';
-  }
-}
 
 String _resolveAgentId(Ref ref) {
-  String? authUid;
+  final sessionUserId = ref.watch(userProvider.select((u) => u.id));
   try {
-    authUid = FirebaseAuth.instance.currentUser?.uid;
+    final authUid = FirebaseAuth.instance.currentUser?.uid;
+    if (authUid != null && authUid.isNotEmpty) return authUid;
   } catch (_) {}
-  if (authUid != null && authUid.isNotEmpty) return authUid;
-  return ref.watch(userProvider.select((u) => u.id));
+  return sessionUserId;
 }
 
 /// Streams the authenticated delivery agent's real-time geographic position from Firestore.
@@ -845,25 +835,68 @@ final deliveryAgentProvider =
 
 class DeliveryEarningsNotifier extends StateNotifier<List<DeliveryEarnings>> {
   final Ref _ref;
-  StreamSubscription<List<EarningModel>>? _subscription;
 
-  DeliveryEarningsNotifier(this._ref) : super(const []) {
-    _listenToEarnings();
+  FirebaseAuth? get _auth {
+    try {
+      return FirebaseAuth.instance;
+    } catch (_) {
+      return null;
+    }
   }
 
-  void _listenToEarnings() {
+  StreamSubscription? _authSubscription;
+  StreamSubscription<List<EarningModel>>? _subscription;
+  String _activeAgentId = '';
+
+  DeliveryEarningsNotifier(this._ref) : super(const []) {
+    try {
+      _authSubscription = _auth?.authStateChanges().listen((fbUser) {
+        _onAgentIdChanged(fbUser?.uid ?? '');
+      });
+    } catch (_) {}
+
+    _onAgentIdChanged(_currentAgentId);
+  }
+
+  String get _currentAgentId {
+    try {
+      final authUid = _auth?.currentUser?.uid;
+      if (authUid != null && authUid.isNotEmpty) return authUid;
+    } catch (_) {}
+    try {
+      final userId = _ref.read(userProvider).id;
+      if (userId.isNotEmpty) return userId;
+    } catch (_) {}
+    return '';
+  }
+
+  void _onAgentIdChanged(String agentId) {
+    final effectiveId = agentId.isNotEmpty ? agentId : _currentAgentId;
+    if (effectiveId == _activeAgentId && _subscription != null) {
+      return;
+    }
     _subscription?.cancel();
-    final agentId = _currentAgentId;
-    if (agentId.isEmpty) return;
+    _subscription = null;
+    _activeAgentId = effectiveId;
+
+    if (effectiveId.isEmpty) {
+      if (mounted) {
+        state = const [];
+      }
+      return;
+    }
 
     _subscription = _ref
         .read(earningsServiceProvider)
-        .getAgentEarnings(agentId)
+        .getAgentEarnings(effectiveId)
         .listen((earningModels) {
       if (!mounted) return;
       state = _groupEarningsByDate(earningModels);
     }, onError: (_) {
-      // Gracefully maintain state on connection error
+      if (!mounted) return;
+      // On error (e.g. permission-denied / unauthorized cross-agent access),
+      // ensure stale or unauthorized earnings are not retained.
+      state = const [];
     });
   }
 
@@ -945,6 +978,7 @@ class DeliveryEarningsNotifier extends StateNotifier<List<DeliveryEarnings>> {
   @override
   void dispose() {
     _subscription?.cancel();
+    _authSubscription?.cancel();
     super.dispose();
   }
 }
@@ -952,6 +986,7 @@ class DeliveryEarningsNotifier extends StateNotifier<List<DeliveryEarnings>> {
 final deliveryEarningsProvider =
     StateNotifierProvider<DeliveryEarningsNotifier, List<DeliveryEarnings>>(
         (ref) {
+  ref.watch(userProvider.select((u) => u.id));
   return DeliveryEarningsNotifier(ref);
 });
 
