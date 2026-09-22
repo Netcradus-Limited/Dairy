@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../core/constants/app_colors.dart';
-import '../../models/kpi_data.dart';
+import '../core/constants/app_colors.dart';
+import '../models/kpi_data.dart';
 
 class KpiCard extends StatelessWidget {
   final KpiMetric metric;

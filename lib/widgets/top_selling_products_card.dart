@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../../core/constants/app_colors.dart';
-import '../../providers/admin_provider.dart';
+import '../core/constants/app_colors.dart';
+import '../providers/admin_provider.dart';
 
 class TopSellingProductsCard extends StatelessWidget {
   const TopSellingProductsCard({super.key});
