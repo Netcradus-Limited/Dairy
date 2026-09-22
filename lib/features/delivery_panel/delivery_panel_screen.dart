@@ -10,6 +10,7 @@ import '../../providers/cart_provider.dart';
 import '../../providers/delivery_live_location_provider.dart';
 import '../../providers/delivery_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../services/network_connectivity_service.dart';
 import 'screens/requests_tab.dart';
 import 'screens/active_delivery_tab.dart';
 import 'screens/orders_tab.dart';
@@ -74,6 +75,19 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen> {
     final isOnline = agent.status == DeliveryStatus.onDuty;
     final sharing = ref.watch(agentLiveLocationProvider);
     final currentIndex = ref.watch(deliveryPanelTabProvider);
+    final isNetworkOnline = ref.watch(networkConnectivityProvider);
+
+    final bodyContent = Column(
+      children: [
+        if (!isNetworkOnline) _buildOfflineBanner(context),
+        Expanded(
+          child: IndexedStack(
+            index: currentIndex,
+            children: _pages,
+          ),
+        ),
+      ],
+    );
 
     if (isDesktop) {
       return Scaffold(
@@ -84,12 +98,7 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen> {
               child: Column(
                 children: [
                   _buildDesktopTopBar(isOnline, currentIndex, sharing),
-                  Expanded(
-                    child: IndexedStack(
-                      index: currentIndex,
-                      children: _pages,
-                    ),
-                  ),
+                  Expanded(child: bodyContent),
                 ],
               ),
             ),
@@ -100,11 +109,55 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen> {
 
     return Scaffold(
       appBar: _buildMobileAppBar(isOnline, currentIndex, sharing),
-      body: IndexedStack(
-        index: currentIndex,
-        children: _pages,
-      ),
+      body: bodyContent,
       bottomNavigationBar: _buildMobileBottomNav(currentIndex),
+    );
+  }
+
+  Widget _buildOfflineBanner(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: AppColors.warning.withValues(alpha: 0.15),
+      child: Row(
+        children: [
+          const Icon(Icons.wifi_off_rounded, size: 16, color: AppColors.warning),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'You are currently offline. Changes will sync when reconnected.',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimaryOf(context),
+              ),
+            ),
+          ),
+          InkWell(
+            onTap: () =>
+                ref.read(networkConnectivityProvider.notifier).checkNow(),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.refresh_rounded,
+                      size: 14, color: AppColors.warning),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Retry',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.warning,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

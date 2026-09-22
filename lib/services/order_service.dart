@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/order.dart';
 import '../models/address.dart';
 import '../models/cart_item.dart';
+import '../core/utils/retry_helper.dart';
 import 'earnings_service.dart';
 
 /// Creates and persists customer orders in Cloud Firestore.
@@ -258,32 +259,46 @@ class OrderService {
   /// [OrderStatus.delivered], the trusted backend Cloud Function handles
   /// calculating and creating the delivery earning server-side.
   Future<void> updateOrderStatus(String orderId, OrderStatus status) async {
-    try {
-      await _firestore
-          .collection('orders')
-          .doc(orderId)
-          .update({'status': orderStatusToString(status)});
+    final cleanOrderId = orderId.trim();
+    if (cleanOrderId.isEmpty) throw ArgumentError('orderId cannot be empty');
 
-      // Sync payment status if order is delivered or cancelled
-      try {
-        final paymentDoc =
-            _firestore.collection('payments').doc('PAY_$orderId');
-        if (status == OrderStatus.delivered) {
-          await paymentDoc.update({
-            'status': 'Success',
-            'paymentStatus': 'Success',
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
-        } else if (status == OrderStatus.cancelled) {
-          await paymentDoc.update({
-            'status': 'Cancelled',
-            'paymentStatus': 'Cancelled',
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
+    try {
+      await retryOperation(() async {
+        final docRef = _firestore.collection('orders').doc(cleanOrderId);
+        final doc = await docRef.get();
+        if (!doc.exists) {
+          throw StateError('Order not found: $cleanOrderId');
         }
-      } catch (_) {}
+        final currentStatusStr = (doc.data()?['status'] as String?)?.toLowerCase();
+        final targetStatusStr = orderStatusToString(status).toLowerCase();
+
+        // Idempotent check: if already in the target status, skip redundant update
+        if (currentStatusStr != targetStatusStr) {
+          await docRef.update({'status': orderStatusToString(status)});
+        }
+
+        // Sync payment status if order is delivered or cancelled
+        try {
+          final paymentDoc =
+              _firestore.collection('payments').doc('PAY_$cleanOrderId');
+          if (status == OrderStatus.delivered) {
+            await paymentDoc.update({
+              'status': 'Success',
+              'paymentStatus': 'Success',
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+          } else if (status == OrderStatus.cancelled) {
+            await paymentDoc.update({
+              'status': 'Cancelled',
+              'paymentStatus': 'Cancelled',
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+          }
+        } catch (_) {}
+      });
     } catch (e) {
-      throw Exception('Failed to update order status for $orderId: $e');
+      if (e is StateError || e is ArgumentError) rethrow;
+      throw Exception('Failed to update order status for $cleanOrderId: $e');
     }
   }
 
@@ -293,24 +308,38 @@ class OrderService {
 
   /// Fails / cancels delivery with a reason (e.g. 'Customer unavailable' or 'Unable to deliver')
   Future<void> failDelivery(String orderId, String reason) async {
-    try {
-      await _firestore.collection('orders').doc(orderId).update({
-        'status': 'cancelled',
-        'cancellationReason': reason,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+    final cleanOrderId = orderId.trim();
+    if (cleanOrderId.isEmpty) throw ArgumentError('orderId cannot be empty');
 
-      try {
-        final paymentDoc =
-            _firestore.collection('payments').doc('PAY_$orderId');
-        await paymentDoc.update({
-          'status': 'Cancelled',
-          'paymentStatus': 'Cancelled',
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      } catch (_) {}
+    try {
+      await retryOperation(() async {
+        final docRef = _firestore.collection('orders').doc(cleanOrderId);
+        final doc = await docRef.get();
+        if (!doc.exists) throw StateError('Order not found: $cleanOrderId');
+
+        final currentStatus = (doc.data()?['status'] as String?)?.toLowerCase();
+        final currentReason = doc.data()?['cancellationReason'] as String?;
+        if (currentStatus != 'cancelled' || currentReason != reason) {
+          await docRef.update({
+            'status': 'cancelled',
+            'cancellationReason': reason,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+
+        try {
+          final paymentDoc =
+              _firestore.collection('payments').doc('PAY_$cleanOrderId');
+          await paymentDoc.update({
+            'status': 'Cancelled',
+            'paymentStatus': 'Cancelled',
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        } catch (_) {}
+      });
     } catch (e) {
-      throw Exception('Failed to record delivery failure for $orderId: $e');
+      if (e is StateError || e is ArgumentError) rethrow;
+      throw Exception('Failed to record delivery failure for $cleanOrderId: $e');
     }
   }
 
@@ -383,12 +412,45 @@ class OrderService {
   /// Firestore as the single source of truth: the order moves from `pending` to
   /// `accepted`, is bound to [agentId], and records the acceptance time.
   ///
-  /// Throws if the write fails so callers can surface a graceful error.
+  /// Concurrency protection & Idempotency:
+  /// - If the order was already accepted by this agent, it succeeds idempotently on retry.
+  /// - If the order was claimed by another agent in the interim, it aborts with [StateError]
+  ///   to prevent race conditions.
   Future<void> acceptOrder(String orderId, String agentId) async {
-    await _firestore.collection('orders').doc(orderId).update({
-      'status': 'accepted',
-      'assignedAgentId': agentId,
-      'acceptedAt': FieldValue.serverTimestamp(),
+    final cleanOrderId = orderId.trim();
+    final cleanAgentId = agentId.trim();
+    if (cleanOrderId.isEmpty) throw ArgumentError('orderId cannot be empty');
+    if (cleanAgentId.isEmpty) throw ArgumentError('agentId cannot be empty');
+
+    await retryOperation(() async {
+      final docRef = _firestore.collection('orders').doc(cleanOrderId);
+      await _firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(docRef);
+        if (!snapshot.exists) {
+          throw StateError('Order not found: $cleanOrderId');
+        }
+        final data = snapshot.data();
+        final currentAssignedAgentId = (data?['assignedAgentId'] as String?)?.trim();
+        final currentStatus = (data?['status'] as String?)?.toLowerCase();
+
+        // Idempotent retry: if this agent already accepted this order, succeed cleanly
+        if (currentAssignedAgentId == cleanAgentId && currentStatus == 'accepted') {
+          return;
+        }
+
+        // Concurrency guard: if another agent has already claimed this order
+        if (currentAssignedAgentId != null &&
+            currentAssignedAgentId.isNotEmpty &&
+            currentAssignedAgentId != cleanAgentId) {
+          throw StateError('Order is already claimed by another agent.');
+        }
+
+        transaction.update(docRef, {
+          'status': 'accepted',
+          'assignedAgentId': cleanAgentId,
+          'acceptedAt': FieldValue.serverTimestamp(),
+        });
+      });
     });
   }
 
@@ -398,6 +460,8 @@ class OrderService {
   ///
   /// Concurrency protection: If the order was reassigned to another agent in the
   /// interim, the decline operation aborts to prevent overwriting newer assignments.
+  ///
+  /// Idempotency: If already unassigned and in Pending, retries succeed cleanly.
   Future<void> declineOrder(String orderId, String agentId) async {
     final cleanOrderId = orderId.trim();
     final cleanAgentId = agentId.trim();
@@ -405,34 +469,43 @@ class OrderService {
       throw ArgumentError('orderId cannot be empty');
     }
 
-    final docRef = _firestore.collection('orders').doc(cleanOrderId);
-    await _firestore.runTransaction((transaction) async {
-      final snapshot = await transaction.get(docRef);
-      if (!snapshot.exists) {
-        throw StateError('Order not found: $cleanOrderId');
-      }
-      final data = snapshot.data();
-      final currentAssignedAgentId = (data?['assignedAgentId'] as String?)?.trim();
+    await retryOperation(() async {
+      final docRef = _firestore.collection('orders').doc(cleanOrderId);
+      await _firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(docRef);
+        if (!snapshot.exists) {
+          throw StateError('Order not found: $cleanOrderId');
+        }
+        final data = snapshot.data();
+        final currentAssignedAgentId = (data?['assignedAgentId'] as String?)?.trim();
+        final currentStatus = (data?['status'] as String?)?.toLowerCase();
 
-      // Concurrency guard: If the order is currently assigned to another agent,
-      // prevent this agent from blindly wiping out the newer assignment.
-      if (currentAssignedAgentId != null &&
-          currentAssignedAgentId.isNotEmpty &&
-          currentAssignedAgentId != cleanAgentId) {
-        throw StateError(
-            'Order is no longer assigned to delivery agent $cleanAgentId.');
-      }
+        // Idempotent retry: if already unassigned and back in Pending, succeed cleanly
+        if ((currentAssignedAgentId == null || currentAssignedAgentId.isEmpty) &&
+            currentStatus == 'pending') {
+          return;
+        }
 
-      // If assigned to this agent, clear the assignment and return to Pending
-      if (currentAssignedAgentId != null &&
-          currentAssignedAgentId.isNotEmpty &&
-          currentAssignedAgentId == cleanAgentId) {
-        transaction.update(docRef, {
-          'status': 'Pending',
-          'assignedAgentId': null,
-          'acceptedAt': null,
-        });
-      }
+        // Concurrency guard: If the order is currently assigned to another agent,
+        // prevent this agent from blindly wiping out the newer assignment.
+        if (currentAssignedAgentId != null &&
+            currentAssignedAgentId.isNotEmpty &&
+            currentAssignedAgentId != cleanAgentId) {
+          throw StateError(
+              'Order is no longer assigned to delivery agent $cleanAgentId.');
+        }
+
+        // If assigned to this agent, clear the assignment and return to Pending
+        if (currentAssignedAgentId != null &&
+            currentAssignedAgentId.isNotEmpty &&
+            currentAssignedAgentId == cleanAgentId) {
+          transaction.update(docRef, {
+            'status': 'Pending',
+            'assignedAgentId': null,
+            'acceptedAt': null,
+          });
+        }
+      });
     });
   }
 

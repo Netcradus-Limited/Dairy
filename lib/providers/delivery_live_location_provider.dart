@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../models/delivery_boy_model.dart';
 import '../services/delivery_tracking_service.dart';
 import '../services/location_service.dart';
+import '../services/network_connectivity_service.dart';
 import 'delivery_provider.dart';
 
 /// Toggles the delivery agent's live GPS tracking. While the agent is online,
@@ -29,6 +31,11 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
   double? _lastWrittenLat;
   double? _lastWrittenLng;
 
+  // Task 9: Buffers unsynced GPS coordinates when Firestore writes fail due
+  // to network loss, ensuring the latest position syncs upon reconnection.
+  double? _pendingOfflineLat;
+  double? _pendingOfflineLng;
+
   AgentLiveLocationNotifier(this._ref) : super(false) {
     // Keep GPS tracking in sync with the agent's duty (online/offline) state:
     // tracking starts automatically when they go online and stops when offline.
@@ -38,6 +45,13 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
         startTracking();
       } else if (!isOnline && state) {
         stopTracking();
+      }
+    });
+
+    // Task 9: When connectivity returns, safely flush pending offline location
+    _ref.listen<bool>(networkConnectivityProvider, (previous, next) {
+      if (previous == false && next == true && state) {
+        _flushPendingLocation();
       }
     });
   }
@@ -83,6 +97,8 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
     // always writes the first position even if coordinates haven't changed.
     _lastWrittenLat = null;
     _lastWrittenLng = null;
+    _pendingOfflineLat = null;
+    _pendingOfflineLng = null;
     state = false;
   }
 
@@ -123,17 +139,48 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
         _ref.read(deliveryActiveOrdersStreamProvider).value ?? [];
     final activeOrderId =
         activeOrders.isNotEmpty ? activeOrders.first.id : null;
-    // Task 7: .catchError ensures Firestore write failures (network, rules,
+
+    // Task 7 & Task 9: .catchError ensures Firestore write failures (network, rules,
     // quota) are silently swallowed and never crash the GPS stream.
+    // In addition, save pending offline coordinates to sync upon reconnect.
     _ref
         .read(deliveryTrackingServiceProvider)
         .updateAgentLocation(agentId, latitude, longitude, orderId: activeOrderId)
-        .catchError((_) {/* Write failures are non-fatal — tracking continues */});
+        .then((_) {
+          _pendingOfflineLat = null;
+          _pendingOfflineLng = null;
+        })
+        .catchError((_) {
+          /* Write failures are non-fatal — tracking continues */
+          _pendingOfflineLat = latitude;
+          _pendingOfflineLng = longitude;
+          // Clear _lastWrittenLat so the next tick or reconnection can retry writing
+          _lastWrittenLat = null;
+          _lastWrittenLng = null;
+        });
+  }
+
+  void _flushPendingLocation() {
+    if (_pendingOfflineLat != null && _pendingOfflineLng != null) {
+      final lat = _pendingOfflineLat!;
+      final lng = _pendingOfflineLng!;
+      _write(lat, lng);
+    }
   }
 
   @override
   void dispose() {
     _subscription?.cancel();
     super.dispose();
+  }
+
+  @visibleForTesting
+  void handlePositionUpdate(double latitude, double longitude) {
+    _write(latitude, longitude);
+  }
+
+  @visibleForTesting
+  void flushPendingLocationForTesting() {
+    _flushPendingLocation();
   }
 }

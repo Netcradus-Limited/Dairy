@@ -22,6 +22,7 @@ class ActiveDeliveryTab extends ConsumerStatefulWidget {
 
 class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
   DeliveryOrder? _selectedOrder;
+  final Set<String> _processingOrderIds = {};
 
   @override
   Widget build(BuildContext context) {
@@ -430,6 +431,7 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
   }
 
   Widget _buildActionButtons(DeliveryOrder order) {
+    final isProcessing = _processingOrderIds.contains(order.id);
     switch (order.status) {
       case DeliveryOrderStatus.accepted:
         return Row(
@@ -466,10 +468,19 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
             const SizedBox(width: 12),
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: () {
-                  _transitionOrder(order, OrderStatus.preparing);
-                },
-                icon: const Icon(Icons.inventory_2_rounded, size: 18),
+                onPressed: isProcessing
+                    ? null
+                    : () {
+                        _transitionOrder(order, OrderStatus.preparing);
+                      },
+                icon: isProcessing
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.inventory_2_rounded, size: 18),
                 label: const Text('Start Pickup'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.success,
@@ -517,10 +528,19 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
             const SizedBox(width: 12),
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: () {
-                  _transitionOrder(order, OrderStatus.outForDelivery);
-                },
-                icon: const Icon(Icons.local_shipping_rounded, size: 18),
+                onPressed: isProcessing
+                    ? null
+                    : () {
+                        _transitionOrder(order, OrderStatus.outForDelivery);
+                      },
+                icon: isProcessing
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.local_shipping_rounded, size: 18),
                 label: const Text('Start Delivery'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.info,
@@ -568,8 +588,17 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
             const SizedBox(width: 12),
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: () => _showDeliveryConfirmation(order),
-                icon: const Icon(Icons.check_circle_rounded, size: 18),
+                onPressed: isProcessing
+                    ? null
+                    : () => _showDeliveryConfirmation(order),
+                icon: isProcessing
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.check_circle_rounded, size: 18),
                 label: const Text('Mark Delivered'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.success,
@@ -747,97 +776,124 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
   }
 
   void _showDeliveryConfirmation(DeliveryOrder order) {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Confirm Delivery',
-            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
-        content: Text('Mark order #${order.displayCode} as delivered?',
-            style: GoogleFonts.plusJakartaSans()),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel',
-                style: GoogleFonts.plusJakartaSans(
-                    color: AppColors.textSecondaryOf(context))),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                final agentId = ref.read(deliveryAgentProvider).id;
-                if (order.isSubscription) {
-                  await SubscriptionService().completeSubscriptionDelivery(
-                    order.id,
-                    agentId: agentId.isNotEmpty ? agentId : null,
-                  );
-                } else {
-                  await ref
-                      .read(orderServiceProvider)
-                      .updateOrderStatus(order.id, OrderStatus.delivered);
-                }
+      builder: (dialogContext) {
+        bool isSubmitting = false;
+        return StatefulBuilder(
+          builder: (dContext, setDialogState) => AlertDialog(
+            title: Text('Confirm Delivery',
+                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
+            content: Text('Mark order #${order.displayCode} as delivered?',
+                style: GoogleFonts.plusJakartaSans()),
+            actions: [
+              TextButton(
+                onPressed: isSubmitting ? null : () => navigator.pop(),
+                child: Text('Cancel',
+                    style: GoogleFonts.plusJakartaSans(
+                        color: AppColors.textSecondaryOf(dContext))),
+              ),
+              ElevatedButton(
+                onPressed: isSubmitting
+                    ? null
+                    : () async {
+                        setDialogState(() => isSubmitting = true);
+                        setState(() => _processingOrderIds.add(order.id));
+                        try {
+                          final agentId = ref.read(deliveryAgentProvider).id;
+                          if (order.isSubscription) {
+                            await SubscriptionService().completeSubscriptionDelivery(
+                              order.id,
+                              agentId: agentId.isNotEmpty ? agentId : null,
+                            );
+                          } else {
+                            await ref
+                                .read(orderServiceProvider)
+                                .updateOrderStatus(order.id, OrderStatus.delivered);
+                          }
 
-                // Clear the agent's active orderId in Firestore & stop location tracking for that order
-                if (agentId.isNotEmpty) {
-                  await ref
-                      .read(deliveryTrackingServiceProvider)
-                      .clearActiveOrder(agentId);
-                }
-              } catch (e, st) {
-                if (mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Could not update order. Check your connection and try again.',
-                      ),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
-                }
-                return;
-              }
-              // Add to history
-              ref.read(deliveryHistoryProvider.notifier).addToHistory(
-                    DeliveryHistoryItem(
-                      orderId: order.orderId,
-                      orderCode: order.displayCode,
-                      customerName: order.customerName,
-                      status: 'Delivered',
-                      earnings: order.deliveryFee,
-                      date: DateTime.now(),
-                      distance: order.distance,
-                    ),
-                  );
-              // Update agent earnings
-              final agent = ref.read(deliveryAgentProvider);
-              ref.read(deliveryAgentProvider.notifier).updateStats(
-                    completedDeliveries: agent.completedDeliveriesToday + 1,
-                    earnings: agent.earningsToday + order.deliveryFee,
-                  );
-              // Add earnings record
-              ref.read(deliveryEarningsProvider.notifier).addEarnings(
-                    DeliveryEarnings(
-                      date: DateTime.now(),
-                      baseEarnings: order.deliveryFee,
-                      tips: 0,
-                      bonuses: 0,
-                      deliveriesCount: 1,
-                      total: order.deliveryFee,
-                    ),
-                  );
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Order #${order.displayCode} delivered!'),
-                  backgroundColor: AppColors.success,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
-            child: Text('Confirm', style: GoogleFonts.plusJakartaSans()),
+                          // Clear the agent's active orderId in Firestore & stop location tracking for that order
+                          if (agentId.isNotEmpty) {
+                            await ref
+                                .read(deliveryTrackingServiceProvider)
+                                .clearActiveOrder(agentId);
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            setState(() => _processingOrderIds.remove(order.id));
+                            navigator.pop();
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Could not update order. Check your connection and try again.',
+                                ),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                          }
+                          return;
+                        }
+
+                        if (mounted) {
+                          setState(() => _processingOrderIds.remove(order.id));
+                        }
+
+                        // Add to history
+                        ref.read(deliveryHistoryProvider.notifier).addToHistory(
+                              DeliveryHistoryItem(
+                                orderId: order.orderId,
+                                orderCode: order.displayCode,
+                                customerName: order.customerName,
+                                status: 'Delivered',
+                                earnings: order.deliveryFee,
+                                date: DateTime.now(),
+                                distance: order.distance,
+                              ),
+                            );
+                        // Update agent earnings
+                        final agent = ref.read(deliveryAgentProvider);
+                        ref.read(deliveryAgentProvider.notifier).updateStats(
+                              completedDeliveries: agent.completedDeliveriesToday + 1,
+                              earnings: agent.earningsToday + order.deliveryFee,
+                            );
+                        // Add earnings record
+                        ref.read(deliveryEarningsProvider.notifier).addEarnings(
+                              DeliveryEarnings(
+                                date: DateTime.now(),
+                                baseEarnings: order.deliveryFee,
+                                tips: 0,
+                                bonuses: 0,
+                                deliveriesCount: 1,
+                                total: order.deliveryFee,
+                              ),
+                            );
+                        if (mounted) {
+                          navigator.pop();
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text('Order #${order.displayCode} delivered!'),
+                              backgroundColor: AppColors.success,
+                            ),
+                          );
+                        }
+                      },
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+                child: isSubmitting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : Text('Confirm', style: GoogleFonts.plusJakartaSans()),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -894,9 +950,11 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
   /// Updates an order's status in Firestore with graceful error handling so a
   /// failed network write surfaces a message instead of failing silently.
   Future<void> _transitionOrder(DeliveryOrder order, OrderStatus status) async {
+    if (_processingOrderIds.contains(order.id)) return;
+    setState(() => _processingOrderIds.add(order.id));
     try {
       await ref.read(orderServiceProvider).updateOrderStatus(order.id, status);
-    } catch (e, st) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -906,6 +964,10 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
             backgroundColor: AppColors.error,
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _processingOrderIds.remove(order.id));
       }
     }
   }

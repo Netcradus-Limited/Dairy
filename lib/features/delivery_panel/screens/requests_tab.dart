@@ -26,6 +26,7 @@ class RequestsTab extends ConsumerStatefulWidget {
 class _RequestsTabState extends ConsumerState<RequestsTab> {
   Timer? _timer;
   final Set<String> _dismissed = {};
+  final Set<String> _processingOrderIds = {};
 
   @override
   void initState() {
@@ -217,6 +218,7 @@ class _RequestsTabState extends ConsumerState<RequestsTab> {
 
     final timeLeft = _requestCountdownSeconds(request);
     final isExpiring = timeLeft <= 10 && timeLeft > 0;
+    final isProcessing = _processingOrderIds.contains(request.id);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -357,7 +359,7 @@ class _RequestsTabState extends ConsumerState<RequestsTab> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _handleDecline(request.id),
+                    onPressed: isProcessing ? null : () => _handleDecline(request.id),
                     icon: const Icon(Icons.close_rounded, size: 18),
                     label: const Text('Decline'),
                     style: OutlinedButton.styleFrom(
@@ -372,9 +374,18 @@ class _RequestsTabState extends ConsumerState<RequestsTab> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () => _handleAccept(request.id),
-                    icon: const Icon(Icons.check_rounded, size: 18),
-                    label: const Text('Accept'),
+                    onPressed: isProcessing ? null : () => _handleAccept(request.id),
+                    icon: isProcessing
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.check_rounded, size: 18),
+                    label: Text(isProcessing ? 'Accepting...' : 'Accept'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
@@ -448,10 +459,12 @@ class _RequestsTabState extends ConsumerState<RequestsTab> {
   }
 
   void _handleAccept(String requestId) async {
+    if (_processingOrderIds.contains(requestId)) return;
     final agent = ref.read(deliveryAgentProvider);
     final order = _findOrder(requestId);
     if (order == null) return;
 
+    setState(() => _processingOrderIds.add(requestId));
     try {
       // Persist acceptance to Firestore (single source of truth). The order
       // moves from Requests to Active automatically via the live stream.
@@ -465,7 +478,7 @@ class _RequestsTabState extends ConsumerState<RequestsTab> {
       );
       // Switch to Active tab
       ref.read(deliveryPanelTabProvider.notifier).setTab(1);
-    } catch (e, st) {
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -475,6 +488,10 @@ class _RequestsTabState extends ConsumerState<RequestsTab> {
           backgroundColor: AppColors.error,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _processingOrderIds.remove(requestId));
+      }
     }
   }
 
@@ -489,10 +506,12 @@ class _RequestsTabState extends ConsumerState<RequestsTab> {
   }
 
   void _handleDecline(String requestId) async {
+    if (_processingOrderIds.contains(requestId)) return;
     final order = _findOrder(requestId);
     if (order == null) return;
     final agent = ref.read(deliveryAgentProvider);
 
+    setState(() => _processingOrderIds.add(requestId));
     try {
       if (agent.id.isNotEmpty) {
         await ref.read(orderServiceProvider).declineOrder(order.id, agent.id);
@@ -515,6 +534,10 @@ class _RequestsTabState extends ConsumerState<RequestsTab> {
           backgroundColor: AppColors.error,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _processingOrderIds.remove(requestId));
+      }
     }
   }
 
