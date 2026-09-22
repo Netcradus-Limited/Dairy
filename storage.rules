@@ -19,6 +19,16 @@ service firebase.storage {
           && request.resource.contentType.matches('image/.*');
     }
 
+    function canManageCatalog() {
+      return isSignedIn() && (
+        firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid))
+        || (
+          firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+          && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superadmin', 'owner', 'manager']
+        )
+      );
+    }
+
     // Delivery agent profile photos:
     // Any user can read (e.g. for customer order tracking or admin panel),
     // but ONLY the authenticated delivery agent can upload/update their own photo.
@@ -37,17 +47,17 @@ service firebase.storage {
     // Product & Category catalog images (read-only for customers; write for authenticated admins/staff)
     match /products/{allPaths=**} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if canManageCatalog() && isValidImage();
     }
 
     match /categories/{allPaths=**} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if canManageCatalog() && isValidImage();
     }
 
     match /banners/{allPaths=**} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if canManageCatalog() && isValidImage();
     }
   }
 }
