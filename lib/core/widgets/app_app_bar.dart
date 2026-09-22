@@ -923,38 +923,101 @@ class _AppTopAppBarState extends ConsumerState<AppTopAppBar> {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         if (!_isMobileSearchOpen) ...[
-          Flexible(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  tr(AppTopAppBar._greetingText()),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textSecondary,
+          // Brand Icon
+          GestureDetector(
+            onTap: () {
+              ref.read(navigationProvider.notifier).setIndex(0);
+            },
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F4A2F).withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              padding: const EdgeInsets.all(3),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/images/newlogo.png',
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.eco_rounded,
+                    color: Color(0xFF0F4A2F),
+                    size: 20,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  tr('Fresh dairy, delivered daily!'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
+
+          // Location Selector Pill
+          Expanded(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: widget.onLocationTap,
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.location_on_rounded,
+                            size: 13,
+                            color: Color(0xFF0F4A2F),
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            tr('Deliver to'),
+                            style: const TextStyle(
+                              fontSize: 10.0,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 1),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              widget.deliveryLocation.isNotEmpty
+                                  ? widget.deliveryLocation
+                                  : 'Select location',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0F172A),
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            size: 16,
+                            color: Color(0xFF64748B),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
         ],
 
         // Search Field on Mobile
@@ -969,7 +1032,7 @@ class _AppTopAppBarState extends ConsumerState<AppTopAppBar> {
                   onChanged: _onSearchChanged,
                   textAlignVertical: TextAlignVertical.center,
                   style: const TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 13.0,
                     color: AppColors.textPrimary,
                   ),
                   decoration: InputDecoration(
@@ -981,13 +1044,13 @@ class _AppTopAppBarState extends ConsumerState<AppTopAppBar> {
                     prefixIcon: IconButton(
                       icon: const Icon(
                         Icons.arrow_back_rounded,
-                        size: 18,
+                        size: 20,
                         color: AppColors.textSecondary,
                       ),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(
-                        minWidth: 32,
-                        minHeight: 32,
+                        minWidth: 34,
+                        minHeight: 34,
                       ),
                       onPressed: () {
                         setState(() {
@@ -1012,30 +1075,30 @@ class _AppTopAppBarState extends ConsumerState<AppTopAppBar> {
                           )
                         : null,
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: const Color(0xFFF8FAFC),
                     contentPadding: const EdgeInsets.symmetric(
                       vertical: 0,
-                      horizontal: 10,
+                      horizontal: 12,
                     ),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(24),
                       borderSide: const BorderSide(
-                        color: Color(0xFFCBD5E1),
-                        width: 0.8,
+                        color: Color(0xFFE2E8F0),
+                        width: 1.0,
                       ),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(24),
                       borderSide: const BorderSide(
-                        color: Color(0xFFCBD5E1),
-                        width: 0.8,
+                        color: Color(0xFFE2E8F0),
+                        width: 1.0,
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(24),
                       borderSide: const BorderSide(
-                        color: Color(0xFF005F38),
-                        width: 1.2,
+                        color: Color(0xFF0F4A2F),
+                        width: 1.5,
                       ),
                     ),
                   ),
@@ -1043,20 +1106,44 @@ class _AppTopAppBarState extends ConsumerState<AppTopAppBar> {
               ),
             )
           else
-            IconButton(
-              icon: const Icon(
-                Icons.search_rounded,
-                color: AppColors.textPrimary,
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  ref.read(navigationProvider.notifier).setIndex(1);
+                  setState(() {
+                    _isMobileSearchOpen = true;
+                  });
+                  widget.onSearchTap?.call();
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                    border: Border.all(
+                      color: const Color(0xFFE2E8F0),
+                      width: 1.0,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.02),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.search_rounded,
+                    color: Color(0xFF1E293B),
+                    size: 19,
+                  ),
+                ),
               ),
-              onPressed: () {
-                ref.read(navigationProvider.notifier).setIndex(1);
-                setState(() {
-                  _isMobileSearchOpen = true;
-                });
-                widget.onSearchTap?.call();
-              },
             ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
         ],
 
         // Notification Button on Mobile

@@ -40,11 +40,22 @@ service cloud.firestore {
       return data != null && ('role' in data) ? data.role : null;
     }
 
-    function isAdmin() {
+    function isSuperAdmin() {
       return isSignedIn() && (
         currentRole() in ['admin', 'superadmin', 'owner']
         || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
+    }
+
+    function isStaffMember() {
+      return isSignedIn() && (
+        currentRole() in ['admin', 'superadmin', 'owner', 'manager', 'dispatcher', 'staff']
+        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isAdmin() {
+      return isStaffMember();
     }
 
     function isDelivery() {
@@ -57,27 +68,31 @@ service cloud.firestore {
 
     // ── 1. users Collection ─────────────────────────────────────────────────
     match /users/{userId} {
-      // Users can read own profile; Admins can read all users
+      // Users can read own profile; Staff/Admins can read all users
       allow read: if isAdmin() || isOwnDoc(userId);
 
       // Self-registration: Strictly allows creating 'customer' profile only.
-      // A user can never self-assign 'admin' or 'delivery' role.
-      // Admins can create any user profile with any role.
-      allow create: if isAdmin()
+      // A user can never self-assign 'admin', 'manager', 'staff', or 'delivery' role.
+      // Super Admins can create any user profile with any role.
+      allow create: if isSuperAdmin()
           || (isOwnDoc(userId)
               && request.resource.data.uid == request.auth.uid
               && request.resource.data.role == 'customer');
 
       // Profile Update:
-      // Owners can update own profile, but MUST NEVER mutate 'role', 'uid', or admin flags.
-      // Admins can update any user profile.
-      allow update: if isAdmin()
+      // Super Admins can update any user profile (roles, permissions, details).
+      // Owners can update own profile, but MUST NEVER mutate 'role', 'uid', 'isAdmin', 'permissions', or 'walletBalance'.
+      // They are explicitly allowed to update their name, email, phone, profileImageUrl, fcmToken, fcmTokens, etc.
+      allow update: if isSuperAdmin()
           || (isOwnDoc(userId)
               && (!('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid)
-              && (!('role' in request.resource.data) || (('role' in resource.data) && request.resource.data.role == resource.data.role)));
+              && (!('role' in request.resource.data) || (('role' in resource.data) && request.resource.data.role == resource.data.role))
+              && (!('isAdmin' in request.resource.data) || (('isAdmin' in resource.data) && request.resource.data.isAdmin == resource.data.isAdmin))
+              && (!('permissions' in request.resource.data) || (('permissions' in resource.data) && request.resource.data.permissions == resource.data.permissions))
+              && (!('walletBalance' in request.resource.data) || (('walletBalance' in resource.data) && request.resource.data.walletBalance == resource.data.walletBalance)));
 
-      // User deletion: Admin only
-      allow delete: if isAdmin();
+      // User deletion: Super Admin only
+      allow delete: if isSuperAdmin();
     }
 
     // ── 2. users/{userId}/addresses Subcollection ───────────────────────────
@@ -387,8 +402,8 @@ service cloud.firestore {
     match /admins/{adminId} {
       // Signed-in users can read admins collection for role verification / discovery
       allow read: if isSignedIn();
-      // Only authenticated admins may create, update, or delete admin records
-      allow write: if isAdmin();
+      // Only authenticated Super Admins may create, update, or delete admin records
+      allow write: if isSuperAdmin();
     }
 
     // ── 14. delivery_batches Collection ────────────────────────────────────

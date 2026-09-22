@@ -456,6 +456,7 @@ class _SupportScreenState extends State<SupportScreen> {
   Widget build(BuildContext context) {
     final provider = context.watch<AdminProvider>();
     final isDesktop = ResponsiveLayout.isDesktop(context);
+    final isMobile = ResponsiveLayout.isMobile(context);
     final cardBg = AppColors.cardBgOf(context);
     final cardBorder = AppColors.cardBorderOf(context);
     final textPrimary = AppColors.textPrimaryOf(context);
@@ -778,122 +779,158 @@ class _SupportScreenState extends State<SupportScreen> {
                                 ),
                                 child: Padding(
                                   padding: const EdgeInsets.all(16.0),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // Ticket icon avatar
-                                      Container(
-                                        width: 44,
-                                        height: 44,
-                                        decoration: BoxDecoration(
-                                          color: _statusColor(ticket.status)
-                                              .withValues(alpha: 0.12),
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                        ),
-                                        child: Icon(
-                                          _statusIcon(ticket.status),
-                                          color: _statusColor(ticket.status),
-                                          size: 22,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 14),
-
-                                      // Main ticket summary
-                                      Expanded(
-                                        child: Column(
+                                  child: isMobile
+                                      ? Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            // Ticket ID & Customer Name & Badges
-                                            Wrap(
-                                              spacing: 8,
-                                              runSpacing: 4,
+                                            // Top header row: Avatar + Name & ID + StatusBadge
+                                            Row(
                                               crossAxisAlignment:
-                                                  WrapCrossAlignment.center,
+                                                  CrossAxisAlignment.center,
                                               children: [
-                                                Text(
-                                                  ticket.displayTicketId,
-                                                  style: GoogleFonts
-                                                      .plusJakartaSans(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w800,
-                                                    color: AppColors.primary,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  '•',
-                                                  style: TextStyle(
-                                                      color: textSecondary),
-                                                ),
-                                                Text(
-                                                  ticket.customerName,
-                                                  style: GoogleFonts
-                                                      .plusJakartaSans(
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: textPrimary,
-                                                  ),
-                                                ),
                                                 Container(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 6,
-                                                      vertical: 2),
+                                                  width: 38,
+                                                  height: 38,
                                                   decoration: BoxDecoration(
-                                                    color: AppColors
-                                                        .customersOrangeBg
-                                                        .withValues(alpha: 0.3),
+                                                    color: _statusColor(
+                                                            ticket.status)
+                                                        .withValues(
+                                                            alpha: 0.12),
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                            4),
+                                                            10),
                                                   ),
-                                                  child: Text(
-                                                    ticket.category,
-                                                    style: GoogleFonts
-                                                        .plusJakartaSans(
-                                                      fontSize: 10,
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                      color: AppColors
-                                                          .customersOrange,
-                                                    ),
+                                                  child: Icon(
+                                                    _statusIcon(ticket.status),
+                                                    color: _statusColor(
+                                                        ticket.status),
+                                                    size: 20,
                                                   ),
                                                 ),
-                                                if (ticket.orderId != null &&
-                                                    ticket.orderId!.isNotEmpty)
-                                                  Container(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                        horizontal: 6,
-                                                        vertical: 2),
-                                                    decoration: BoxDecoration(
-                                                      color: AppColors.primary
-                                                          .withValues(
-                                                              alpha: 0.1),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              4),
-                                                    ),
-                                                    child: Text(
-                                                      'Order #${ticket.orderId}',
-                                                      style: GoogleFonts
-                                                          .plusJakartaSans(
-                                                        fontSize: 10,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        color:
-                                                            AppColors.primary,
+                                                const SizedBox(width: 10),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        ticket.customerName,
+                                                        style: GoogleFonts
+                                                            .plusJakartaSans(
+                                                          fontSize: 14,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                          color: textPrimary,
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
                                                       ),
-                                                    ),
+                                                      const SizedBox(height: 2),
+                                                      Wrap(
+                                                        spacing: 6,
+                                                        runSpacing: 2,
+                                                        crossAxisAlignment:
+                                                            WrapCrossAlignment
+                                                                .center,
+                                                        children: [
+                                                          Text(
+                                                            ticket
+                                                                .displayTicketId,
+                                                            style: GoogleFonts
+                                                                .plusJakartaSans(
+                                                              fontSize: 11,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w800,
+                                                              color: AppColors
+                                                                  .primary,
+                                                            ),
+                                                          ),
+                                                          Container(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .symmetric(
+                                                                    horizontal:
+                                                                        5,
+                                                                    vertical:
+                                                                        1.5),
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              color: AppColors
+                                                                  .customersOrangeBg
+                                                                  .withValues(
+                                                                      alpha:
+                                                                          0.3),
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          4),
+                                                            ),
+                                                            child: Text(
+                                                              ticket.category,
+                                                              style: GoogleFonts
+                                                                  .plusJakartaSans(
+                                                                fontSize: 9.5,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
+                                                                color: AppColors
+                                                                    .customersOrange,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          if (ticket.orderId !=
+                                                                  null &&
+                                                              ticket.orderId!
+                                                                  .isNotEmpty)
+                                                            Container(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .symmetric(
+                                                                      horizontal:
+                                                                          5,
+                                                                      vertical:
+                                                                          1.5),
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                color: AppColors
+                                                                    .primary
+                                                                    .withValues(
+                                                                        alpha:
+                                                                            0.1),
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            4),
+                                                              ),
+                                                              child: Text(
+                                                                'Order #${ticket.orderId}',
+                                                                style: GoogleFonts
+                                                                    .plusJakartaSans(
+                                                                  fontSize: 9.5,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                  color: AppColors
+                                                                      .primary,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                        ],
+                                                      ),
+                                                    ],
                                                   ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                StatusBadge.fromString(
+                                                    ticket.status),
                                               ],
                                             ),
-                                            const SizedBox(height: 4),
-
-                                            // Subject if provided
                                             if (ticket.subject.isNotEmpty) ...[
+                                              const SizedBox(height: 8),
                                               Text(
                                                 ticket.subject,
                                                 style:
@@ -902,11 +939,12 @@ class _SupportScreenState extends State<SupportScreen> {
                                                   fontWeight: FontWeight.w600,
                                                   color: textPrimary,
                                                 ),
+                                                maxLines: 1,
+                                                overflow:
+                                                    TextOverflow.ellipsis,
                                               ),
-                                              const SizedBox(height: 2),
                                             ],
-
-                                            // Description
+                                            const SizedBox(height: 4),
                                             Text(
                                               ticket.description,
                                               style:
@@ -915,64 +953,91 @@ class _SupportScreenState extends State<SupportScreen> {
                                                 color: textSecondary,
                                               ),
                                               maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
+                                              overflow:
+                                                  TextOverflow.ellipsis,
                                             ),
-                                            const SizedBox(height: 6),
-
-                                            // Date & Admin response badge
-                                            Row(
+                                            const SizedBox(height: 8),
+                                            // Bottom metadata Wrap + Manage link
+                                            Wrap(
+                                              spacing: 10,
+                                              runSpacing: 6,
+                                              crossAxisAlignment:
+                                                  WrapCrossAlignment.center,
                                               children: [
-                                                Icon(Icons.access_time_rounded,
-                                                    size: 13,
-                                                    color: textSecondary),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  ticket.formattedCreatedAt,
-                                                  style: GoogleFonts
-                                                      .plusJakartaSans(
-                                                    fontSize: 11,
-                                                    color: textSecondary,
-                                                  ),
-                                                ),
-                                                if (ticket
-                                                    .phone.isNotEmpty) ...[
-                                                  const SizedBox(width: 12),
-                                                  Icon(Icons.phone_outlined,
-                                                      size: 13,
-                                                      color: textSecondary),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    ticket.phone,
-                                                    style: GoogleFonts
-                                                        .plusJakartaSans(
-                                                      fontSize: 11,
-                                                      color: textSecondary,
+                                                Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                        Icons
+                                                            .access_time_rounded,
+                                                        size: 12,
+                                                        color:
+                                                            textSecondary),
+                                                    const SizedBox(width: 3),
+                                                    Text(
+                                                      ticket
+                                                          .formattedCreatedAt,
+                                                      style: GoogleFonts
+                                                          .plusJakartaSans(
+                                                        fontSize: 11,
+                                                        color:
+                                                            textSecondary,
+                                                      ),
                                                     ),
+                                                  ],
+                                                ),
+                                                if (ticket.phone.isNotEmpty)
+                                                  Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Icon(
+                                                          Icons
+                                                              .phone_outlined,
+                                                          size: 12,
+                                                          color:
+                                                              textSecondary),
+                                                      const SizedBox(width: 3),
+                                                      Text(
+                                                        ticket.phone,
+                                                        style: GoogleFonts
+                                                            .plusJakartaSans(
+                                                          fontSize: 11,
+                                                          color:
+                                                              textSecondary,
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
-                                                ],
-                                                if (ticket.adminReply != null &&
+                                                if (ticket.adminReply !=
+                                                        null &&
                                                     ticket.adminReply!
-                                                        .isNotEmpty) ...[
-                                                  const SizedBox(width: 12),
+                                                        .isNotEmpty)
                                                   Container(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                        horizontal: 6,
-                                                        vertical: 1),
-                                                    decoration: BoxDecoration(
-                                                      color: AppColors.success
+                                                    padding:
+                                                        const EdgeInsets
+                                                            .symmetric(
+                                                            horizontal: 6,
+                                                            vertical: 1),
+                                                    decoration:
+                                                        BoxDecoration(
+                                                      color: AppColors
+                                                          .success
                                                           .withValues(
-                                                              alpha: 0.12),
+                                                              alpha:
+                                                                  0.12),
                                                       borderRadius:
-                                                          BorderRadius.circular(
-                                                              4),
+                                                          BorderRadius
+                                                              .circular(4),
                                                     ),
                                                     child: Row(
                                                       mainAxisSize:
                                                           MainAxisSize.min,
                                                       children: [
                                                         const Icon(
-                                                            Icons.reply_rounded,
+                                                            Icons
+                                                                .reply_rounded,
                                                             size: 11,
                                                             color: AppColors
                                                                 .success),
@@ -984,7 +1049,8 @@ class _SupportScreenState extends State<SupportScreen> {
                                                               .plusJakartaSans(
                                                             fontSize: 10,
                                                             fontWeight:
-                                                                FontWeight.w700,
+                                                                FontWeight
+                                                                    .w700,
                                                             color: AppColors
                                                                 .success,
                                                           ),
@@ -992,33 +1058,315 @@ class _SupportScreenState extends State<SupportScreen> {
                                                       ],
                                                     ),
                                                   ),
+                                                Text(
+                                                  'Manage ›',
+                                                  style: GoogleFonts
+                                                      .plusJakartaSans(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: AppColors.primary,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        )
+                                      : Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            // Ticket icon avatar
+                                            Container(
+                                              width: 44,
+                                              height: 44,
+                                              decoration: BoxDecoration(
+                                                color: _statusColor(
+                                                        ticket.status)
+                                                    .withValues(alpha: 0.12),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                              child: Icon(
+                                                _statusIcon(ticket.status),
+                                                color: _statusColor(
+                                                    ticket.status),
+                                                size: 22,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 14),
+
+                                            // Main ticket summary
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  // Ticket ID & Customer Name & Badges
+                                                  Wrap(
+                                                    spacing: 8,
+                                                    runSpacing: 4,
+                                                    crossAxisAlignment:
+                                                        WrapCrossAlignment
+                                                            .center,
+                                                    children: [
+                                                      Text(
+                                                        ticket.displayTicketId,
+                                                        style: GoogleFonts
+                                                            .plusJakartaSans(
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.w800,
+                                                          color:
+                                                              AppColors.primary,
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        '•',
+                                                        style: TextStyle(
+                                                            color:
+                                                                textSecondary),
+                                                      ),
+                                                      Text(
+                                                        ticket.customerName,
+                                                        style: GoogleFonts
+                                                            .plusJakartaSans(
+                                                          fontSize: 14,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                          color: textPrimary,
+                                                        ),
+                                                      ),
+                                                      Container(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                horizontal: 6,
+                                                                vertical: 2),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: AppColors
+                                                              .customersOrangeBg
+                                                              .withValues(
+                                                                  alpha: 0.3),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(4),
+                                                        ),
+                                                        child: Text(
+                                                          ticket.category,
+                                                          style: GoogleFonts
+                                                              .plusJakartaSans(
+                                                            fontSize: 10,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                            color: AppColors
+                                                                .customersOrange,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      if (ticket.orderId !=
+                                                              null &&
+                                                          ticket.orderId!
+                                                              .isNotEmpty)
+                                                        Container(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  horizontal: 6,
+                                                                  vertical: 2),
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            color: AppColors
+                                                                .primary
+                                                                .withValues(
+                                                                    alpha: 0.1),
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        4),
+                                                          ),
+                                                          child: Text(
+                                                            'Order #${ticket.orderId}',
+                                                            style: GoogleFonts
+                                                                .plusJakartaSans(
+                                                              fontSize: 10,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                              color: AppColors
+                                                                  .primary,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 4),
+
+                                                  // Subject if provided
+                                                  if (ticket.subject
+                                                      .isNotEmpty) ...[
+                                                    Text(
+                                                      ticket.subject,
+                                                      style: GoogleFonts
+                                                          .plusJakartaSans(
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: textPrimary,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                  ],
+
+                                                  // Description
+                                                  Text(
+                                                    ticket.description,
+                                                    style: GoogleFonts
+                                                        .plusJakartaSans(
+                                                      fontSize: 12,
+                                                      color: textSecondary,
+                                                    ),
+                                                    maxLines: 2,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                  const SizedBox(height: 6),
+
+                                                  // Date & Admin response badge (using Wrap)
+                                                  Wrap(
+                                                    spacing: 12,
+                                                    runSpacing: 4,
+                                                    crossAxisAlignment:
+                                                        WrapCrossAlignment
+                                                            .center,
+                                                    children: [
+                                                      Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          Icon(
+                                                              Icons
+                                                                  .access_time_rounded,
+                                                              size: 13,
+                                                              color:
+                                                                  textSecondary),
+                                                          const SizedBox(
+                                                              width: 4),
+                                                          Text(
+                                                            ticket
+                                                                .formattedCreatedAt,
+                                                            style: GoogleFonts
+                                                                .plusJakartaSans(
+                                                              fontSize: 11,
+                                                              color:
+                                                                  textSecondary,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      if (ticket
+                                                          .phone.isNotEmpty)
+                                                        Row(
+                                                          mainAxisSize:
+                                                              MainAxisSize.min,
+                                                          children: [
+                                                            Icon(
+                                                                Icons
+                                                                    .phone_outlined,
+                                                                size: 13,
+                                                                color:
+                                                                    textSecondary),
+                                                            const SizedBox(
+                                                                width: 4),
+                                                            Text(
+                                                              ticket.phone,
+                                                              style: GoogleFonts
+                                                                  .plusJakartaSans(
+                                                                fontSize: 11,
+                                                                color:
+                                                                    textSecondary,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      if (ticket.adminReply !=
+                                                              null &&
+                                                          ticket.adminReply!
+                                                              .isNotEmpty)
+                                                        Container(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  horizontal: 6,
+                                                                  vertical: 1),
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            color: AppColors
+                                                                .success
+                                                                .withValues(
+                                                                    alpha:
+                                                                        0.12),
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        4),
+                                                          ),
+                                                          child: Row(
+                                                            mainAxisSize:
+                                                                MainAxisSize
+                                                                    .min,
+                                                            children: [
+                                                              const Icon(
+                                                                  Icons
+                                                                      .reply_rounded,
+                                                                  size: 11,
+                                                                  color: AppColors
+                                                                      .success),
+                                                              const SizedBox(
+                                                                  width: 3),
+                                                              Text(
+                                                                'Replied',
+                                                                style: GoogleFonts
+                                                                    .plusJakartaSans(
+                                                                  fontSize: 10,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w700,
+                                                                  color: AppColors
+                                                                      .success,
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                    ],
+                                                  ),
                                                 ],
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+
+                                            // Status badge & Action
+                                            Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.end,
+                                              children: [
+                                                StatusBadge.fromString(
+                                                    ticket.status),
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  'Manage ›',
+                                                  style: GoogleFonts
+                                                      .plusJakartaSans(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: AppColors.primary,
+                                                  ),
+                                                ),
                                               ],
                                             ),
                                           ],
                                         ),
-                                      ),
-                                      const SizedBox(width: 12),
-
-                                      // Status badge & Action
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.end,
-                                        children: [
-                                          StatusBadge.fromString(ticket.status),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            'Manage ›',
-                                            style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
-                                              color: AppColors.primary,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
                                 ),
                               );
                             },

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -27,6 +28,7 @@ class CategoriesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<AdminProvider>();
     final isDesktop = ResponsiveLayout.isDesktop(context);
+    final isMobile = ResponsiveLayout.isMobile(context);
     final cardBg = AppColors.cardBgOf(context);
     final cardBorder = AppColors.cardBorderOf(context);
     final textPrimary = AppColors.textPrimaryOf(context);
@@ -60,33 +62,28 @@ class CategoriesScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Product Categories',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    Text(
-                      'Categorize fresh dairy items, daily morning batches, and retail dairy products.',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
+          if (isMobile) ...[
+            Text(
+              'Product Categories',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
               ),
-              const SizedBox(width: 12),
-              ElevatedButton.icon(
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Categorize fresh dairy items, daily morning batches, and retail dairy products.',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                key: const Key('add_category_button'),
                 onPressed: () => _showCategoryDialog(context, provider, null),
                 icon: const Icon(Icons.add_circle_outline_rounded,
                     size: 18, color: Colors.white),
@@ -106,8 +103,58 @@ class CategoriesScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10)),
                 ),
               ),
-            ],
-          ),
+            ),
+          ] else ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Product Categories',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        'Categorize fresh dairy items, daily morning batches, and retail dairy products.',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  key: const Key('add_category_button'),
+                  onPressed: () => _showCategoryDialog(context, provider, null),
+                  icon: const Icon(Icons.add_circle_outline_rounded,
+                      size: 18, color: Colors.white),
+                  label: Text(
+                    'Add Category',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 20),
           provider.categories.isEmpty
               ? Padding(
@@ -162,6 +209,7 @@ class CategoriesScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Container(
                                 width: 44,
@@ -171,115 +219,124 @@ class CategoriesScreen extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 alignment: Alignment.center,
-                                child: cat.imageUrl.isNotEmpty
-                                    ? ClipRRect(
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: cat.imageUrl.startsWith('http')
-                                            ? Image.network(
-                                                cat.imageUrl,
-                                                width: 44,
-                                                height: 44,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) =>
-                                                    Text(
-                                                  cat.emoji,
-                                                  style: const TextStyle(
-                                                      fontSize: 22),
-                                                ),
-                                              )
-                                            : Image.asset(
-                                                cat.imageUrl,
-                                                width: 44,
-                                                height: 44,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) =>
-                                                    Text(
-                                                  cat.emoji,
-                                                  style: const TextStyle(
-                                                      fontSize: 22),
-                                                ),
-                                              ),
-                                      )
-                                    : Text(
+                                child: Builder(
+                                  builder: (context) {
+                                    final image = cat.resolvedImageUrl.trim();
+                                    if (image.isEmpty) {
+                                      return Text(
                                         cat.emoji,
                                         style: const TextStyle(fontSize: 22),
+                                      );
+                                    }
+                                    if (image.startsWith('http://') ||
+                                        image.startsWith('https://')) {
+                                      return ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Image.network(
+                                          image,
+                                          width: 44,
+                                          height: 44,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => Text(
+                                            cat.emoji,
+                                            style: const TextStyle(fontSize: 22),
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                    return ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.asset(
+                                        image,
+                                        width: 44,
+                                        height: 44,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Text(
+                                          cat.emoji,
+                                          style: const TextStyle(fontSize: 22),
+                                        ),
                                       ),
-                              ),
-                              const SizedBox(width: 10),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: bgColor,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: cardBorder),
-                                    ),
-                                    child: Text(
-                                      '${cat.productCount} Products',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: textSecondary,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 1.5),
-                                    decoration: BoxDecoration(
-                                      color: cat.isActive
-                                          ? const Color(0xFF10B981).withValues(alpha: 0.12)
-                                          : Colors.grey.withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      cat.isActive ? 'Active' : 'Inactive',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 9.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: cat.isActive
-                                            ? const Color(0xFF059669)
-                                            : Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const Spacer(),
-                              // Quick active toggle
-                              Transform.scale(
-                                scale: 0.75,
-                                child: Switch(
-                                  value: cat.isActive,
-                                  activeColor: AppColors.primary,
-                                  onChanged: (val) async {
-                                    await provider.toggleCategoryActive(cat.id);
+                                    );
                                   },
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.edit_outlined,
-                                    size: 18, color: AppColors.primary),
-                                tooltip: 'Edit Category',
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(
-                                    minWidth: 28, minHeight: 28),
-                                onPressed: () =>
-                                    _showCategoryDialog(context, provider, cat),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 4,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: bgColor,
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: cardBorder),
+                                          ),
+                                          child: Text(
+                                            '${cat.productCount} Products',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: textSecondary,
+                                            ),
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6, vertical: 1.5),
+                                          decoration: BoxDecoration(
+                                            color: cat.isActive
+                                                ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                                                : Colors.grey.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            cat.isActive ? 'Active' : 'Inactive',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: cat.isActive
+                                                  ? const Color(0xFF059669)
+                                                  : Colors.grey.shade600,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline_rounded,
-                                    size: 18, color: Color(0xFFEF4444)),
-                                tooltip: 'Delete Category',
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(
-                                    minWidth: 28, minHeight: 28),
-                                onPressed: () => _showDeleteConfirmation(
-                                    context, provider, cat),
+                              const SizedBox(width: 4),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit_outlined,
+                                        size: 18, color: AppColors.primary),
+                                    tooltip: 'Edit Category',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(
+                                        minWidth: 26, minHeight: 26),
+                                    onPressed: () =>
+                                        _showCategoryDialog(context, provider, cat),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline_rounded,
+                                        size: 18, color: Color(0xFFEF4444)),
+                                    tooltip: 'Delete Category',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(
+                                        minWidth: 26, minHeight: 26),
+                                    onPressed: () => _showDeleteConfirmation(
+                                        context, provider, cat),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -361,16 +418,20 @@ class CategoriesScreen extends StatelessWidget {
         String? errorMessage;
 
         return StatefulBuilder(
-          builder: (ctx, setDialogState) => AlertDialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: Text(
-              isEdit ? 'Update Category' : 'Add New Category',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
-            ),
-            content: SizedBox(
-              width: 440,
-              child: SingleChildScrollView(
+          builder: (ctx, setDialogState) {
+            final isNarrow = MediaQuery.sizeOf(ctx).width < 500;
+            return AlertDialog(
+              insetPadding: const EdgeInsets.symmetric(
+                  horizontal: 16.0, vertical: 24.0),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              title: Text(
+                isEdit ? 'Update Category' : 'Add New Category',
+                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+              ),
+              content: SizedBox(
+                width: math.min(440.0, MediaQuery.sizeOf(ctx).width - 32),
+                child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -409,12 +470,14 @@ class CategoriesScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Category Image',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
+                        Flexible(
+                          child: Text(
+                            'Category Image',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
                         ),
                         TextButton.icon(
@@ -555,7 +618,11 @@ class CategoriesScreen extends StatelessWidget {
                                 ),
                               )
                             : Image.asset(
-                                selectedImageUrl,
+                                AppAssets.categoryImage(
+                                      imageUrl: selectedImageUrl,
+                                      categoryKey: nameCtrl.text,
+                                    ) ??
+                                    AppAssets.milkCategory,
                                 height: 90,
                                 width: double.infinity,
                                 fit: BoxFit.contain,
@@ -655,70 +722,129 @@ class CategoriesScreen extends StatelessWidget {
                           hintText: 'Short description of products'),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: emojiCtrl,
-                            decoration: const InputDecoration(
-                                labelText: 'Emoji Icon',
-                                hintText: '🥛, 🧀, 🍯'),
-                          ),
+                    if (isNarrow) ...[
+                      TextField(
+                        controller: emojiCtrl,
+                        decoration: const InputDecoration(
+                            labelText: 'Emoji Icon',
+                            hintText: '🥛, 🧀, 🍯'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: countCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                            labelText: 'Product Count'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: sortOrderCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                            labelText: 'Display Sort Order',
+                            hintText: '0, 1, 2...'),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.cardBorder),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: countCtrl,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                                labelText: 'Product Count'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: sortOrderCtrl,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                                labelText: 'Display Sort Order',
-                                hintText: '0, 1, 2...'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: AppColors.cardBorder),
-                              borderRadius: BorderRadius.circular(8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Active Status',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Active Status',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
+                            Switch(
+                              value: isActive,
+                              activeThumbColor: AppColors.primary,
+                              onChanged: (val) {
+                                setDialogState(() => isActive = val);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: emojiCtrl,
+                              decoration: const InputDecoration(
+                                  labelText: 'Emoji Icon',
+                                  hintText: '🥛, 🧀, 🍯'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: countCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                  labelText: 'Product Count'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: sortOrderCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                  labelText: 'Display Sort Order',
+                                  hintText: '0, 1, 2...'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: AppColors.cardBorder),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'Active Status',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                ),
-                                Switch(
-                                  value: isActive,
-                                  activeColor: AppColors.primary,
-                                  onChanged: (val) {
-                                    setDialogState(() => isActive = val);
-                                  },
-                                ),
-                              ],
+                                  Switch(
+                                    value: isActive,
+                                    activeThumbColor: AppColors.primary,
+                                    onChanged: (val) {
+                                      setDialogState(() => isActive = val);
+                                    },
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -819,11 +945,12 @@ class CategoriesScreen extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-        );
-      },
-    );
-  }
+          );
+        },
+      );
+    },
+  );
+}
 
   void _showDeleteConfirmation(
       BuildContext context, AdminProvider provider, DairyCategory category) {
@@ -835,6 +962,8 @@ class CategoriesScreen extends StatelessWidget {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(
+              horizontal: 16.0, vertical: 24.0),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Row(
             children: [
@@ -906,14 +1035,18 @@ class CategoriesScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16.0, vertical: 24.0),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
             const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444)),
             const SizedBox(width: 8),
-            Text(
-              'Delete Category',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+            Expanded(
+              child: Text(
+                'Delete Category',
+                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+              ),
             ),
           ],
         ),

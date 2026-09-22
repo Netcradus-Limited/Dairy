@@ -22,14 +22,20 @@ import 'staff/staff_roles_screen.dart';
 import 'subscriptions/admin_subscriptions_screen.dart';
 import 'support/support_screen.dart';
 
-class AdminMainShell extends ConsumerWidget {
+class AdminMainShell extends ConsumerStatefulWidget {
   const AdminMainShell({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminMainShell> createState() => _AdminMainShellState();
+}
+
+class _AdminMainShellState extends ConsumerState<AdminMainShell> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(userProvider);
     final isDesktop = ResponsiveLayout.isDesktop(context);
-    final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
     final bgColor = AppColors.bgOf(context);
 
     // Defense-in-depth: Ensure only authenticated admins can render admin screens
@@ -130,42 +136,56 @@ class AdminMainShell extends ConsumerWidget {
     if (isDesktop) {
       return Scaffold(
         backgroundColor: bgColor,
-        body: Row(
-          children: [
-            // Fixed Persistent Sidebar for Desktop
-            const SidebarNavigation(isDrawer: false),
-            // Right Main Content Area
-            Expanded(
-              child: Column(
-                children: [
-                  const AppHeader(),
-                  Expanded(
-                    child: getActiveScreen(adminProv.selectedNavIndex),
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxHeight <= 1.0 || constraints.maxWidth <= 1.0) {
+              return const SizedBox.shrink();
+            }
+            return Row(
+              children: [
+                // Fixed Persistent Sidebar for Desktop
+                const SidebarNavigation(isDrawer: false),
+                // Right Main Content Area
+                Expanded(
+                  child: Column(
+                    children: [
+                      const AppHeader(),
+                      Expanded(
+                        child: getActiveScreen(adminProv.selectedNavIndex),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-          ],
+                ),
+              ],
+            );
+          },
         ),
       );
     } else {
       // Mobile / Tablet with Drawer Navigation
       return Scaffold(
-        key: scaffoldKey,
+        key: _scaffoldKey,
         backgroundColor: bgColor,
         drawer: const Drawer(
           child: SidebarNavigation(isDrawer: true),
         ),
         body: SafeArea(
-          child: Column(
-            children: [
-              AppHeader(
-                onOpenDrawer: () => scaffoldKey.currentState?.openDrawer(),
-              ),
-              Expanded(
-                child: getActiveScreen(adminProv.selectedNavIndex),
-              ),
-            ],
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxHeight <= 1.0 || constraints.maxWidth <= 1.0) {
+                return const SizedBox.shrink();
+              }
+              return Column(
+                children: [
+                  AppHeader(
+                    onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+                  ),
+                  Expanded(
+                    child: getActiveScreen(adminProv.selectedNavIndex),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       );

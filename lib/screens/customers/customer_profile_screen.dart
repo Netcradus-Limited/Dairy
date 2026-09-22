@@ -20,10 +20,12 @@ import '../../widgets/status_badge.dart';
 /// Provides real-time insights into Today, Tomorrow, Purchase History, Subscriptions, and Ledger.
 class CustomerProfileScreen extends StatefulWidget {
   final DairyCustomer customer;
+  final CustomerProfileService? service;
 
   const CustomerProfileScreen({
     super.key,
     required this.customer,
+    this.service,
   });
 
   @override
@@ -55,7 +57,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
   @override
   void initState() {
     super.initState();
-    _service = CustomerProfileService();
+    _service = widget.service ?? CustomerProfileService();
     _tabController = TabController(length: 5, vsync: this);
     _initStreams();
   }
@@ -316,6 +318,45 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
   // 1. HEADER COMPONENT
   // ───────────────────────────────────────────────────────────────────────────
 
+  Widget _buildAvatar() {
+    return CircleAvatar(
+      radius: 30,
+      backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
+      child: (widget.customer.profileImageUrl != null &&
+              widget.customer.profileImageUrl!.trim().isNotEmpty &&
+              (widget.customer.profileImageUrl!.startsWith('http://') ||
+                  widget.customer.profileImageUrl!.startsWith('https://')))
+          ? ClipOval(
+              child: AppNetworkImage(
+                imageUrl: widget.customer.profileImageUrl!,
+                width: 60,
+                height: 60,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Text(
+                  widget.customer.name.isNotEmpty
+                      ? widget.customer.name.substring(0, 1).toUpperCase()
+                      : 'C',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 22,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            )
+          : Text(
+              widget.customer.name.isNotEmpty
+                  ? widget.customer.name.substring(0, 1).toUpperCase()
+                  : 'C',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w800,
+                fontSize: 22,
+                color: AppColors.primary,
+              ),
+            ),
+    );
+  }
+
   Widget _buildHeader(
     BuildContext context,
     AdminProvider adminProv,
@@ -329,13 +370,16 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Top Back Row
-        Row(
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             InkWell(
               onTap: () => adminProv.clearSelectedCustomer(),
               borderRadius: BorderRadius.circular(8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
@@ -344,12 +388,12 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.arrow_back_rounded, size: 18, color: AppColors.primary),
-                    const SizedBox(width: 6),
+                    const Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.primary),
+                    const SizedBox(width: 4),
                     Text(
                       'Back to Customers',
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w700,
                         color: AppColors.primary,
                       ),
@@ -358,16 +402,14 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                 ),
               ),
             ),
-            const SizedBox(width: 12),
             Text(
               '/',
-              style: TextStyle(color: textSecondary, fontSize: 16),
+              style: TextStyle(color: textSecondary, fontSize: 14),
             ),
-            const SizedBox(width: 12),
             Text(
               'Customer Profile',
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: textSecondary,
               ),
@@ -378,119 +420,82 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
 
         // Main Customer Identity Card
         Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: cardBg,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: cardBorder),
             boxShadow: AppColors.cardShadow,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Avatar
-                  CircleAvatar(
-                    radius: 32,
-                    backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
-                    child: (widget.customer.profileImageUrl != null &&
-                            widget.customer.profileImageUrl!.trim().isNotEmpty &&
-                            (widget.customer.profileImageUrl!.startsWith('http://') ||
-                                widget.customer.profileImageUrl!.startsWith('https://')))
-                        ? ClipOval(
-                            child: AppNetworkImage(
-                              imageUrl: widget.customer.profileImageUrl!,
-                              width: 64,
-                              height: 64,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Text(
-                                widget.customer.name.isNotEmpty
-                                    ? widget.customer.name.substring(0, 1).toUpperCase()
-                                    : 'C',
+          child: isDesktop
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildAvatar(),
+                    const SizedBox(width: 16),
+
+                    // Info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Text(
+                                widget.customer.name,
                                 style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 20,
                                   fontWeight: FontWeight.w800,
-                                  fontSize: 24,
-                                  color: AppColors.primary,
+                                  color: textPrimary,
                                 ),
                               ),
-                            ),
-                          )
-                        : Text(
-                            widget.customer.name.isNotEmpty
-                                ? widget.customer.name.substring(0, 1).toUpperCase()
-                                : 'C',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 24,
-                              color: AppColors.primary,
-                            ),
+                              StatusBadge.fromString(widget.customer.status),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.lightBlue.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'ID: ${widget.customer.id}',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primaryBlue,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                  ),
-                  const SizedBox(width: 16),
-
-                  // Info
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 6,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Text(
-                              widget.customer.name,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
-                                color: textPrimary,
-                              ),
-                            ),
-                            StatusBadge.fromString(widget.customer.status),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.lightBlue.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                'ID: ${widget.customer.id}',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primaryBlue,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 16,
-                          runSpacing: 6,
-                          children: [
-                            _buildInfoChip(
-                                Icons.phone_outlined, widget.customer.phone, textSecondary),
-                            if (widget.customer.email.isNotEmpty)
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 16,
+                            runSpacing: 6,
+                            children: [
                               _buildInfoChip(
-                                  Icons.email_outlined, widget.customer.email, textSecondary),
-                            _buildInfoChip(
-                                Icons.location_on_outlined, widget.customer.address, textSecondary),
-                            _buildInfoChip(
-                                Icons.map_outlined, widget.customer.deliveryZone, textSecondary),
-                            _buildInfoChip(Icons.calendar_today_outlined,
-                                'Joined: ${widget.customer.joinedDate}', textSecondary),
-                          ],
-                        ),
-                      ],
+                                  Icons.phone_outlined, widget.customer.phone, textSecondary),
+                              if (widget.customer.email.isNotEmpty)
+                                _buildInfoChip(
+                                    Icons.email_outlined, widget.customer.email, textSecondary),
+                              if (widget.customer.address.isNotEmpty)
+                                _buildInfoChip(
+                                    Icons.location_on_outlined, widget.customer.address, textSecondary),
+                              if (widget.customer.deliveryZone.isNotEmpty)
+                                _buildInfoChip(
+                                    Icons.map_outlined, widget.customer.deliveryZone, textSecondary),
+                              _buildInfoChip(Icons.calendar_today_outlined,
+                                  'Joined: ${widget.customer.joinedDate}', textSecondary),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
 
-                  // Wallet Balance Callout
-                  if (isDesktop)
+                    // Wallet Balance Callout
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
@@ -523,39 +528,137 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                         ],
                       ),
                     ),
-                ],
-              ),
-              if (!isDesktop) ...[
-                const SizedBox(height: 12),
-                const Divider(),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Wallet Balance',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: textSecondary,
-                      ),
+                    // Mobile Top Row: Avatar + Name + Status + ID
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _buildAvatar(),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.customer.name,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: textPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  StatusBadge.fromString(widget.customer.status),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.lightBlue.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      'ID: ${widget.customer.id}',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.primaryBlue,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      currencyFormatter.format(widget.customer.walletBalance),
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: widget.customer.walletBalance >= 0
-                            ? AppColors.revenueGreen
-                            : const Color(0xFFEF4444),
-                      ),
+                    const SizedBox(height: 12),
+                    const Divider(height: 1),
+                    const SizedBox(height: 10),
+
+                    // Details Column with full text wrap / ellipsis
+                    _buildDetailRow(
+                        Icons.phone_outlined, widget.customer.phone, textSecondary),
+                    if (widget.customer.email.isNotEmpty)
+                      _buildDetailRow(
+                          Icons.email_outlined, widget.customer.email, textSecondary),
+                    if (widget.customer.address.isNotEmpty)
+                      _buildDetailRow(
+                          Icons.location_on_outlined, widget.customer.address, textSecondary),
+                    if (widget.customer.deliveryZone.isNotEmpty)
+                      _buildDetailRow(
+                          Icons.map_outlined, widget.customer.deliveryZone, textSecondary),
+                    _buildDetailRow(Icons.calendar_today_outlined,
+                        'Joined: ${widget.customer.joinedDate}', textSecondary),
+
+                    const SizedBox(height: 8),
+                    const Divider(height: 1),
+                    const SizedBox(height: 10),
+
+                    // Mobile Wallet Balance
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Wallet Balance',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: textSecondary,
+                          ),
+                        ),
+                        Text(
+                          currencyFormatter.format(widget.customer.walletBalance),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: widget.customer.walletBalance >= 0
+                                ? AppColors.revenueGreen
+                                : const Color(0xFFEF4444),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ],
-          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -665,13 +768,14 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
         ))).toList(),
       );
     } else {
+      final isVerySmall = MediaQuery.of(context).size.width < 360;
       return GridView.count(
-        crossAxisCount: 2,
+        crossAxisCount: isVerySmall ? 1 : 2,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 1.35,
+        childAspectRatio: isVerySmall ? 2.8 : 1.3,
         children: cards,
       );
     }
@@ -690,7 +794,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
     required Color textSecondary,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(14),
@@ -704,41 +808,50 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.8,
-                  color: textSecondary,
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                    color: textSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 4),
               Container(
-                padding: const EdgeInsets.all(6),
+                padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
                   color: bgColor,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, size: 16, color: iconColor),
+                child: Icon(icon, size: 15, color: iconColor),
               ),
             ],
           ),
+          const SizedBox(height: 4),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 mainValue,
                 style: GoogleFonts.plusJakartaSans(
-                  fontSize: 18,
+                  fontSize: 17,
                   fontWeight: FontWeight.w800,
                   color: textPrimary,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
                 style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
+                  fontSize: 10.5,
                   fontWeight: FontWeight.w500,
                   color: textSecondary,
                 ),

@@ -145,11 +145,15 @@ class OrderDetailsScreen extends ConsumerWidget {
                     const Icon(Icons.calendar_today_rounded,
                         size: 13, color: AppColors.textSecondary),
                     const SizedBox(width: 4),
-                    Text(
-                      _formatDate(o.orderDate),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
+                    Expanded(
+                      child: Text(
+                        _formatDate(o.orderDate),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -165,6 +169,7 @@ class OrderDetailsScreen extends ConsumerWidget {
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
             decoration: BoxDecoration(
@@ -610,9 +615,13 @@ class _PriceRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label,
-            style:
-                const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+          ),
+        ),
+        const SizedBox(width: 8),
         Text(
           value,
           style: TextStyle(

@@ -286,21 +286,28 @@ class CheckoutScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.location_on_rounded,
-                      color: AppColors.primaryBlue),
-                  const SizedBox(width: 8),
-                  Text(
-                    tr('Delivery Address'),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+              Expanded(
+                child: Row(
+                  children: [
+                    const Icon(Icons.location_on_rounded,
+                        color: AppColors.primaryBlue),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        tr('Delivery Address'),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               TextButton.icon(
                 onPressed: () async {
                   final chosen = await Navigator.push<Address>(
@@ -411,68 +418,85 @@ class CheckoutScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () async {
-                            final newAddr = await Navigator.push<Address>(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const AddAddressScreen(
-                                    autoDetectLocation: true),
-                              ),
-                            );
-                            if (newAddr != null) {
-                              ref
-                                  .read(selectedAddressIdProvider.notifier)
-                                  .state = newAddr.id;
-                            }
-                          },
-                          icon: const Icon(Icons.my_location_rounded, size: 16),
-                          label: const Text('Use Current Location'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryBlue,
-                            foregroundColor: AppColors.textOnPrimary,
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            textStyle: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isNarrow = constraints.maxWidth < 320;
+                      final useLocationBtn = ElevatedButton.icon(
+                        onPressed: () async {
+                          final newAddr = await Navigator.push<Address>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AddAddressScreen(
+                                  autoDetectLocation: true),
                             ),
+                          );
+                          if (newAddr != null) {
+                            ref
+                                .read(selectedAddressIdProvider.notifier)
+                                .state = newAddr.id;
+                          }
+                        },
+                        icon: const Icon(Icons.my_location_rounded, size: 16),
+                        label: const Text('Use Current Location'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryBlue,
+                          foregroundColor: AppColors.textOnPrimary,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 10),
+                          textStyle: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () async {
-                            final chosen = await Navigator.push<Address>(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const AddressScreen(),
-                              ),
-                            );
-                            if (chosen != null) {
-                              ref
-                                  .read(selectedAddressIdProvider.notifier)
-                                  .state = chosen.id;
-                            }
-                          },
-                          icon: const Icon(Icons.list_alt_rounded, size: 16),
-                          label: const Text('Saved Addresses'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.primaryBlue,
-                            side:
-                                const BorderSide(color: AppColors.primaryBlue),
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            textStyle: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                      );
+
+                      final savedAddressesBtn = OutlinedButton.icon(
+                        onPressed: () async {
+                          final chosen = await Navigator.push<Address>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AddressScreen(),
                             ),
+                          );
+                          if (chosen != null) {
+                            ref
+                                .read(selectedAddressIdProvider.notifier)
+                                .state = chosen.id;
+                          }
+                        },
+                        icon: const Icon(Icons.list_alt_rounded, size: 16),
+                        label: const Text('Saved Addresses'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primaryBlue,
+                          side: const BorderSide(color: AppColors.primaryBlue),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 10),
+                          textStyle: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
-                    ],
+                      );
+
+                      if (isNarrow) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            useLocationBtn,
+                            const SizedBox(height: 8),
+                            savedAddressesBtn,
+                          ],
+                        );
+                      }
+
+                      return Row(
+                        children: [
+                          Expanded(child: useLocationBtn),
+                          const SizedBox(width: 8),
+                          Expanded(child: savedAddressesBtn),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
@@ -540,21 +564,28 @@ class CheckoutScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.shopping_bag_outlined,
-                      color: AppColors.primaryBlue),
-                  SizedBox(width: 8),
-                  Text(
-                    'Order Items',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+              const Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.shopping_bag_outlined,
+                        color: AppColors.primaryBlue),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Order Items',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Text(
                 '${cartItems.length} Products',
                 style: const TextStyle(

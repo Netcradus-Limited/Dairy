@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -18,6 +19,7 @@ class ProductsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<AdminProvider>();
     final isDesktop = ResponsiveLayout.isDesktop(context);
+    final isMobile = ResponsiveLayout.isMobile(context);
     final currencyFormatter =
         NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
     final cardBg = AppColors.cardBgOf(context);
@@ -85,33 +87,27 @@ class ProductsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Dairy Products & Inventory',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    Text(
-                      'Configure milk varieties, fat content, packaging, and stock levels.',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
+          if (isMobile) ...[
+            Text(
+              'Dairy Products & Inventory',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
               ),
-              const SizedBox(width: 12),
-              ElevatedButton.icon(
+            ),
+            Text(
+              'Configure milk varieties, fat content, packaging, and stock levels.',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                key: const Key('add_product_button'),
                 onPressed: () => _showProductDialog(context, provider, null),
                 icon: const Icon(Icons.add_box_rounded,
                     size: 18, color: Colors.white),
@@ -131,8 +127,58 @@ class ProductsScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10)),
                 ),
               ),
-            ],
-          ),
+            ),
+          ] else ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Dairy Products & Inventory',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        'Configure milk varieties, fat content, packaging, and stock levels.',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  key: const Key('add_product_button'),
+                  onPressed: () => _showProductDialog(context, provider, null),
+                  icon: const Icon(Icons.add_box_rounded,
+                      size: 18, color: Colors.white),
+                  label: Text(
+                    'Add Product',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 20),
           filteredProducts.isEmpty
               ? Padding(
@@ -355,19 +401,17 @@ class ProductsScreen extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 10),
-                          Row(
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
                             children: [
                               _buildBadge(product.category, AppColors.primary),
-                              if (product.fatContent.isNotEmpty) ...[
-                                const SizedBox(width: 6),
+                              if (product.fatContent.isNotEmpty)
                                 _buildBadge(product.fatContent,
                                     AppColors.statusPreparing),
-                              ],
-                              if (product.isBestSeller) ...[
-                                const SizedBox(width: 6),
+                              if (product.isBestSeller)
                                 _buildBadge(
                                     'Best Seller', const Color(0xFFF59E0B)),
-                              ],
                             ],
                           ),
                           const Spacer(),
@@ -375,26 +419,31 @@ class ProductsScreen extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    currencyFormatter.format(product.price),
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w800,
-                                      color: textPrimary,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      currencyFormatter.format(product.price),
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w800,
+                                        color: textPrimary,
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    'Stock: ${product.stockQuantity} ${product.unit}',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 11,
-                                      color: AppColors.textMuted,
+                                    Text(
+                                      'Stock: ${product.stockQuantity} ${product.unit}',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11,
+                                        color: AppColors.textMuted,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
+                              const SizedBox(width: 8),
                               Row(
                                 children: [
                                   Text(
@@ -485,462 +534,514 @@ class ProductsScreen extends StatelessWidget {
         bool isUploadingImage = false;
         String selectedImageUrl = existing?.imageUrl ?? '';
         return StatefulBuilder(
-          builder: (ctx, setDialogState) => AlertDialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: Text(
-              isEdit ? 'Edit Dairy Product' : 'Add Dairy Product',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
-            ),
-            content: SizedBox(
-              width: 440,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Product Image Selector ──
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Product Image',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: isUploadingImage
-                              ? null
-                              : () async {
-                                  try {
-                                    final picker = ImagePicker();
-                                    final picked = await picker.pickImage(
-                                      source: ImageSource.gallery,
-                                      maxWidth: 1024,
-                                      maxHeight: 1024,
-                                      imageQuality: 85,
-                                    );
-                                    if (picked == null) return;
-
-                                    setDialogState(
-                                        () => isUploadingImage = true);
-                                    final bytes = await picked.readAsBytes();
-
-                                    final downloadUrl =
-                                        await FirebaseStorageService
-                                            .instance
-                                            .uploadProductImage(
-                                                productId: prodId,
-                                                bytes: bytes);
-
-                                    setDialogState(() {
-                                      selectedImageUrl = downloadUrl;
-                                      isUploadingImage = false;
-                                    });
-
-                                    // If editing an existing product, persist imageUrl immediately to Firestore
-                                    if (existing != null) {
-                                      final updated = existing.copyWith(
-                                          imageUrl: downloadUrl);
-                                      await provider.updateProduct(updated);
-                                    }
-
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                              'Product image uploaded successfully!'),
-                                          backgroundColor: AppColors.freshGreen,
-                                        ),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    setDialogState(
-                                        () => isUploadingImage = false);
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Failed to upload image: ${e.toString().replaceAll("Exception: ", "")}',
-                                          ),
-                                          backgroundColor: AppColors.error,
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                          icon: isUploadingImage
-                              ? const SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.primary,
-                                  ),
-                                )
-                              : const Icon(Icons.cloud_upload_outlined,
-                                  size: 16, color: AppColors.primary),
-                          label: Text(
-                            isUploadingImage ? 'Uploading...' : 'Upload Image',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primary,
+          builder: (ctx, setDialogState) {
+            final isNarrow = MediaQuery.sizeOf(ctx).width < 500;
+            return AlertDialog(
+              insetPadding: const EdgeInsets.symmetric(
+                  horizontal: 16.0, vertical: 24.0),
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text(
+                isEdit ? 'Edit Dairy Product' : 'Add Dairy Product',
+                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+              ),
+              content: SizedBox(
+                width: math.min(440.0, MediaQuery.sizeOf(ctx).width - 32),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Product Image Selector ──
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              'Product Image',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    if (isUploadingImage)
-                      Container(
-                        height: 100,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: AppColors.background,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.cardBorder),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const CircularProgressIndicator(
-                                color: AppColors.primary),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Uploading to Firebase Storage...',
+                          TextButton.icon(
+                            onPressed: isUploadingImage
+                                ? null
+                                : () async {
+                                    try {
+                                      final picker = ImagePicker();
+                                      final picked = await picker.pickImage(
+                                        source: ImageSource.gallery,
+                                        maxWidth: 1024,
+                                        maxHeight: 1024,
+                                        imageQuality: 85,
+                                      );
+                                      if (picked == null) return;
+
+                                      setDialogState(
+                                          () => isUploadingImage = true);
+                                      final bytes = await picked.readAsBytes();
+
+                                      final downloadUrl =
+                                          await FirebaseStorageService
+                                              .instance
+                                              .uploadProductImage(
+                                                  productId: prodId,
+                                                  bytes: bytes);
+
+                                      setDialogState(() {
+                                        selectedImageUrl = downloadUrl;
+                                        isUploadingImage = false;
+                                      });
+
+                                      // If editing an existing product, persist imageUrl immediately to Firestore
+                                      if (existing != null) {
+                                        final updated = existing.copyWith(
+                                            imageUrl: downloadUrl);
+                                        await provider.updateProduct(updated);
+                                      }
+
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                                'Product image uploaded successfully!'),
+                                            backgroundColor: AppColors.freshGreen,
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      setDialogState(
+                                          () => isUploadingImage = false);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Failed to upload image: ${e.toString().replaceAll("Exception: ", "")}',
+                                            ),
+                                            backgroundColor: AppColors.error,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
+                            icon: isUploadingImage
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.primary,
+                                    ),
+                                  )
+                                : const Icon(Icons.cloud_upload_outlined,
+                                    size: 16, color: AppColors.primary),
+                            label: Text(
+                              isUploadingImage ? 'Uploading...' : 'Upload Image',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 12,
-                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (isUploadingImage)
+                        Container(
+                          height: 90,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: AppColors.background,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.cardBorder),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const CircularProgressIndicator(
+                                  color: AppColors.primary),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Uploading to Firebase Storage...',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else if (selectedImageUrl.isNotEmpty) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: (selectedImageUrl.trim().startsWith('http://') ||
+                                  selectedImageUrl.trim().startsWith('https://'))
+                              ? AppNetworkImage(
+                                  imageUrl: selectedImageUrl.trim(),
+                                  height: 90,
+                                  width: double.infinity,
+                                  fit: BoxFit.contain,
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Container(
+                                      height: 90,
+                                      width: double.infinity,
+                                      color: AppColors.background,
+                                      child: const Center(
+                                        child: CircularProgressIndicator(
+                                            color: AppColors.primary),
+                                      ),
+                                    );
+                                  },
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
+                                    height: 90,
+                                    width: double.infinity,
+                                    color: AppColors.background,
+                                    child: const Icon(Icons.image_not_supported,
+                                        color: AppColors.textMuted),
+                                  ),
+                                )
+                              : Image.asset(
+                                  AppAssets.productImage(
+                                        imageUrl: selectedImageUrl,
+                                        categoryKey: categoryCtrl.text,
+                                        productTitle: nameCtrl.text,
+                                      ) ??
+                                      AppAssets.milkPng,
+                                  height: 90,
+                                  width: double.infinity,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
+                                    height: 90,
+                                    width: double.infinity,
+                                    color: AppColors.background,
+                                    child: const Icon(Icons.image_not_supported,
+                                        color: AppColors.textMuted),
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      Text(
+                        'Or choose a preset dairy product image:',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        height: 72,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _productImages.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            final img = _productImages[index];
+                            final isSelected = selectedImageUrl == img['path'];
+                            return GestureDetector(
+                              onTap: () => setDialogState(
+                                  () => selectedImageUrl = img['path']!),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 56,
+                                    height: 56,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.background,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? AppColors.primary
+                                            : AppColors.cardBorder,
+                                        width: isSelected ? 2 : 1,
+                                      ),
+                                    ),
+                                    alignment: Alignment.center,
+                                    padding: const EdgeInsets.all(6),
+                                    child: Image.asset(
+                                      img['path']!,
+                                      fit: BoxFit.contain,
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              const Icon(Icons.image,
+                                                  color: AppColors.textMuted),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    img['label']!,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 10,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
+                                      color: isSelected
+                                          ? AppColors.primary
+                                          : AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // ── Existing fields ──
+                      TextField(
+                        controller: nameCtrl,
+                        decoration: const InputDecoration(
+                            labelText: 'Product Name (e.g. Pure Cow Milk 1L)'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: subtitleCtrl,
+                        decoration: const InputDecoration(
+                            labelText: 'Subtitle / Description'),
+                      ),
+                      const SizedBox(height: 12),
+                      if (isNarrow) ...[
+                        TextField(
+                          controller: priceCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration:
+                              const InputDecoration(labelText: 'Price (₹)'),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: stockCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                              labelText: 'Stock Quantity'),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: unitCtrl,
+                          decoration: const InputDecoration(
+                              labelText: 'Unit (e.g. 500ml, 1L)'),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: fatCtrl,
+                          decoration: const InputDecoration(
+                              labelText: 'Fat % (e.g. 4.5% Fat)'),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: categoryCtrl,
+                          decoration:
+                              const InputDecoration(labelText: 'Category'),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: emojiCtrl,
+                          decoration:
+                              const InputDecoration(labelText: 'Emoji Icon'),
+                        ),
+                      ] else ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: priceCtrl,
+                                keyboardType: TextInputType.number,
+                                decoration:
+                                    const InputDecoration(labelText: 'Price (₹)'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextField(
+                                controller: stockCtrl,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                    labelText: 'Stock Quantity'),
                               ),
                             ),
                           ],
                         ),
-                      )
-                    else if (selectedImageUrl.isNotEmpty) ...[
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: (selectedImageUrl.trim().startsWith('http://') ||
-                                selectedImageUrl.trim().startsWith('https://'))
-                            ? AppNetworkImage(
-                                imageUrl: selectedImageUrl.trim(),
-                                height: 100,
-                                width: double.infinity,
-                                fit: BoxFit.contain,
-                                loadingBuilder:
-                                    (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Container(
-                                    height: 100,
-                                    width: double.infinity,
-                                    color: AppColors.background,
-                                    child: const Center(
-                                      child: CircularProgressIndicator(
-                                          color: AppColors.primary),
-                                    ),
-                                  );
-                                },
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Container(
-                                  height: 100,
-                                  width: double.infinity,
-                                  color: AppColors.background,
-                                  child: const Icon(Icons.image_not_supported,
-                                      color: AppColors.textMuted),
-                                ),
-                              )
-                            : Image.asset(
-                                selectedImageUrl,
-                                height: 100,
-                                width: double.infinity,
-                                fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Container(
-                                  height: 100,
-                                  width: double.infinity,
-                                  color: AppColors.background,
-                                  child: const Icon(Icons.image_not_supported,
-                                      color: AppColors.textMuted),
-                                ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: unitCtrl,
+                                decoration: const InputDecoration(
+                                    labelText: 'Unit (e.g. 500ml, 1L)'),
                               ),
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-                    Text(
-                      'Or choose a preset default image:',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    SizedBox(
-                      height: 72,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _productImages.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
-                        itemBuilder: (context, index) {
-                          final img = _productImages[index];
-                          final isSelected = selectedImageUrl == img['path'];
-                          return GestureDetector(
-                            onTap: () => setDialogState(
-                                () => selectedImageUrl = img['path']!),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 56,
-                                  height: 56,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.background,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? AppColors.primary
-                                          : AppColors.cardBorder,
-                                      width: isSelected ? 2 : 1,
-                                    ),
-                                  ),
-                                  alignment: Alignment.center,
-                                  padding: const EdgeInsets.all(6),
-                                  child: Image.asset(
-                                    img['path']!,
-                                    fit: BoxFit.contain,
-                                    errorBuilder:
-                                        (context, error, stackTrace) =>
-                                            const Icon(Icons.image,
-                                                color: AppColors.textMuted),
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  img['label']!,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 10,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                    color: isSelected
-                                        ? AppColors.primary
-                                        : AppColors.textSecondary,
-                                  ),
-                                ),
-                              ],
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // ── Existing fields ──
-                    TextField(
-                      controller: nameCtrl,
-                      decoration: const InputDecoration(
-                          labelText: 'Product Name (e.g. Pure Cow Milk 1L)'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: subtitleCtrl,
-                      decoration: const InputDecoration(
-                          labelText: 'Subtitle / Description'),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: priceCtrl,
-                            keyboardType: TextInputType.number,
-                            decoration:
-                                const InputDecoration(labelText: 'Price (₹)'),
-                          ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextField(
+                                controller: fatCtrl,
+                                decoration: const InputDecoration(
+                                    labelText: 'Fat % (e.g. 4.5% Fat)'),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: stockCtrl,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                                labelText: 'Stock Quantity'),
-                          ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: categoryCtrl,
+                                decoration:
+                                    const InputDecoration(labelText: 'Category'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextField(
+                                controller: emojiCtrl,
+                                decoration:
+                                    const InputDecoration(labelText: 'Emoji Icon'),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: unitCtrl,
-                            decoration: const InputDecoration(
-                                labelText: 'Unit (e.g. 500ml, 1L)'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: fatCtrl,
-                            decoration: const InputDecoration(
-                                labelText: 'Fat % (e.g. 4.5% Fat)'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: categoryCtrl,
-                            decoration:
-                                const InputDecoration(labelText: 'Category'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: emojiCtrl,
-                            decoration:
-                                const InputDecoration(labelText: 'Emoji Icon'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: isSaving ? null : () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: isSaving
-                    ? null
-                    : () async {
-                        if (nameCtrl.text.trim().isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Please enter a product name'),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                          return;
-                        }
-
-                        if (!isEdit && selectedImageUrl.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Please select a product image'),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                          return;
-                        }
-
-                        setDialogState(() => isSaving = true);
-
-                        try {
-                          if (isEdit) {
-                            await provider.updateProduct(
-                              existing.copyWith(
-                                name: nameCtrl.text.trim(),
-                                subtitle: subtitleCtrl.text.trim(),
-                                price: double.tryParse(priceCtrl.text) ??
-                                    existing.price,
-                                stockQuantity: int.tryParse(stockCtrl.text) ??
-                                    existing.stockQuantity,
-                                unit: unitCtrl.text.trim(),
-                                fatContent: fatCtrl.text.trim(),
-                                category: categoryCtrl.text.trim(),
-                                emoji: emojiCtrl.text.trim().isEmpty
-                                    ? '🥛'
-                                    : emojiCtrl.text.trim(),
-                                imageUrl: selectedImageUrl,
-                              ),
-                            );
-                          } else {
-                            await provider.addProduct(
-                              DairyProduct(
-                                id: prodId,
-                                name: nameCtrl.text.trim(),
-                                subtitle: subtitleCtrl.text.trim().isEmpty
-                                    ? fatCtrl.text.trim()
-                                    : subtitleCtrl.text.trim(),
-                                category: categoryCtrl.text.trim().isEmpty
-                                    ? 'Milk & Creams'
-                                    : categoryCtrl.text.trim(),
-                                unit: unitCtrl.text.trim().isEmpty
-                                    ? '1 Litre'
-                                    : unitCtrl.text.trim(),
-                                price: double.tryParse(priceCtrl.text) ?? 60.0,
-                                stockQuantity:
-                                    int.tryParse(stockCtrl.text) ?? 100,
-                                fatContent: fatCtrl.text.trim().isEmpty
-                                    ? '3.5% Fat'
-                                    : fatCtrl.text.trim(),
-                                packaging: 'Fresh Pouch',
-                                emoji: emojiCtrl.text.trim().isEmpty
-                                    ? '🥛'
-                                    : emojiCtrl.text.trim(),
-                                imageUrl: selectedImageUrl,
-                              ),
-                            );
-                          }
-
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          if (context.mounted) {
+              actions: [
+                TextButton(
+                  onPressed: isSaving ? null : () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          if (nameCtrl.text.trim().isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  isEdit
-                                      ? 'Product "${nameCtrl.text}" updated successfully!'
-                                      : 'Product "${nameCtrl.text}" added to catalog!',
-                                ),
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          setDialogState(() => isSaving = false);
-                          debugPrint('Product save failed: $e');
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Failed to save product: $e'),
+                              const SnackBar(
+                                content: Text('Please enter a product name'),
                                 backgroundColor: AppColors.error,
                               ),
                             );
+                            return;
                           }
-                        }
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                ),
-                child: isSaving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
+
+                          if (!isEdit && selectedImageUrl.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please select a product image'),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                            return;
+                          }
+
+                          setDialogState(() => isSaving = true);
+
+                          try {
+                            if (isEdit) {
+                              await provider.updateProduct(
+                                existing.copyWith(
+                                  name: nameCtrl.text.trim(),
+                                  subtitle: subtitleCtrl.text.trim(),
+                                  price: double.tryParse(priceCtrl.text) ??
+                                      existing.price,
+                                  stockQuantity: int.tryParse(stockCtrl.text) ??
+                                      existing.stockQuantity,
+                                  unit: unitCtrl.text.trim(),
+                                  fatContent: fatCtrl.text.trim(),
+                                  category: categoryCtrl.text.trim(),
+                                  emoji: emojiCtrl.text.trim().isEmpty
+                                      ? '🥛'
+                                      : emojiCtrl.text.trim(),
+                                  imageUrl: selectedImageUrl,
+                                ),
+                              );
+                            } else {
+                              await provider.addProduct(
+                                DairyProduct(
+                                  id: prodId,
+                                  name: nameCtrl.text.trim(),
+                                  subtitle: subtitleCtrl.text.trim().isEmpty
+                                      ? fatCtrl.text.trim()
+                                      : subtitleCtrl.text.trim(),
+                                  category: categoryCtrl.text.trim().isEmpty
+                                      ? 'Milk & Creams'
+                                      : categoryCtrl.text.trim(),
+                                  unit: unitCtrl.text.trim().isEmpty
+                                      ? '1 Litre'
+                                      : unitCtrl.text.trim(),
+                                  price: double.tryParse(priceCtrl.text) ?? 60.0,
+                                  stockQuantity:
+                                      int.tryParse(stockCtrl.text) ?? 100,
+                                  fatContent: fatCtrl.text.trim().isEmpty
+                                      ? '3.5% Fat'
+                                      : fatCtrl.text.trim(),
+                                  packaging: 'Fresh Pouch',
+                                  emoji: emojiCtrl.text.trim().isEmpty
+                                      ? '🥛'
+                                      : emojiCtrl.text.trim(),
+                                  imageUrl: selectedImageUrl,
+                                ),
+                              );
+                            }
+
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    isEdit
+                                        ? 'Product "${nameCtrl.text}" updated successfully!'
+                                        : 'Product "${nameCtrl.text}" added to catalog!',
+                                  ),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setDialogState(() => isSaving = false);
+                            debugPrint('Product save failed: $e');
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Failed to save product: $e'),
+                                  backgroundColor: AppColors.error,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          isEdit ? 'Save Changes' : 'Add Product',
+                          style: const TextStyle(color: Colors.white),
                         ),
-                      )
-                    : Text(
-                        isEdit ? 'Save Changes' : 'Add Product',
-                        style: const TextStyle(color: Colors.white),
-                      ),
-              ),
-            ],
-          ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -951,14 +1052,18 @@ class ProductsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16.0, vertical: 24.0),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
             const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444)),
             const SizedBox(width: 8),
-            Text(
-              'Delete Product',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+            Expanded(
+              child: Text(
+                'Delete Product',
+                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+              ),
             ),
           ],
         ),

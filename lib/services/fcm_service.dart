@@ -92,6 +92,39 @@ class FCMService {
 
       // Initial token fetch & registration (best-effort; never crashes).
       await _saveTokenIfAuthorized();
+
+      // Create Android Notification Channels for high priority alerts
+      if (!kIsWeb) {
+        final androidImplementation = _localNotifications
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+        if (androidImplementation != null) {
+          await androidImplementation.createNotificationChannel(
+            const AndroidNotificationChannel(
+              'order_alerts',
+              'Order Alerts',
+              description: 'Notifications for new and updated dairy orders',
+              importance: Importance.high,
+            ),
+          );
+          await androidImplementation.createNotificationChannel(
+            const AndroidNotificationChannel(
+              'delivery_alerts',
+              'Delivery Route Alerts',
+              description: 'Live delivery updates and dispatch notices',
+              importance: Importance.high,
+            ),
+          );
+          await androidImplementation.createNotificationChannel(
+            const AndroidNotificationChannel(
+              'promotions_channel',
+              'Promotions & Offers',
+              description: 'Special dairy discounts and announcements',
+              importance: Importance.defaultImportance,
+            ),
+          );
+        }
+      }
     } catch (e) {
       debugPrint('[FCM] Error in FCMService.init: $e');
     }
@@ -121,7 +154,7 @@ class FCMService {
   }
 
   /// Listen to FCM token refreshes and automatically sync the new token to
-  /// Firestore for the authenticated delivery agent. Only writes if the token
+  /// Firestore for the authenticated user. Only writes if the token
   /// changes.
   void _listenTokenRefresh() {
     onTokenRefresh.listen((String? newToken) async {
@@ -136,7 +169,7 @@ class FCMService {
   }
 
   /// Listen to auth changes so the FCM token is automatically synced whenever
-  /// a delivery agent logs in.
+  /// a user logs in.
   void _listenAuthChanges() {
     _authSubscription?.cancel();
     try {
@@ -156,34 +189,15 @@ class FCMService {
   /// Public method to sync the FCM token to Firestore if authorized.
   Future<void> saveTokenIfAuthorized() => _saveTokenIfAuthorized();
 
-  /// Save or update the FCM token for the authenticated delivery agent in
-  /// Firestore. Only writes if:
+  /// Save or update the FCM token for the authenticated user in Firestore.
+  /// Only writes if:
   ///   • A Firebase UID is available (user is authenticated)
   ///   • The token is not empty/null
-  ///   • The token differs from what's already stored (best-effort dedup)
-  ///
-  /// The token is stored under the delivery agent's user document so that the
-  /// backend can target notifications to this specific agent. The structure uses
-  /// a subcollection or a dedicated field; here we store it as a field on the
-  /// user's main document under a `fcmTokens` map keyed by platform identifier.
   Future<void> _saveTokenIfAuthorized() async {
     final authUid = _auth.currentUser?.uid;
 
-    // Only authenticated delivery agents may have their token stored.
     if (authUid == null || authUid.isEmpty) {
       debugPrint('[FCM] No authenticated user — skipping token save.');
-      return;
-    }
-
-    // Verify this user has a delivery role per the existing RBAC.
-    final userData = await _firestore.collection('users').doc(authUid).get();
-    if (!userData.exists) {
-      debugPrint('[FCM] User document does not exist — skipping token save.');
-      return;
-    }
-    final role = userData.data()?['role'] ?? '';
-    if (role != 'delivery' && role != 'superadmin') {
-      debugPrint('[FCM] User role "$role" is not a delivery role — skipping token save.');
       return;
     }
 
@@ -198,15 +212,16 @@ class FCMService {
       return;
     }
 
-    // Write token to user document. We store it as a simple string field
-    // `fcmToken` for the delivery agent's UID. The Firestore rules (updated
-    // below) allow the owner to update this field.
-    await _firestore.collection('users').doc(authUid).update({
-      'fcmToken': token,
-      'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
-    });
-
-    debugPrint('[FCM] Token saved to Firestore for delivery agent: $authUid');
+    try {
+      await _firestore.collection('users').doc(authUid).set({
+        'fcmToken': token,
+        'fcmTokens': FieldValue.arrayUnion([token]),
+        'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      debugPrint('[FCM] Token saved to Firestore for user: $authUid');
+    } catch (e) {
+      debugPrint('[FCM] Error saving token to Firestore: $e');
+    }
   }
 
   /// Handle a foreground message (app in use). Routes to the existing local
@@ -355,6 +370,9 @@ final fcmServiceProvider = Provider<FCMService>((ref) => FCMService(ref));
 /// Holds the orderId of the last notification tapped by the user, so the
 /// DeliveryPanelScreen can navigate to the correct screen after the app resumes.
 final lastTappedOrderIdProvider = StateProvider<String>((ref) => '');
+
+/// Holds the route path of the last notification tapped by the user.
+final lastTappedRouteProvider = StateProvider<String>((ref) => '');
 
 /// Triggers one-time initialization of FCM (permission + token registration).
 /// Watched from MyApp so it runs exactly once at app start.

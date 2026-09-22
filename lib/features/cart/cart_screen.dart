@@ -268,12 +268,14 @@ class CartScreen extends ConsumerWidget {
           Icon(Icons.verified_user_rounded,
               color: AppColors.primaryBlue, size: 18),
           SizedBox(width: 8),
-          Text(
-            '100% Fresh Dairy Direct from Sawariya Farms',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.primaryBlue,
+          Expanded(
+            child: Text(
+              '100% Fresh Dairy Direct from Sawariya Farms',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primaryBlue,
+              ),
             ),
           ),
         ],

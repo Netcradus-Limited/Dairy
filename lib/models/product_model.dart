@@ -39,7 +39,13 @@ class DairyProduct {
   /// The image source to render: a valid network/asset URL is returned
   /// untouched, otherwise this falls back to the product's category default.
   String get resolvedImageUrl =>
-      AppAssets.productImage(imageUrl: imageUrl, categoryKey: category) ?? '';
+      AppAssets.productImage(
+        imageUrl: imageUrl,
+        categoryKey: category,
+        productId: id,
+        productTitle: name,
+      ) ??
+      '';
 
   DairyProduct copyWith({
     String? id,

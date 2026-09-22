@@ -473,7 +473,7 @@ class _EditSubscriptionScreenState
   Widget _buildPricingPreview(Product product, int quantity) {
     final validQty = quantity > 0 ? quantity : 1;
     final perDelivery = product.price * validQty;
-    final discountRate = 0.10; // Standard 10% subscription recurring discount
+    const discountRate = 0.10; // Standard 10% subscription recurring discount
     final discount = perDelivery * discountRate;
     final afterDiscount = (perDelivery - discount).clamp(0.0, double.infinity);
     final monthly = afterDiscount * _selectedFrequency.deliveriesPerMonth;
@@ -538,14 +538,18 @@ class _EditSubscriptionScreenState
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppColors.textSecondary,
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
+          const SizedBox(width: 8),
           Text(
             value,
             style: TextStyle(

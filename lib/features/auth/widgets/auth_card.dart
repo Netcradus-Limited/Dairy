@@ -182,11 +182,11 @@ class AuthCard extends StatelessWidget {
                                 return Column(
                                   children: [
                                     Expanded(
-                                      flex: 5,
+                                      flex: isMobile ? 4 : 5,
                                       child: mediaSection,
                                     ),
                                     Expanded(
-                                      flex: 5,
+                                      flex: isMobile ? 6 : 5,
                                       child: formSection,
                                     ),
                                   ],

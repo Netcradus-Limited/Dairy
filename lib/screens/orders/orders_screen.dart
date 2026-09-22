@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -82,19 +83,23 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   orElse: () => null,
                 );
 
+            final screenWidth = MediaQuery.sizeOf(dialogContext).width;
+            final isNarrow = screenWidth < 480;
+
             return Dialog(
               backgroundColor: cardBg,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
                 side: BorderSide(color: cardBorder),
               ),
+              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: 540,
+                constraints: BoxConstraints(
+                  maxWidth: math.min(540.0, screenWidth - 32),
                   maxHeight: 620,
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(24.0),
+                  padding: EdgeInsets.all(isNarrow ? 16.0 : 24.0),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -115,7 +120,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                       size: 22,
                                     ),
                                     const SizedBox(width: 8),
-                                    Flexible(
+                                    Expanded(
                                       child: Text(
                                         order.isAssigned
                                             ? 'Reassign Delivery Agent'
@@ -394,6 +399,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                             value: rider.id,
                                             groupValue: selectedAgentId,
                                             activeColor: AppColors.primary,
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            materialTapTargetSize:
+                                                MaterialTapTargetSize
+                                                    .shrinkWrap,
                                             onChanged: isSubmitting
                                                 ? null
                                                 : (val) {
@@ -414,22 +424,24 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       const SizedBox(height: 16),
 
                       // Footer Actions
-                      Wrap(
-                        alignment: WrapAlignment.spaceBetween,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        runSpacing: 8,
-                        spacing: 8,
-                        children: [
-                          if (order.isAssigned)
-                            TextButton.icon(
-                              onPressed: isSubmitting
+                      if (isNarrow)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            ElevatedButton(
+                              onPressed: (isSubmitting ||
+                                      selectedAgentId == null ||
+                                      selectedAgentId ==
+                                          order.assignedAgentId)
                                   ? null
                                   : () async {
-                                      setDialogState(() => isSubmitting = true);
+                                      setDialogState(
+                                          () => isSubmitting = true);
                                       try {
                                         await provider.assignDeliveryAgent(
                                           order.id,
-                                          null,
+                                          selectedAgentId,
+                                          agentName: selectedRider?.name,
                                         );
                                         if (dialogContext.mounted) {
                                           Navigator.of(dialogContext).pop();
@@ -437,9 +449,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                         if (context.mounted) {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(
-                                            const SnackBar(
+                                            SnackBar(
                                               content: Text(
-                                                  'Delivery agent unassigned successfully.'),
+                                                order.isAssigned
+                                                    ? 'Order reassigned to ${selectedRider?.name ?? "agent"}.'
+                                                    : 'Order assigned to ${selectedRider?.name ?? "agent"}.',
+                                              ),
                                               backgroundColor:
                                                   AppColors.revenueGreen,
                                             ),
@@ -450,75 +465,148 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                             () => isSubmitting = false);
                                         if (context.mounted) {
                                           ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                  'Failed to unassign agent: $e'),
-                                              backgroundColor:
-                                                  AppColors.statusCancelled,
-                                            ),
-                                          );
+                                            ..showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                    'Failed to assign agent: $e'),
+                                                backgroundColor:
+                                                    AppColors.statusCancelled,
+                                              ),
+                                            );
                                         }
                                       }
                                     },
-                              icon: const Icon(Icons.person_remove_outlined,
-                                  size: 16, color: AppColors.statusCancelled),
-                              label: const Text(
-                                'Unassign',
-                                style: TextStyle(
-                                  color: AppColors.statusCancelled,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 12,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 12),
                               ),
-                            )
-                          else
-                            const SizedBox.shrink(),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              TextButton(
-                                onPressed: isSubmitting
-                                    ? null
-                                    : () => Navigator.of(dialogContext).pop(),
-                                child: Text(
-                                  'Cancel',
-                                  style: TextStyle(
-                                    color: textSecondary,
-                                    fontWeight: FontWeight.w600,
+                              child: isSubmitting
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(
+                                      order.isAssigned
+                                          ? 'Confirm Reassignment'
+                                          : 'Assign Agent',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                if (order.isAssigned)
+                                  TextButton.icon(
+                                    onPressed: isSubmitting
+                                        ? null
+                                        : () async {
+                                            setDialogState(
+                                                () => isSubmitting = true);
+                                            try {
+                                              await provider
+                                                  .assignDeliveryAgent(order.id, null);
+                                              if (dialogContext.mounted) {
+                                                Navigator.of(dialogContext).pop();
+                                              }
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                        'Agent unassigned from order.'),
+                                                    backgroundColor:
+                                                        AppColors.ordersBlue,
+                                                  ),
+                                                );
+                                              }
+                                            } catch (e) {
+                                              setDialogState(
+                                                  () => isSubmitting = false);
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                        'Failed to unassign agent: $e'),
+                                                    backgroundColor:
+                                                        AppColors.statusCancelled,
+                                                  ),
+                                                );
+                                              }
+                                            }
+                                          },
+                                    icon: const Icon(
+                                        Icons.person_remove_outlined,
+                                        size: 16,
+                                        color: AppColors.statusCancelled),
+                                    label: const Text(
+                                      'Unassign',
+                                      style: TextStyle(
+                                        color: AppColors.statusCancelled,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  const SizedBox.shrink(),
+                                TextButton(
+                                  onPressed: isSubmitting
+                                      ? null
+                                      : () => Navigator.of(dialogContext).pop(),
+                                  child: Text(
+                                    'Cancel',
+                                    style: TextStyle(
+                                      color: textSecondary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              ElevatedButton(
-                                onPressed: (isSubmitting ||
-                                        selectedAgentId == null ||
-                                        selectedAgentId ==
-                                            order.assignedAgentId)
+                              ],
+                            ),
+                          ],
+                        )
+                      else
+                        Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            if (order.isAssigned)
+                              TextButton.icon(
+                                onPressed: isSubmitting
                                     ? null
                                     : () async {
                                         setDialogState(
                                             () => isSubmitting = true);
                                         try {
-                                          await provider.assignDeliveryAgent(
-                                            order.id,
-                                            selectedAgentId,
-                                            agentName: selectedRider?.name,
-                                          );
+                                          await provider
+                                              .assignDeliveryAgent(order.id, null);
                                           if (dialogContext.mounted) {
                                             Navigator.of(dialogContext).pop();
                                           }
                                           if (context.mounted) {
                                             ScaffoldMessenger.of(context)
                                                 .showSnackBar(
-                                              SnackBar(
+                                              const SnackBar(
                                                 content: Text(
-                                                  order.isAssigned
-                                                      ? 'Order reassigned to ${selectedRider?.name ?? "agent"}.'
-                                                      : 'Order assigned to ${selectedRider?.name ?? "agent"}.',
-                                                ),
+                                                    'Agent unassigned from order.'),
                                                 backgroundColor:
-                                                    AppColors.revenueGreen,
+                                                    AppColors.ordersBlue,
                                               ),
                                             );
                                           }
@@ -527,49 +615,126 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                               () => isSubmitting = false);
                                           if (context.mounted) {
                                             ScaffoldMessenger.of(context)
-                                              ..showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                      'Failed to assign agent: $e'),
-                                                  backgroundColor:
-                                                      AppColors.statusCancelled,
-                                                ),
-                                              );
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                    'Failed to unassign agent: $e'),
+                                                backgroundColor:
+                                                    AppColors.statusCancelled,
+                                              ),
+                                            );
                                           }
                                         }
                                       },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
+                                icon: const Icon(Icons.person_remove_outlined,
+                                    size: 16, color: AppColors.statusCancelled),
+                                label: const Text(
+                                  'Unassign',
+                                  style: TextStyle(
+                                    color: AppColors.statusCancelled,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
                                   ),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 10),
                                 ),
-                                child: isSubmitting
-                                    ? const SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white,
+                              )
+                            else
+                              const SizedBox.shrink(),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TextButton(
+                                  onPressed: isSubmitting
+                                      ? null
+                                      : () => Navigator.of(dialogContext).pop(),
+                                  child: Text(
+                                    'Cancel',
+                                    style: TextStyle(
+                                      color: textSecondary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                ElevatedButton(
+                                  onPressed: (isSubmitting ||
+                                          selectedAgentId == null ||
+                                          selectedAgentId ==
+                                              order.assignedAgentId)
+                                      ? null
+                                      : () async {
+                                          setDialogState(
+                                              () => isSubmitting = true);
+                                          try {
+                                            await provider.assignDeliveryAgent(
+                                              order.id,
+                                              selectedAgentId,
+                                              agentName: selectedRider?.name,
+                                            );
+                                            if (dialogContext.mounted) {
+                                              Navigator.of(dialogContext).pop();
+                                            }
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    order.isAssigned
+                                                        ? 'Order reassigned to ${selectedRider?.name ?? "agent"}.'
+                                                        : 'Order assigned to ${selectedRider?.name ?? "agent"}.',
+                                                  ),
+                                                  backgroundColor:
+                                                      AppColors.revenueGreen,
+                                                ),
+                                              );
+                                            }
+                                          } catch (e) {
+                                            setDialogState(
+                                                () => isSubmitting = false);
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                ..showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                        'Failed to assign agent: $e'),
+                                                    backgroundColor:
+                                                        AppColors.statusCancelled,
+                                                  ),
+                                                );
+                                            }
+                                          }
+                                        },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 10),
+                                  ),
+                                  child: isSubmitting
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : Text(
+                                          order.isAssigned
+                                              ? 'Confirm Reassignment'
+                                              : 'Assign Agent',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 13,
+                                          ),
                                         ),
-                                      )
-                                    : Text(
-                                        order.isAssigned
-                                            ? 'Confirm Reassignment'
-                                            : 'Assign Agent',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                     ],
                   ),
                 ),
@@ -596,16 +761,22 @@ class _OrdersScreenState extends State<OrdersScreen> {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) {
+        final isNarrow = MediaQuery.sizeOf(dialogContext).width < 500;
         return Dialog(
           backgroundColor: cardBg,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: cardBorder),
           ),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 540),
+            constraints: BoxConstraints(
+              maxWidth:
+                  math.min(540.0, MediaQuery.sizeOf(dialogContext).width - 32),
+            ),
             child: Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: EdgeInsets.all(isNarrow ? 16.0 : 24.0),
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
