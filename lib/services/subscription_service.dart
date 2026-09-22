@@ -51,8 +51,11 @@ class SubscriptionService {
   }
 
   String _resolveEffectiveUid(String uid) {
+    if (uid.trim().isNotEmpty) {
+      return uid.trim();
+    }
     final authUid = _currentAuthUid;
-    return (authUid != null && authUid.isNotEmpty) ? authUid : uid;
+    return (authUid != null && authUid.isNotEmpty) ? authUid : '';
   }
 
   static String formatOrderDateKey(DateTime date) {
@@ -122,6 +125,9 @@ class SubscriptionService {
   /// Stream all subscriptions belonging to a user (real-time from root `subscriptions` collection)
   Stream<List<Subscription>> streamSubscriptionsForUser(String uid) {
     final effectiveUid = _resolveEffectiveUid(uid);
+    if (effectiveUid.isEmpty) {
+      return Stream.value(<Subscription>[]);
+    }
     return _firestore
         .collection('subscriptions')
         .where('userId', isEqualTo: effectiveUid)
@@ -142,6 +148,9 @@ class SubscriptionService {
   /// Get all subscriptions for a user (one-time fetch from root `subscriptions`)
   Future<List<Subscription>> getSubscriptionsForUser(String uid) async {
     final effectiveUid = _resolveEffectiveUid(uid);
+    if (effectiveUid.isEmpty) {
+      return <Subscription>[];
+    }
     try {
       final snapshot = await _firestore
           .collection('subscriptions')
