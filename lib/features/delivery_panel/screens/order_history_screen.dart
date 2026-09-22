@@ -168,7 +168,9 @@ class OrderHistoryScreen extends ConsumerWidget {
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        _formatDate(order.orderDate),
+                        _formatDate(order.deliveredAt ??
+                            order.deliveryDate ??
+                            order.orderDate),
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           color: textMuted,
@@ -178,6 +180,56 @@ class OrderHistoryScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
+                if (order.deliverySlot != null &&
+                    order.deliverySlot!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.schedule_rounded, size: 12, color: textMuted),
+                      const SizedBox(width: 4),
+                      Text(
+                        order.deliverySlot!,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (isCancelled &&
+                    order.cancellationReason != null &&
+                    order.cancellationReason!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline_rounded,
+                            size: 12, color: AppColors.error),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            'Reason: ${order.cancellationReason!}',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.error,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

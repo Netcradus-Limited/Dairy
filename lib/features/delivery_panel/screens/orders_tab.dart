@@ -257,6 +257,56 @@ class OrdersTab extends ConsumerWidget {
                     ),
                   ],
                 ),
+                if (order.deliverySlot != null &&
+                    order.deliverySlot!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.schedule_rounded, size: 12, color: textMuted),
+                      const SizedBox(width: 4),
+                      Text(
+                        order.deliverySlot!,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (isCancelled &&
+                    order.cancellationReason != null &&
+                    order.cancellationReason!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline_rounded,
+                            size: 12, color: AppColors.error),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            'Reason: ${order.cancellationReason!}',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.error,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -317,21 +367,37 @@ class _HistoryOrderItem {
   final String orderId;
   final String orderCode;
   final String customerName;
+  final String customerAddress;
   final double earnings;
   final DateTime date;
   final String distance;
   final DeliveryOrderStatus status;
   final bool isSubscription;
+  final String orderType;
+  final String? subscriptionId;
+  final DateTime? deliveryDate;
+  final String? deliverySlot;
+  final String? cancellationReason;
+  final String? paymentStatus;
+  final List<String> items;
 
   _HistoryOrderItem({
     required this.orderId,
     this.orderCode = '',
     required this.customerName,
+    this.customerAddress = '',
     required this.earnings,
     required this.date,
     required this.distance,
     this.status = DeliveryOrderStatus.delivered,
     this.isSubscription = false,
+    this.orderType = 'normal',
+    this.subscriptionId,
+    this.deliveryDate,
+    this.deliverySlot,
+    this.cancellationReason,
+    this.paymentStatus,
+    this.items = const [],
   });
 
   String get displayCode => orderCode.isNotEmpty ? orderCode : orderId;
@@ -341,11 +407,19 @@ class _HistoryOrderItem {
       orderId: order.orderId,
       orderCode: order.displayCode,
       customerName: order.customerName,
+      customerAddress: order.customerAddress,
       earnings: order.deliveryFee,
-      date: order.deliveredTime ?? order.orderTime,
+      date: order.deliveredTime ?? order.deliveryDate ?? order.orderTime,
       distance: order.distance,
       status: order.status,
       isSubscription: order.isSubscription,
+      orderType: order.orderType,
+      subscriptionId: order.subscriptionId,
+      deliveryDate: order.deliveryDate,
+      deliverySlot: order.deliverySlot,
+      cancellationReason: order.cancellationReason,
+      paymentStatus: order.paymentStatus,
+      items: order.items,
     );
   }
 }

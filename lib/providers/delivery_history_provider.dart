@@ -30,7 +30,7 @@ final deliveryHistoryStreamProvider =
       .where('assignedAgentId', isEqualTo: agentId)
       .snapshots()
       .map((snap) {
-    final orders = snap.docs
+    final rawOrders = snap.docs
         .map((doc) {
           final data = doc.data() as Map<String, dynamic>?;
           if (data == null) return null;
@@ -44,12 +44,29 @@ final deliveryHistoryStreamProvider =
           if (filter == OrderHistoryFilter.cancelled) {
             return order.status == model.OrderStatus.cancelled;
           }
-          return true; // OrderHistoryFilter.all
-        })
-        .toList();
+          // OrderHistoryFilter.all: strictly include historical orders only
+          return order.status == model.OrderStatus.delivered ||
+              order.status == model.OrderStatus.cancelled;
+        });
 
-    // Sort descending by creation time (newest first).
-    orders.sort((a, b) => b.orderDate.compareTo(a.orderDate));
+    // Prevent duplicate history entries
+    final seenIds = <String>{};
+    final orders = <model.Order>[];
+    for (final order in rawOrders) {
+      final key = order.id.isNotEmpty ? order.id : order.orderCode;
+      if (key.isNotEmpty && seenIds.add(key)) {
+        orders.add(order);
+      } else if (key.isEmpty) {
+        orders.add(order);
+      }
+    }
+
+    // Sort descending by most relevant delivery/order date (newest first).
+    orders.sort((a, b) {
+      final dateA = a.deliveredAt ?? a.deliveryDate ?? a.orderDate;
+      final dateB = b.deliveredAt ?? b.deliveryDate ?? b.orderDate;
+      return dateB.compareTo(dateA);
+    });
     return orders;
   });
 });

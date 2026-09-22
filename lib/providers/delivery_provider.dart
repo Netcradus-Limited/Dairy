@@ -130,6 +130,8 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
     deliveryFee: order.deliveryCharge,
     status: status,
     orderTime: order.orderDate,
+    acceptedTime: order.acceptedAt,
+    deliveredTime: order.deliveredAt,
     distance: formattedDistance,
     estimatedTime: formattedEta,
     distanceKm: distanceKm,
@@ -223,11 +225,33 @@ final deliveryHistoryStreamProvider =
     Provider.autoDispose<AsyncValue<List<DeliveryOrder>>>((ref) {
   final asyncOrders = ref.watch(deliveryOrdersStreamProvider);
   return asyncOrders.whenData(
-    (orders) => orders
-        .where((o) =>
-            o.status == DeliveryOrderStatus.delivered ||
-            o.status == DeliveryOrderStatus.cancelled)
-        .toList(),
+    (orders) {
+      // 1. Strict status filtering: only completed (delivered) or cancelled orders
+      final filtered = orders.where((o) =>
+          o.status == DeliveryOrderStatus.delivered ||
+          o.status == DeliveryOrderStatus.cancelled);
+
+      // 2. Prevent duplicate history entries
+      final seenIds = <String>{};
+      final deduplicated = <DeliveryOrder>[];
+      for (final order in filtered) {
+        final key = order.orderId.isNotEmpty ? order.orderId : order.id;
+        if (key.isNotEmpty && seenIds.add(key)) {
+          deduplicated.add(order);
+        } else if (key.isEmpty) {
+          deduplicated.add(order);
+        }
+      }
+
+      // 3. Sort consistently by the most relevant delivery/order date (newest first)
+      deduplicated.sort((a, b) {
+        final dateA = a.deliveredTime ?? a.deliveryDate ?? a.orderTime;
+        final dateB = b.deliveredTime ?? b.deliveryDate ?? b.orderTime;
+        return dateB.compareTo(dateA);
+      });
+
+      return deduplicated;
+    },
   );
 });
 
