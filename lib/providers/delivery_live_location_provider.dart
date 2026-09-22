@@ -22,6 +22,13 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
   final Ref _ref;
   StreamSubscription<Position>? _subscription;
 
+  // Task 7: Secondary coordinate deduplication guard at the provider level.
+  // The primary filter is AndroidSettings.distanceFilter (20 m); this prevents
+  // duplicate Firestore writes when _writeCurrentPosition() and the stream
+  // start emit the same coordinates on tracking start.
+  double? _lastWrittenLat;
+  double? _lastWrittenLng;
+
   AgentLiveLocationNotifier(this._ref) : super(false) {
     // Keep GPS tracking in sync with the agent's duty (online/offline) state:
     // tracking starts automatically when they go online and stops when offline.
@@ -37,8 +44,13 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
 
   /// Starts streaming real GPS coordinates to Firestore. Requests permission
   /// first; if denied, tracking stays off (state remains `false`).
+  ///
+  /// On Android 10+, also requests [ACCESS_BACKGROUND_LOCATION] so that
+  /// the geolocator foreground service can continue sending updates when the
+  /// app is minimised or the screen is locked. If the user denies background
+  /// access, tracking degrades gracefully to foreground-only (no crash).
   Future<void> startTracking() async {
-    if (state) return;
+    if (state) return; // Duplicate-start guard
 
     final location = _ref.read(locationServiceProvider);
     final granted = await location.requestLocationPermission();
@@ -46,6 +58,10 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
       state = false;
       return;
     }
+
+    // Task 7: Request background location permission (Android 10+).
+    // Result is intentionally ignored for graceful foreground-only degradation.
+    await location.requestBackgroundLocationPermission();
 
     state = true;
     _writeCurrentPosition();
@@ -63,6 +79,10 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
   void stopTracking() {
     _subscription?.cancel();
     _subscription = null;
+    // Task 7: Reset deduplication state so the next tracking session
+    // always writes the first position even if coordinates haven't changed.
+    _lastWrittenLat = null;
+    _lastWrittenLng = null;
     state = false;
   }
 
@@ -86,6 +106,13 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
   }
 
   void _write(double latitude, double longitude) {
+    // Task 7: Secondary coordinate deduplication guard.
+    // Prevents a redundant Firestore write when _writeCurrentPosition() and
+    // the stream first emission report identical coordinates on tracking start.
+    if (_lastWrittenLat == latitude && _lastWrittenLng == longitude) return;
+    _lastWrittenLat = latitude;
+    _lastWrittenLng = longitude;
+
     String agentId = _ref.read(deliveryAgentProvider).id;
     if (agentId.isEmpty) {
       agentId = FirebaseAuth.instance.currentUser?.uid ?? '';
@@ -96,9 +123,12 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
         _ref.read(deliveryActiveOrdersStreamProvider).value ?? [];
     final activeOrderId =
         activeOrders.isNotEmpty ? activeOrders.first.id : null;
-    _ref.read(deliveryTrackingServiceProvider).updateAgentLocation(
-        agentId, latitude, longitude,
-        orderId: activeOrderId);
+    // Task 7: .catchError ensures Firestore write failures (network, rules,
+    // quota) are silently swallowed and never crash the GPS stream.
+    _ref
+        .read(deliveryTrackingServiceProvider)
+        .updateAgentLocation(agentId, latitude, longitude, orderId: activeOrderId)
+        .catchError((_) {/* Write failures are non-fatal — tracking continues */});
   }
 
   @override

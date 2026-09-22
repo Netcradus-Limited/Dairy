@@ -62,7 +62,7 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen> {
   String? _lastOrderId;
   // -------------------------------------------------------------------------
 
-  void _focusOn(LatLng point, {double zoom = 14}) {
+  void _focusOn(LatLng point, {double zoom = 16}) {
     _mapController.move(point, zoom);
   }
 
@@ -75,7 +75,7 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen> {
     });
     final loc = _MapConstants.locationForOrder(order);
     if (loc != null) {
-      _focusOn(loc, zoom: 15);
+      _focusOn(loc, zoom: 16);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -238,7 +238,7 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen> {
     if (agentPos != null && !_hasInitiallyCentered) {
       _hasInitiallyCentered = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _mapController.move(agentPos, 14.0);
+        _mapController.move(agentPos, 16.0);
       });
     }
 
@@ -269,9 +269,9 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen> {
             icon: const Icon(Icons.my_location_rounded),
             onPressed: () {
               if (agentPos != null) {
-                _focusOn(agentPos, zoom: 15);
+                _focusOn(agentPos, zoom: 16);
               } else {
-                _focusOn(_MapConstants.pickupHub, zoom: 13);
+                _focusOn(_MapConstants.pickupHub, zoom: 15);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Agent GPS location is currently unavailable.'),
@@ -309,18 +309,20 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen> {
                 mapController: _mapController,
                 options: MapOptions(
                   initialCenter: agentPos ?? _MapConstants.defaultMapCenter,
-                  initialZoom: 13,
+                  initialZoom: 15.5,
                   minZoom: 4,
-                  maxZoom: 18,
+                  maxZoom: 19,
                 ),
                 children: [
                   TileLayer(
                     urlTemplate:
                         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    subdomains: const ['a', 'b', 'c'],
-                    userAgentPackageName: 'com.example.dairy_app',
+                    userAgentPackageName: 'in.sawariyadairy.delivery',
+                    maxZoom: 19,
+                    maxNativeZoom: 19,
+                    retinaMode: RetinaMode.isHighDensity(context),
                     errorTileCallback: (tile, error, stackTrace) {
-                      // Gracefully absorb tile network errors when offline
+                      debugPrint('Map Tile error: $error on tile $tile');
                     },
                   ),
                   // Task 6: draw polyline from RouteService result.

@@ -7,6 +7,19 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <!-- Task 7: Background location — allows GPS updates when the app is minimized
+         or the screen is locked (Android 10+, API 29+). The user must grant
+         "Allow all the time" for true background tracking. -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- Task 7: Required to start a foreground service. geolocator_android uses
+         this internally when foregroundNotificationConfig is set. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <!-- Task 7: Required for foreground services accessing location
+         (Android 14+, API 34+, targetSdk >= 34). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
     <!-- Notifications (required for Android 13+ to show push alerts) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
