@@ -422,18 +422,29 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
           realName = authUser.displayName!.trim();
         }
 
-        // 2. Phone: Check agent doc -> user provider -> authUser phoneNumber
+        // 2. Phone: Prioritize authenticated Firebase phone number, fallback to agent doc -> user provider
         String realPhone = '';
+        final authPhone = authUser?.phoneNumber?.trim();
         final agentDocPhone = (data['phone'] as String?)?.trim() ?? '';
-        if (agentDocPhone.isNotEmpty && !_isLegacyMockPhone(agentDocPhone)) {
+
+        if (authPhone != null &&
+            authPhone.isNotEmpty &&
+            !_isLegacyMockPhone(authPhone)) {
+          realPhone = authPhone;
+          // Synchronize to Firestore if missing or mismatched
+          if (agentDocPhone.isEmpty || agentDocPhone != authPhone) {
+            try {
+              firestore.collection('delivery_agents').doc(uid).set({
+                'phone': authPhone,
+                'updatedAt': FieldValue.serverTimestamp(),
+              }, SetOptions(merge: true));
+            } catch (_) {}
+          }
+        } else if (agentDocPhone.isNotEmpty && !_isLegacyMockPhone(agentDocPhone)) {
           realPhone = agentDocPhone;
         } else if (_currentUser.phone.trim().isNotEmpty &&
             !_isLegacyMockPhone(_currentUser.phone)) {
           realPhone = _currentUser.phone.trim();
-        } else if (authUser?.phoneNumber != null &&
-            authUser!.phoneNumber!.trim().isNotEmpty &&
-            !_isLegacyMockPhone(authUser.phoneNumber)) {
-          realPhone = authUser.phoneNumber!.trim();
         }
 
         // 3. Email: Check agent doc -> user provider -> authUser email
@@ -609,7 +620,12 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
                     uName == 'Sawariya Customer')
                 ? ''
                 : uName;
-            final cleanPhone = _isLegacyMockPhone(uPhone) ? '' : uPhone;
+            final authPhone = authUser?.phoneNumber?.trim();
+            final cleanPhone = (authPhone != null &&
+                    authPhone.isNotEmpty &&
+                    !_isLegacyMockPhone(authPhone))
+                ? authPhone
+                : (_isLegacyMockPhone(uPhone) ? '' : uPhone);
             final cleanVehicle = _isLegacyMockVehicle(uVehicle) ? '' : uVehicle;
             final cleanVehicleNum =
                 _isLegacyMockVehicleNumber(uVehicleNumber) ? '' : uVehicleNumber;
@@ -656,9 +672,14 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
             ? (authUser?.displayName ?? '')
             : _currentUser.name.trim();
 
-        final fallbackPhone = _isLegacyMockPhone(_currentUser.phone)
-            ? (authUser?.phoneNumber ?? '')
-            : _currentUser.phone.trim();
+        final authPhone = authUser?.phoneNumber?.trim();
+        final fallbackPhone = (authPhone != null &&
+                authPhone.isNotEmpty &&
+                !_isLegacyMockPhone(authPhone))
+            ? authPhone
+            : (_isLegacyMockPhone(_currentUser.phone)
+                ? (authUser?.phoneNumber ?? '')
+                : _currentUser.phone.trim());
 
         debugPrint('DeliveryNotifier: Loaded name = $fallbackName');
         debugPrint('DeliveryNotifier: Loaded phone = $fallbackPhone');
@@ -762,6 +783,15 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
     final trimmedZone = assignedZone?.trim();
     final trimmedImage = profileImageUrl?.trim();
 
+    final authPhone = authUser?.phoneNumber?.trim();
+    // Requirements: Phone number must NOT be overwritten by arbitrary user input.
+    // Prioritize authenticated Firebase phone number.
+    final effectivePhone = (authPhone != null && authPhone.isNotEmpty)
+        ? authPhone
+        : (trimmedPhone != null && trimmedPhone.isNotEmpty
+            ? trimmedPhone
+            : state.phone);
+
     final agentUpdates = <String, dynamic>{
       'updatedAt': FieldValue.serverTimestamp(),
     };
@@ -769,8 +799,8 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
     if (trimmedName != null && trimmedName.isNotEmpty) {
       agentUpdates['name'] = trimmedName;
     }
-    if (trimmedPhone != null && trimmedPhone.isNotEmpty) {
-      agentUpdates['phone'] = trimmedPhone;
+    if (effectivePhone.isNotEmpty) {
+      agentUpdates['phone'] = effectivePhone;
     }
     if (trimmedVehicle != null && trimmedVehicle.isNotEmpty) {
       agentUpdates['vehicle'] = trimmedVehicle;
@@ -811,7 +841,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
     // Synchronize profile details to users/{uid} and userProvider in-sync
     await _ref.read(userProvider.notifier).updateProfile(
           name: trimmedName,
-          phone: trimmedPhone,
+          phone: effectivePhone.isNotEmpty ? effectivePhone : null,
           vehicle: trimmedVehicle,
           vehicleType: trimmedVehicle,
           vehicleNumber: trimmedVehicleNumber,
@@ -830,7 +860,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
     // Update local state
     state = state.copyWith(
       name: trimmedName ?? state.name,
-      phone: trimmedPhone ?? state.phone,
+      phone: effectivePhone.isNotEmpty ? effectivePhone : state.phone,
       vehicle: trimmedVehicle ?? state.vehicle,
       vehicleNumber: trimmedVehicleNumber ?? state.vehicleNumber,
       assignedZone: trimmedZone ?? state.assignedZone,

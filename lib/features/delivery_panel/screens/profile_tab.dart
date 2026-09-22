@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../core/constants/app_colors.dart';
@@ -230,9 +231,24 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
   }
 
   void _showEditProfileDialog(BuildContext context, DeliveryAgent agent) {
+    final authPhone = () {
+      try {
+        if (Firebase.apps.isNotEmpty) {
+          return FirebaseAuth.instance.currentUser?.phoneNumber?.trim();
+        }
+      } catch (_) {}
+      return null;
+    }();
+
+    final effectivePhone = (authPhone != null && authPhone.isNotEmpty)
+        ? authPhone
+        : (agent.phone.trim().isNotEmpty
+            ? agent.phone.trim()
+            : ref.read(userProvider).phone.trim());
+
     final formKey = GlobalKey<FormState>();
     final nameCtrl = TextEditingController(text: agent.name);
-    final phoneCtrl = TextEditingController(text: agent.phone);
+    final phoneCtrl = TextEditingController(text: effectivePhone);
     final vehicleCtrl = TextEditingController(text: agent.vehicle);
     final vehicleNumCtrl = TextEditingController(text: agent.vehicleNumber);
     final zoneCtrl = TextEditingController(text: agent.assignedZone);
@@ -271,12 +287,37 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: phoneCtrl,
+                    readOnly: true,
+                    enableInteractiveSelection: false,
                     keyboardType: TextInputType.phone,
-                    validator: AppValidators.validateIndianPhone,
-                    decoration: const InputDecoration(
-                      labelText: 'Phone Number *',
-                      hintText: 'e.g. 9826012345',
-                      prefixIcon: Icon(Icons.phone_rounded),
+                    style: GoogleFonts.plusJakartaSans(
+                      color: AppColors.textSecondaryOf(context),
+                      fontWeight: FontWeight.w600,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Phone Number (Read-Only)',
+                      hintText: effectivePhone.isNotEmpty
+                          ? effectivePhone
+                          : 'No phone linked',
+                      prefixIcon: const Icon(Icons.phone_rounded),
+                      suffixIcon: const Tooltip(
+                        message:
+                            'Phone number is linked to your authenticated account and cannot be modified.',
+                        child: Icon(
+                          Icons.lock_outline_rounded,
+                          size: 20,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.grey.withValues(alpha: 0.12),
+                      helperText: 'Linked to authenticated account',
+                      helperStyle: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: AppColors.textSecondaryOf(context),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -341,7 +382,7 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
               try {
                 await ref.read(deliveryAgentProvider.notifier).updateProfile(
                       name: normalizedName,
-                      phone: phoneCtrl.text.trim(),
+                      phone: effectivePhone,
                       vehicle: vehicleCtrl.text.trim(),
                       vehicleNumber: normalizedPlate,
                       assignedZone: zoneCtrl.text.trim(),

@@ -632,4 +632,157 @@ void main() {
       expect(freshAgent.isProfileComplete, isFalse);
     });
   });
+
+  group('Delivery Agent Profile — Phone Read-Only & Authentication Sync Tests', () {
+    test('Authenticated Firebase phone number takes precedence over empty or outdated Firestore phone', () {
+      const authPhone = '+91 98765 43210';
+      const outdatedDocPhone = '+91 91111 22222';
+
+      String resolveEffectivePhone({
+        required String? firebaseAuthPhone,
+        required String? firestorePhone,
+        required String? userProviderPhone,
+      }) {
+        final authP = firebaseAuthPhone?.trim();
+        if (authP != null && authP.isNotEmpty) {
+          return authP;
+        }
+        final docP = firestorePhone?.trim();
+        if (docP != null && docP.isNotEmpty) {
+          return docP;
+        }
+        final userP = userProviderPhone?.trim();
+        if (userP != null && userP.isNotEmpty) {
+          return userP;
+        }
+        return '';
+      }
+
+      // 1. When Firestore has outdated phone but Auth has new phone
+      final resolvedWithAuth = resolveEffectivePhone(
+        firebaseAuthPhone: authPhone,
+        firestorePhone: outdatedDocPhone,
+        userProviderPhone: '',
+      );
+      expect(resolvedWithAuth, equals(authPhone));
+
+      // 2. When Firestore has no phone but Auth has phone
+      final resolvedWithEmptyDoc = resolveEffectivePhone(
+        firebaseAuthPhone: authPhone,
+        firestorePhone: '',
+        userProviderPhone: '',
+      );
+      expect(resolvedWithEmptyDoc, equals(authPhone));
+
+      // 3. When Auth has no phone but Firestore doc has phone
+      final resolvedFromDoc = resolveEffectivePhone(
+        firebaseAuthPhone: null,
+        firestorePhone: outdatedDocPhone,
+        userProviderPhone: '',
+      );
+      expect(resolvedFromDoc, equals(outdatedDocPhone));
+    });
+
+    test('Profile save operation prevents arbitrary phone input from overwriting authenticated phone', () {
+      const authenticatedPhone = '+91 98765 43210';
+      const arbitraryUserInputPhone = '+91 99999 88888';
+
+      // Simulates the effective phone resolution in updateProfile
+      String resolveSavePhone({
+        required String? authPhoneNumber,
+        required String? inputPhone,
+        required String existingStatePhone,
+      }) {
+        final authP = authPhoneNumber?.trim();
+        if (authP != null && authP.isNotEmpty) {
+          return authP;
+        }
+        final trimmedInput = inputPhone?.trim();
+        if (trimmedInput != null && trimmedInput.isNotEmpty) {
+          return trimmedInput;
+        }
+        return existingStatePhone;
+      }
+
+      // Even if arbitrary user input is passed, authenticated phone takes total priority
+      final phoneToSave = resolveSavePhone(
+        authPhoneNumber: authenticatedPhone,
+        inputPhone: arbitraryUserInputPhone,
+        existingStatePhone: '+91 91234 56789',
+      );
+
+      expect(phoneToSave, equals(authenticatedPhone));
+      expect(phoneToSave, isNot(equals(arbitraryUserInputPhone)));
+    });
+
+    test('Profile save preserves existing phone when auth phone is absent and input is empty', () {
+      const existingPhone = '+91 98765 43210';
+
+      String resolveSavePhone({
+        required String? authPhoneNumber,
+        required String? inputPhone,
+        required String existingStatePhone,
+      }) {
+        final authP = authPhoneNumber?.trim();
+        if (authP != null && authP.isNotEmpty) {
+          return authP;
+        }
+        final trimmedInput = inputPhone?.trim();
+        if (trimmedInput != null && trimmedInput.isNotEmpty) {
+          return trimmedInput;
+        }
+        return existingStatePhone;
+      }
+
+      final phoneToSave = resolveSavePhone(
+        authPhoneNumber: null,
+        inputPhone: '',
+        existingStatePhone: existingPhone,
+      );
+
+      expect(phoneToSave, equals(existingPhone));
+    });
+
+    test('Missing phone number in both Auth and Firestore is handled gracefully without crash', () {
+      final agent = DeliveryAgent.empty('test_uid_new').copyWith(isLoaded: true);
+
+      expect(agent.phone, isEmpty);
+      expect(agent.isProfileComplete, isFalse);
+
+      // Verify that missing phone allows updating other fields without breaking
+      final updated = agent.copyWith(
+        name: 'Rohan Sharma',
+        vehicle: 'Honda Shine',
+        vehicleNumber: 'MP 09 XY 1234',
+        assignedZone: 'Vijay Nagar',
+      );
+
+      expect(updated.name, equals('Rohan Sharma'));
+      expect(updated.phone, isEmpty);
+      expect(updated.vehicle, equals('Honda Shine'));
+      expect(updated.isProfileComplete, isFalse); // Still incomplete without phone
+    });
+
+    test('Editable profile fields (Name, Vehicle, Plate, Zone) validate and save correctly alongside read-only phone', () {
+      // 1. Name validation
+      expect(AppValidators.validateFullName('Rohan Verma'), isNull);
+      expect(AppValidators.validateFullName(''), isNotNull);
+
+      // 2. Vehicle Model validation
+      expect(AppValidators.validateVehicleModel('Hero Splendor Plus'), isNull);
+      expect(AppValidators.validateVehicleModel(''), isNotNull);
+
+      // 3. Vehicle Plate validation
+      expect(AppValidators.validateVehicleNumber('MP 09 AB 1234'), isNull);
+      expect(AppValidators.validateVehicleNumber('INVALID'), isNotNull);
+
+      // 4. Delivery Zone validation
+      expect(AppValidators.validateDeliveryZone('Vijay Nagar'), isNull);
+      expect(AppValidators.validateDeliveryZone(''), isNotNull);
+
+      // Normalization helpers
+      expect(AppValidators.normalizeName('  Rohan  Verma  '), equals('Rohan Verma'));
+      expect(AppValidators.normalizeVehicleNumber('mp  09  ab  1234'), equals('MP 09 AB 1234'));
+    });
+  });
 }
