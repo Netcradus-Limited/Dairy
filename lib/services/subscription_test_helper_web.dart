@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:js' as js;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import '../models/product.dart';
 import '../models/subscription.dart';
 import 'subscription_service.dart';
@@ -62,7 +63,7 @@ void setupSubscriptionWebBridge() {
       service.createSubscription(uid, sub).then((res) {
         callback.apply([null, jsonEncode(res.toMap())]);
       }).catchError((err) {
-        print('[SUBSCRIPTION_BRIDGE_ERROR] create: $err');
+        debugPrint('[SUBSCRIPTION_BRIDGE_ERROR] create: $err');
         callback.apply([err.toString(), null]);
       });
     },
@@ -70,7 +71,7 @@ void setupSubscriptionWebBridge() {
       service.getCurrentSubscription(uid).then((res) {
         callback.apply([null, res != null ? jsonEncode(res.toMap()) : null]);
       }).catchError((err) {
-        print('[SUBSCRIPTION_BRIDGE_ERROR] get: $err');
+        debugPrint('[SUBSCRIPTION_BRIDGE_ERROR] get: $err');
         callback.apply([err.toString(), null]);
       });
     },
@@ -78,7 +79,7 @@ void setupSubscriptionWebBridge() {
       service.cancelSubscription(uid).then((res) {
         callback.apply([null, jsonEncode(res.toMap())]);
       }).catchError((err) {
-        print('[SUBSCRIPTION_BRIDGE_ERROR] cancel: $err');
+        debugPrint('[SUBSCRIPTION_BRIDGE_ERROR] cancel: $err');
         callback.apply([err.toString(), null]);
       });
     },
@@ -86,7 +87,7 @@ void setupSubscriptionWebBridge() {
       service.renewSubscription(uid).then((res) {
         callback.apply([null, jsonEncode(res.toMap())]);
       }).catchError((err) {
-        print('[SUBSCRIPTION_BRIDGE_ERROR] renew: $err');
+        debugPrint('[SUBSCRIPTION_BRIDGE_ERROR] renew: $err');
         callback.apply([err.toString(), null]);
       });
     },
@@ -106,11 +107,11 @@ void setupSubscriptionWebBridge() {
             .then((res) {
           callback.apply([null, jsonEncode(res.toMap())]);
         }).catchError((err) {
-          print('[SUBSCRIPTION_BRIDGE_ERROR] pause: $err');
+          debugPrint('[SUBSCRIPTION_BRIDGE_ERROR] pause: $err');
           callback.apply([err.toString(), null]);
         });
       }).catchError((err) {
-        print('[SUBSCRIPTION_BRIDGE_ERROR] pause: $err');
+        debugPrint('[SUBSCRIPTION_BRIDGE_ERROR] pause: $err');
         callback.apply([err.toString(), null]);
       });
     },
@@ -130,11 +131,11 @@ void setupSubscriptionWebBridge() {
             .then((res) {
           callback.apply([null, jsonEncode(res.toMap())]);
         }).catchError((err) {
-          print('[SUBSCRIPTION_BRIDGE_ERROR] resume: $err');
+          debugPrint('[SUBSCRIPTION_BRIDGE_ERROR] resume: $err');
           callback.apply([err.toString(), null]);
         });
       }).catchError((err) {
-        print('[SUBSCRIPTION_BRIDGE_ERROR] resume: $err');
+        debugPrint('[SUBSCRIPTION_BRIDGE_ERROR] resume: $err');
         callback.apply([err.toString(), null]);
       });
     },

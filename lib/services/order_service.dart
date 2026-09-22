@@ -174,8 +174,10 @@ class OrderService {
 
     // Create corresponding payment transaction record in payments collection
     final paymentDocId = 'PAY_${docRef.id}';
-    debugPrint('[P0.1] order created: ${docRef.id}');
-    debugPrint('[P0.1] attempting payment write: $paymentDocId');
+    if (kDebugMode) {
+      debugPrint('[P0.1] order created: ${docRef.id}');
+      debugPrint('[P0.1] attempting payment write: $paymentDocId');
+    }
 
     try {
       final isCash = paymentMethod.toLowerCase().contains('cash');
@@ -197,16 +199,20 @@ class OrderService {
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      debugPrint('[P0.1] payment write success: $paymentDocId');
-    } catch (e, stack) {
-      debugPrint('[P0.1] payment write FAILED');
-      if (e is FirebaseException) {
-        debugPrint('error code: ${e.code}');
-        debugPrint('error message: ${e.message}');
-      } else {
-        debugPrint('error: $e');
+      if (kDebugMode) {
+        debugPrint('[P0.1] payment write success: $paymentDocId');
       }
-      debugPrint('stackTrace: $stack');
+    } catch (e, stack) {
+      if (kDebugMode) {
+        debugPrint('[P0.1] payment write FAILED');
+        if (e is FirebaseException) {
+          debugPrint('error code: ${e.code}');
+          debugPrint('error message: ${e.message}');
+        } else {
+          debugPrint('error: $e');
+        }
+        debugPrint('stackTrace: $stack');
+      }
     }
 
     return order;

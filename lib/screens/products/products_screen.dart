@@ -244,12 +244,6 @@ class ProductsScreen extends StatelessWidget {
                                 clipBehavior: Clip.antiAlias,
                                 child: Builder(builder: (context) {
                                   final image = product.resolvedImageUrl.trim();
-                                  if (product.id == 'prod_1788762789345') {
-                                    debugPrint('ADMIN PRODUCT ${product.id}');
-                                    debugPrint(
-                                        'Firestore imageUrl: ${product.imageUrl}');
-                                    debugPrint('Resolved imageUrl: $image');
-                                  }
                                   if (image.isEmpty) {
                                     return Text(
                                       product.emoji,

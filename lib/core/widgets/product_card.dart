@@ -34,7 +34,7 @@ class _ProductCardState extends State<ProductCard> {
     final p = widget.product;
     final origPrice = p.originalPrice;
     final hasDiscount = origPrice != null && origPrice > p.price && origPrice > 0;
-    final discountPercent = (hasDiscount && origPrice != null && origPrice > 0)
+    final discountPercent = (hasDiscount && origPrice > 0)
         ? (((origPrice - p.price) / origPrice) * 100).round()
         : 0;
 

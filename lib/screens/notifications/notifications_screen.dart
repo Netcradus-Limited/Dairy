@@ -8,7 +8,6 @@ import '../../core/responsive/responsive_layout.dart';
 import '../../models/notification_item.dart';
 import '../../models/order.dart' as order_model;
 import '../../providers/notification_provider.dart';
-import '../../providers/user_provider.dart';
 import '../../services/order_service.dart';
 
 /// Admin Notifications Screen — Role-Aware Broadcasts, Targeted Alerts & History

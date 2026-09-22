@@ -547,9 +547,6 @@ class OrderDetailsScreen extends ConsumerWidget {
               Navigator.pop(ctx);
               try {
                 await ref.read(orderServiceProvider).cancelOrder(orderId);
-                try {
-                  ref.read(ordersProvider.notifier).cancelOrder(orderId);
-                } catch (_) {}
 
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(

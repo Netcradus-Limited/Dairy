@@ -190,14 +190,6 @@ class AdminProvider extends ChangeNotifier {
   List<DairyProduct> get topSellingProducts =>
       _products.where((p) => p.isBestSeller).toList();
 
-  static bool get _canAccessFirestore {
-    try {
-      return Firebase.apps.isNotEmpty;
-    } catch (_) {
-      return false;
-    }
-  }
-
   AdminProvider({
     FirestoreProductRepository? repo,
     OrderService? orderService,
@@ -524,12 +516,6 @@ class AdminProvider extends ChangeNotifier {
       isBestSeller: (raw['isBestSeller'] as bool?) ?? false,
       imageUrl: rawImageUrl.trim(),
     );
-
-    if (product.id == 'prod_1788762789345' || product.imageUrl.isNotEmpty) {
-      debugPrint('ADMIN PRODUCT ${product.id}');
-      debugPrint('Firestore imageUrl: ${product.imageUrl}');
-      debugPrint('Resolved imageUrl: ${product.resolvedImageUrl}');
-    }
 
     return product;
   }
