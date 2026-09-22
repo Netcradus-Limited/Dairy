@@ -31,6 +31,8 @@ import '../../models/product.dart';
 import '../../providers/user_provider.dart';
 import '../../features/subscription/subscriptions_screen.dart';
 import '../../features/subscription/edit_subscription_screen.dart';
+import '../../providers/notification_provider.dart';
+import '../../services/notification_service.dart';
 import 'auth_refresh.dart';
 
 /// Global root navigator key for deep-link / push notification navigation.
@@ -70,9 +72,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         targetRoute = isAuthPath ? null : '/login';
       }
       // 2. Authenticated users:
-      // If currently on an auth/onboarding screen, redirect to their role's home panel
+      // If currently on an auth/onboarding screen, redirect to pending notification or their role's home panel
       else if (isAuthPath) {
-        if (isAdmin) {
+        final pendingDest = ref.read(pendingNotificationDestinationProvider);
+        if (pendingDest != null && path != '/splash') {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(pendingNotificationDestinationProvider.notifier).state = null;
+            if (pendingDest.notificationId != null && user.id.isNotEmpty) {
+              try {
+                ref
+                    .read(notificationRepositoryProvider)
+                    .markAsRead(user.id, pendingDest.notificationId!);
+              } catch (_) {}
+            }
+          });
+          targetRoute = NotificationService.resolveNotificationRoute(
+            user: user,
+            explicitRoute: pendingDest.route,
+            orderId: pendingDest.orderId,
+            type: pendingDest.type,
+          );
+        } else if (isAdmin) {
           targetRoute = '/admin';
         } else if (isDelivery) {
           targetRoute = '/delivery';

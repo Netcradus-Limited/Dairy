@@ -47,13 +47,6 @@ class MyApp extends ConsumerWidget {
     // widget tree below it) whenever the user switches language.
     AppLanguage.setLanguage(settings.languageCode);
 
-    // Wire up app-level FCM message handling: initial message and opened-app
-    // notifications. These are listened to once at app start so that taps on
-    // notifications when the app was in background/terminated state are handled
-    // even before the widget tree fully builds.
-    // We use a once-only listener via a provider so it doesn't accumulate.
-    registerFCMMessageListeners(ref);
-
     return MaterialApp.router(
       title: 'Sawariya Dairy',
       debugShowCheckedModeBanner: false,
@@ -69,45 +62,5 @@ class MyApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
     );
-  }
-}
-
-/// Listens to FirebaseMessaging initial message and opened-app events once at
-/// app start. This ensures that notification taps are handled regardless of
-/// timing (e.g. if the listener inside NotificationService.init() runs later).
-void registerFCMMessageListeners(WidgetRef ref) {
-  try {
-    if (Firebase.apps.isEmpty) {
-      debugPrint('[FCM] Firebase not initialized; skipping FCM message listeners.');
-      return;
-    }
-
-    // Get initial message when app is opened from terminated state.
-    final initialMessageFuture = FirebaseMessaging.instance.getInitialMessage();
-    initialMessageFuture.then((RemoteMessage? message) {
-      if (message != null) {
-        final orderId = message.data['orderId'] ?? message.data['order_id'];
-        if (orderId != null) {
-          ref.read(lastTappedOrderIdProvider.notifier).state = orderId;
-          debugPrint('[FCM] Initial message: set lastTappedOrderId to $orderId');
-        }
-      }
-    }).catchError((e) {
-      debugPrint('[FCM] Error getting initial message: $e');
-    });
-
-    // Listen for opened-app events (app was in background/terminated, user tapped notification).
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) async {
-      final orderId = message.data['orderId'] ?? message.data['order_id'];
-      if (orderId != null) {
-        ref.read(lastTappedOrderIdProvider.notifier).state = orderId;
-        debugPrint('[FCM] Opened-app message: set lastTappedOrderId to $orderId');
-      }
-      debugPrint('[FCM] onMessageOpenedApp triggered with data: ${message.data}');
-    }).onError((Object error) {
-      debugPrint('[FCM] onMessageOpenedApp error: $error');
-    });
-  } catch (e) {
-    debugPrint('[FCM] Error registering FCM message listeners: $e');
   }
 }

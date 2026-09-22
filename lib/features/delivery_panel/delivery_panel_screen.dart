@@ -10,6 +10,7 @@ import '../../providers/cart_provider.dart';
 import '../../providers/delivery_live_location_provider.dart';
 import '../../providers/delivery_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../services/fcm_service.dart';
 import '../../services/network_connectivity_service.dart';
 import 'screens/requests_tab.dart';
 import 'screens/active_delivery_tab.dart';
@@ -69,7 +70,40 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkLastTappedOrder();
+    });
+  }
+
+  void _checkLastTappedOrder() {
+    final tappedOrderId = ref.read(lastTappedOrderIdProvider);
+    if (tappedOrderId.isNotEmpty) {
+      _handleTappedOrderId(tappedOrderId);
+    }
+  }
+
+  void _handleTappedOrderId(String orderId) {
+    final activeOrders =
+        ref.read(deliveryActiveOrdersStreamProvider).asData?.value ?? [];
+    final isActive =
+        activeOrders.any((o) => o.id == orderId || o.orderId == orderId);
+    if (isActive) {
+      ref.read(deliveryPanelTabProvider.notifier).setTab(1);
+    } else {
+      ref.read(deliveryPanelTabProvider.notifier).setTab(0);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    ref.listen<String>(lastTappedOrderIdProvider, (prev, next) {
+      if (next.isNotEmpty && next != prev) {
+        _handleTappedOrderId(next);
+      }
+    });
+
     final isDesktop = ResponsiveLayout.isDesktop(context);
     final agent = ref.watch(deliveryAgentProvider);
     final isOnline = agent.status == DeliveryStatus.onDuty;

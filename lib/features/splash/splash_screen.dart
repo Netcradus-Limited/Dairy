@@ -6,8 +6,10 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants/app_assets.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/notification_provider.dart';
 import '../../providers/onboarding_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../services/notification_service.dart';
 import '../auth/services/auth_video_service.dart';
 
 /// Premium Minimal Animated Splash Screen for Sawariya Dairy
@@ -61,9 +63,30 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Future<void> _navigateToNextScreen() async {
     if (!mounted) return;
 
-    // If a session already exists, go straight to the relevant home screen
+    // If a session already exists, go straight to the relevant home screen or pending notification
     final user = ref.read(userProvider);
     if (user.id.isNotEmpty) {
+      final pendingDest = ref.read(pendingNotificationDestinationProvider);
+      if (pendingDest != null) {
+        ref.read(pendingNotificationDestinationProvider.notifier).state = null;
+        if (pendingDest.notificationId != null && user.id.isNotEmpty) {
+          try {
+            ref
+                .read(notificationRepositoryProvider)
+                .markAsRead(user.id, pendingDest.notificationId!);
+          } catch (_) {}
+        }
+        final targetRoute = NotificationService.resolveNotificationRoute(
+          user: user,
+          explicitRoute: pendingDest.route,
+          orderId: pendingDest.orderId,
+          type: pendingDest.type,
+        );
+        debugPrint('[SPLASH] Routing authenticated cold-start to: $targetRoute');
+        context.go(targetRoute);
+        return;
+      }
+
       if (user.isAdmin) {
         context.go('/admin');
       } else if (user.isDelivery) {
