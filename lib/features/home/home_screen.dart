@@ -13,7 +13,7 @@ import '../../core/widgets/section_header.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/navigation_provider.dart';
 
-/// Sawariya Dairy — Pixel-Perfect Home Screen matching attached design
+/// Sawariya Dairy — Pixel-Perfect Modern Home Screen
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -36,12 +36,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final isDesktop = context.isDesktop;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SizedBox(height: 10),
+
+            // ─── 1. Quick Commerce Delivery Promise Pill ───
+            _DeliveryPromisePill(
+              onTap: () => ref.read(navigationProvider.notifier).setIndex(1),
+            ),
+
             const SizedBox(height: 12),
 
             // ─── 2. Hero Banner (banner1v.mp4 Video Banner) ───
@@ -49,13 +57,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               onTap: () => ref.read(navigationProvider.notifier).setIndex(1),
             ),
 
-            const SizedBox(height: AppSizes.p24),
+            const SizedBox(height: AppSizes.p20),
 
             // ─── 3. Categories Section ──────────────────────────────────────────
             categoriesAsync.when(
               loading: () => const SizedBox(
                 height: 205,
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: CircularProgressIndicator(color: Color(0xFF0F4A2F))),
               ),
               error: (_, __) => const SizedBox.shrink(),
               data: (categories) => Column(
@@ -65,7 +73,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     title: tr('Categories'),
                     subtitle: tr('Farm fresh dairy essentials delivered daily'),
                   ),
-                  const SizedBox(height: AppSizes.p14),
+                  const SizedBox(height: AppSizes.p12),
                   SizedBox(
                     height: 205,
                     child: ScrollConfiguration(
@@ -107,12 +115,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
 
-            const SizedBox(height: AppSizes.p24),
+            const SizedBox(height: AppSizes.p20),
 
             // ─── 3.5. Middle Promotional Banner (banner4 & banner5) ───────────────────
             const _CategoryPromotionalBanner(),
 
-            const SizedBox(height: AppSizes.p24),
+            const SizedBox(height: AppSizes.p20),
 
             // ─── 4. Bottom Split Row: Track Order & Freshness Banner ─────────────
             if (isDesktop)
@@ -160,13 +168,91 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               ),
 
-            const SizedBox(height: AppSizes.p24),
+            const SizedBox(height: AppSizes.p20),
 
             // ─── Why Choose Us Banner ───
             const _WhyChooseUsVideo(),
 
-            const SizedBox(height: 36),
+            const SizedBox(height: 70), // Safe bottom clearance for floating cart
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. Delivery Promise Pill
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _DeliveryPromisePill extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _DeliveryPromisePill({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFE6F4EA), Color(0xFFD1E7DD)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFFB1D5C0),
+              width: 1.0,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0F4A2F),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.electric_bolt_rounded,
+                  color: Colors.amber,
+                  size: 13,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: RichText(
+                  text: TextSpan(
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: Color(0xFF0F4A2F),
+                    ),
+                    children: [
+                      TextSpan(
+                        text: tr('Next Morning Delivery: '),
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      TextSpan(
+                        text: tr('6:00 AM – 7:30 AM • Order before 10 PM'),
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 16,
+                color: Color(0xFF0F4A2F),
+              ),
+            ],
+          ),
         ),
       ),
     );

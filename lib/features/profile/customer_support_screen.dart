@@ -53,7 +53,7 @@ class _CustomerSupportScreenState extends ConsumerState<CustomerSupportScreen> {
   final _messageController = TextEditingController();
 
   String _selectedCategory = _complaintCategories.first;
-  String _selectedPriority = 'Medium';
+  final String _selectedPriority = 'Medium';
   bool _submitting = false;
   bool _initializedUser = false;
 
@@ -404,12 +404,15 @@ class _CustomerSupportScreenState extends ConsumerState<CustomerSupportScreen> {
               children: [
                 Icon(icon, color: AppColors.primaryBlue, size: 26),
                 const SizedBox(height: AppSizes.p8),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
               ],
@@ -712,14 +715,17 @@ class _CustomerSupportScreenState extends ConsumerState<CustomerSupportScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'My Support Tickets',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
+                    const Expanded(
+                      child: Text(
+                        'My Support Tickets',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 8),
                     complaintsAsync.maybeWhen(
                       data: (list) => list.isNotEmpty
                           ? Container(
@@ -830,13 +836,15 @@ class _CustomerSupportScreenState extends ConsumerState<CustomerSupportScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSizes.p12),
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: AppSizes.borderLarge,
-                    border: Border.all(color: AppColors.border, width: 1.0),
-                  ),
-                  child: ListView.separated(
+                Material(
+                  color: AppColors.surface,
+                  borderRadius: AppSizes.borderLarge,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: AppSizes.borderLarge,
+                      border: Border.all(color: AppColors.border, width: 1.0),
+                    ),
+                    child: ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _faqs.length,
@@ -877,7 +885,8 @@ class _CustomerSupportScreenState extends ConsumerState<CustomerSupportScreen> {
                     },
                   ),
                 ),
-                const SizedBox(height: AppSizes.p24),
+              ),
+              const SizedBox(height: AppSizes.p24),
               ],
             ),
           ),

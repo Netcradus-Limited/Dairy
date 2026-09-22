@@ -3,9 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/responsive/responsive_layout.dart';
-import '../../models/delivery_boy_model.dart';
 import '../../models/delivery_model.dart';
-import '../../models/delivery_staff_model.dart';
 import '../../providers/admin_provider.dart';
 import '../../widgets/status_badge.dart';
 
@@ -72,14 +70,18 @@ class DeliveryManagementScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Active Delivery Corridors',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: textPrimary,
+              Expanded(
+                child: Text(
+                  'Active Delivery Corridors',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: textPrimary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 8),
               ElevatedButton.icon(
                 key: const Key('add_delivery_route_button'),
                 onPressed: () => _showRouteDialog(context, provider, null),
@@ -207,35 +209,37 @@ class DeliveryManagementScreen extends StatelessWidget {
                             child: Text(
                               corridor.routeName,
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 14,
+                                fontSize: 13.5,
                                 fontWeight: FontWeight.w700,
                                 color: textPrimary,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
+                                horizontal: 6, vertical: 3),
                             decoration: BoxDecoration(
                               color:
                                   AppColors.primaryLight.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               '${corridor.subscribersCount} Subscriptions',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
+                                fontSize: 10.5,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.primary,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 2),
                           IconButton(
                             padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
+                            visualDensity: VisualDensity.compact,
+                            constraints: const BoxConstraints(
+                                minWidth: 26, minHeight: 26),
                             icon: const Icon(Icons.edit_outlined, size: 16),
                             color: textMuted,
                             tooltip: 'Edit Corridor',
@@ -309,14 +313,18 @@ class DeliveryManagementScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                "Today's Batch Deliveries Progress",
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: textPrimary,
+              Expanded(
+                child: Text(
+                  "Today's Batch Deliveries Progress",
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: textPrimary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 8),
               ElevatedButton.icon(
                 key: const Key('create_delivery_batch_button'),
                 onPressed: () => _showBatchDialog(context, provider, null),
@@ -431,24 +439,140 @@ class DeliveryManagementScreen extends StatelessWidget {
                   final batch = provider.deliveryBatches[idx];
                   return Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: Text(
-                            batch.deliveryId,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          flex: 3,
-                          child: Column(
+                    child: isDesktop
+                        ? Row(
+                            children: [
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  batch.deliveryId,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 3,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      batch.staffName,
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: textPrimary,
+                                      ),
+                                    ),
+                                    Text(
+                                      batch.zone,
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11,
+                                        color: textMuted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                flex: 4,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          '${batch.completedCount} / ${batch.assignedCount} Delivered',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: textSecondary,
+                                          ),
+                                        ),
+                                        Text(
+                                          '${(batch.completionPercentage * 100).toInt()}%',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    LinearProgressIndicator(
+                                      value: batch.completionPercentage,
+                                      backgroundColor: cardBorder,
+                                      color: batch.completionPercentage >= 1.0
+                                          ? AppColors.revenueGreen
+                                          : AppColors.primary,
+                                      borderRadius: BorderRadius.circular(4),
+                                      minHeight: 6,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              StatusBadge.fromString(batch.status),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                icon: const Icon(Icons.edit_outlined, size: 16),
+                                color: textMuted,
+                                tooltip: 'Edit Batch',
+                                onPressed: () =>
+                                    _showBatchDialog(context, provider, batch),
+                              ),
+                            ],
+                          )
+                        : Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Mobile Header: ID + Status + Edit
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      batch.deliveryId,
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.primary,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      StatusBadge.fromString(batch.status),
+                                      const SizedBox(width: 4),
+                                      IconButton(
+                                        padding: EdgeInsets.zero,
+                                        visualDensity: VisualDensity.compact,
+                                        constraints: const BoxConstraints(
+                                            minWidth: 28, minHeight: 28),
+                                        icon: const Icon(Icons.edit_outlined,
+                                            size: 16),
+                                        color: textMuted,
+                                        tooltip: 'Edit Batch',
+                                        onPressed: () => _showBatchDialog(
+                                            context, provider, batch),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              // Rider and Zone Info
                               Text(
                                 batch.staffName,
                                 style: GoogleFonts.plusJakartaSans(
@@ -456,6 +580,8 @@ class DeliveryManagementScreen extends StatelessWidget {
                                   fontWeight: FontWeight.w700,
                                   color: textPrimary,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               Text(
                                 batch.zone,
@@ -463,15 +589,11 @@ class DeliveryManagementScreen extends StatelessWidget {
                                   fontSize: 11,
                                   color: textMuted,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          flex: 4,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                              const SizedBox(height: 10),
+                              // Progress Counter and Bar
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
@@ -506,21 +628,6 @@ class DeliveryManagementScreen extends StatelessWidget {
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        StatusBadge.fromString(batch.status),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          icon: const Icon(Icons.edit_outlined, size: 16),
-                          color: textMuted,
-                          tooltip: 'Edit Batch',
-                          onPressed: () =>
-                              _showBatchDialog(context, provider, batch),
-                        ),
-                      ],
-                    ),
                   );
                 },
               ),
@@ -1180,6 +1287,7 @@ class DeliveryManagementScreen extends StatelessWidget {
     }
 
     final progress = provider.todaysDeliveryProgress;
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
 
     return Container(
       width: double.infinity,
@@ -1193,54 +1301,109 @@ class DeliveryManagementScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Real-Time Dispatch Status',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: textPrimary,
+          isMobile
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Real-Time Dispatch Status',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: (progress.completionPercentage >= 100.0 &&
+                                    progress.total > 0)
+                                ? AppColors.revenueGreen.withValues(alpha: 0.15)
+                                : AppColors.primaryLight.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '${progress.completionPercentage.toInt()}% Completed',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: (progress.completionPercentage >= 100.0 &&
+                                      progress.total > 0)
+                                  ? AppColors.revenueGreen
+                                  : AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${progress.completed} of ${progress.total} deliveries fulfilled',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 12,
-                      color: textSecondary,
+                    const SizedBox(height: 4),
+                    Text(
+                      '${progress.completed} of ${progress.total} deliveries fulfilled',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        color: textSecondary,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: (progress.completionPercentage >= 100.0 &&
-                          progress.total > 0)
-                      ? AppColors.revenueGreen.withValues(alpha: 0.15)
-                      : AppColors.primaryLight.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
+                  ],
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Real-Time Dispatch Status',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${progress.completed} of ${progress.total} deliveries fulfilled',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            color: textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: (progress.completionPercentage >= 100.0 &&
+                                progress.total > 0)
+                            ? AppColors.revenueGreen.withValues(alpha: 0.15)
+                            : AppColors.primaryLight.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${progress.completionPercentage.toInt()}% Completed',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: (progress.completionPercentage >= 100.0 &&
+                                  progress.total > 0)
+                              ? AppColors.revenueGreen
+                              : AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                child: Text(
-                  '${progress.completionPercentage.toInt()}% Completed',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: (progress.completionPercentage >= 100.0 &&
-                            progress.total > 0)
-                        ? AppColors.revenueGreen
-                        : AppColors.primary,
-                  ),
-                ),
-              ),
-            ],
-          ),
           const SizedBox(height: 14),
           LinearProgressIndicator(
             value: progress.progressFraction,

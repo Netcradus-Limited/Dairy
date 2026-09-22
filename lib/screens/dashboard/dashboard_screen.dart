@@ -31,34 +31,39 @@ class DashboardScreen extends StatelessWidget {
           // Section Title: Business Overview
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Dashboard Overview',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: textPrimary,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Dashboard Overview',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: textPrimary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Real-time business performance, customer growth, and order lifecycle metrics.',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      color: textSecondary,
+                    const SizedBox(height: 2),
+                    Text(
+                      'Real-time business performance, customer growth, and order lifecycle metrics.',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        color: textSecondary,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              if (provider.ordersLoading || provider.usersLoading)
+              if (provider.ordersLoading || provider.usersLoading) ...[
+                const SizedBox(width: 12),
                 const SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
+              ],
             ],
           ),
           const SizedBox(height: 16),

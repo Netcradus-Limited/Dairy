@@ -219,11 +219,14 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final isVeryNarrow = constraints.maxWidth < 360;
+        final cardWidth = isVeryNarrow
+            ? constraints.maxWidth
+            : (constraints.maxWidth - 10) / 2;
         return Wrap(
           spacing: 10,
           runSpacing: 10,
           children: kpis.map((kpi) {
-            final cardWidth = (constraints.maxWidth - 10) / 2;
             return SizedBox(
               width: cardWidth,
               child: _buildKpiCard(kpi, cardBg, cardBorder, textPrimary, textSecondary),
@@ -279,6 +282,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                 const SizedBox(height: 2),
                 Text(
                   kpi.value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
@@ -302,6 +307,115 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     Color textPrimary,
     Color textSecondary,
   ) {
+    final searchField = SizedBox(
+      height: 40,
+      child: TextField(
+        controller: _searchController,
+        onChanged: (val) => setState(() => _searchQuery = val),
+        style: GoogleFonts.plusJakartaSans(fontSize: 13, color: textPrimary),
+        decoration: InputDecoration(
+          hintText: 'Search by customer, ID, or order...',
+          hintStyle: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: textSecondary),
+          prefixIcon: const Icon(Icons.search_rounded, size: 18),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear_rounded, size: 16),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                )
+              : null,
+          contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+          filled: true,
+          fillColor: AppColors.freshGreen.withValues(alpha: 0.04),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: cardBorder),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: cardBorder),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: AppColors.freshGreen, width: 1.5),
+          ),
+        ),
+      ),
+    );
+
+    final filtersWrap = Wrap(
+      spacing: 16,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        // Status Filter
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Status: ',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: textSecondary,
+              ),
+            ),
+            const SizedBox(width: 4),
+            DropdownButton<String>(
+              value: _statusFilter,
+              underline: const SizedBox(),
+              isDense: true,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: textPrimary,
+              ),
+              items: ['All', 'Success', 'Pending', 'Failed', 'Cancelled']
+                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                  .toList(),
+              onChanged: (val) {
+                if (val != null) setState(() => _statusFilter = val);
+              },
+            ),
+          ],
+        ),
+
+        // Method Filter
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Method: ',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: textSecondary,
+              ),
+            ),
+            const SizedBox(width: 4),
+            DropdownButton<String>(
+              value: _methodFilter,
+              underline: const SizedBox(),
+              isDense: true,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: textPrimary,
+              ),
+              items: ['All', 'Cash', 'Online', 'Wallet']
+                  .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                  .toList(),
+              onChanged: (val) {
+                if (val != null) setState(() => _methodFilter = val);
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
@@ -309,114 +423,22 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: cardBorder),
       ),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 10,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        alignment: WrapAlignment.spaceBetween,
-        children: [
-          // Search Input
-          SizedBox(
-            width: isDesktop ? 300 : double.infinity,
-            height: 40,
-            child: TextField(
-              controller: _searchController,
-              onChanged: (val) => setState(() => _searchQuery = val),
-              style: GoogleFonts.plusJakartaSans(fontSize: 13, color: textPrimary),
-              decoration: InputDecoration(
-                hintText: 'Search by customer, ID, or order...',
-                hintStyle: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: textSecondary),
-                prefixIcon: const Icon(Icons.search_rounded, size: 18),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded, size: 16),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      )
-                    : null,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
-                filled: true,
-                fillColor: AppColors.freshGreen.withValues(alpha: 0.04),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: cardBorder),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: cardBorder),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: AppColors.freshGreen, width: 1.5),
-                ),
-              ),
+      child: isDesktop
+          ? Row(
+              children: [
+                SizedBox(width: 320, child: searchField),
+                const Spacer(),
+                filtersWrap,
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                searchField,
+                const SizedBox(height: 10),
+                filtersWrap,
+              ],
             ),
-          ),
-
-          // Filters row
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Status Filter
-              Text(
-                'Status: ',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: textSecondary,
-                ),
-              ),
-              const SizedBox(width: 4),
-              DropdownButton<String>(
-                value: _statusFilter,
-                underline: const SizedBox(),
-                isDense: true,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: textPrimary,
-                ),
-                items: ['All', 'Success', 'Pending', 'Failed', 'Cancelled']
-                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                    .toList(),
-                onChanged: (val) {
-                  if (val != null) setState(() => _statusFilter = val);
-                },
-              ),
-              const SizedBox(width: 16),
-
-              // Method Filter
-              Text(
-                'Method: ',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: textSecondary,
-                ),
-              ),
-              const SizedBox(width: 4),
-              DropdownButton<String>(
-                value: _methodFilter,
-                underline: const SizedBox(),
-                isDense: true,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: textPrimary,
-                ),
-                items: ['All', 'Cash', 'Online', 'Wallet']
-                    .map((m) => DropdownMenuItem(value: m, child: Text(m)))
-                    .toList(),
-                onChanged: (val) {
-                  if (val != null) setState(() => _methodFilter = val);
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 
@@ -560,6 +582,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                           fontWeight: FontWeight.w700,
                           color: textPrimary,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -568,6 +592,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                           fontSize: 12,
                           color: textSecondary,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),

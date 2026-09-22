@@ -26,6 +26,8 @@ class ProfileScreen extends ConsumerWidget {
       backgroundColor: const Color(0xFFF8FAFD),
       body: SafeArea(
         child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics()),
           child: Center(
             child: Container(
               constraints: BoxConstraints(
@@ -166,7 +168,7 @@ class ProfileScreen extends ConsumerWidget {
 
                         // Logout Button
                         _buildLogoutTile(context, ref),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 70),
                       ],
                     ),
                   ),

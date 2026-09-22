@@ -72,6 +72,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
           vertical: AppSizes.p16,
         ),
         child: ResponsiveContainer(
+          padding: EdgeInsets.zero,
           child: isDesktop
               ? Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -362,27 +363,35 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
           ),
         ),
         const SizedBox(height: 6),
-        Row(
+        Wrap(
+          spacing: 12,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 18),
-            const SizedBox(width: 4),
-            Text(
-              '${product.rating}',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.star_rounded,
+                    color: Color(0xFFF59E0B), size: 18),
+                const SizedBox(width: 4),
+                Text(
+                  '${product.rating}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '(${product.reviewCount} reviews)',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 4),
-            Text(
-              '(${product.reviewCount} customer reviews)',
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const Spacer(),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
@@ -435,20 +444,26 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
             ),
           ),
           if (product.hasDiscount)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.freshGreen.withValues(alpha: 0.1),
-                borderRadius: AppSizes.borderSmall,
-                border: Border.all(
-                    color: AppColors.freshGreen.withValues(alpha: 0.3)),
-              ),
-              child: Text(
-                'Save ₹${(product.originalPrice! - product.price).toStringAsFixed(0)} today!',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.freshGreen,
+            Flexible(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.freshGreen.withValues(alpha: 0.1),
+                  borderRadius: AppSizes.borderSmall,
+                  border: Border.all(
+                      color: AppColors.freshGreen.withValues(alpha: 0.3)),
+                ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Save ₹${(product.originalPrice! - product.price).toStringAsFixed(0)} today!',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.freshGreen,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -484,16 +499,19 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
     return Column(
       children: [
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Select Quantity:',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+            const Expanded(
+              child: Text(
+                'Select Quantity:',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ),
-            const SizedBox(width: AppSizes.p16),
+            const SizedBox(width: AppSizes.p12),
             QuantitySelector(
               quantity: _selectedQuantity,
               onIncrement: () {
@@ -540,9 +558,12 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                     );
                   },
                   icon: const Icon(Icons.add_shopping_cart_rounded),
-                  label: const Text(
-                    'Add to Cart',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'Add to Cart',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primaryBlue,
@@ -570,9 +591,12 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                     _navigateToCheckout(context);
                   },
                   icon: const Icon(Icons.flash_on_rounded),
-                  label: const Text(
-                    'Buy Now',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'Buy Now',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryBlue,

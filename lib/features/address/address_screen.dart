@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/widgets/address_tile.dart';
 import '../../models/address.dart';
 import '../../providers/address_provider.dart';
@@ -60,8 +61,9 @@ class AddressScreen extends ConsumerWidget {
               child: Center(
                 child: Container(
                   constraints: const BoxConstraints(maxWidth: 1000),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppSizes.p24, vertical: AppSizes.p16),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: context.responsiveHorizontalPadding,
+                      vertical: AppSizes.p16),
                   child: Builder(
                     builder: (context) {
                       if (isLoading && addresses.isEmpty) {

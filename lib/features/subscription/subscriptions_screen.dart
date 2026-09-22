@@ -147,45 +147,54 @@ class SubscriptionsScreen extends ConsumerWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryBlue.withValues(alpha: 0.1),
-                  borderRadius: AppSizes.borderSmall,
-                ),
-                child: const Icon(
-                  Icons.all_inbox_rounded,
-                  color: AppColors.primaryBlue,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '$activeCount Active ($totalCount Total)',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
+          Expanded(
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                    borderRadius: AppSizes.borderSmall,
                   ),
-                  const Text(
-                    'Daily & recurring doorstep deliveries',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textSecondary,
-                    ),
+                  child: const Icon(
+                    Icons.all_inbox_rounded,
+                    color: AppColors.primaryBlue,
+                    size: 24,
                   ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$activeCount Active ($totalCount Total)',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const Text(
+                        'Daily & recurring doorstep deliveries',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          if (activeCount > 0)
+          if (activeCount > 0) ...[
+            const SizedBox(width: 8),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -206,6 +215,7 @@ class SubscriptionsScreen extends ConsumerWidget {
                 ),
               ],
             ),
+          ],
         ],
       ),
     );
@@ -430,10 +440,13 @@ class _SubscriptionCard extends ConsumerWidget {
                                     fontSize: 11,
                                     color: AppColors.textSecondary,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 10, vertical: 4),
@@ -443,12 +456,15 @@ class _SubscriptionCard extends ConsumerWidget {
                               border: Border.all(
                                   color: statusColor.withValues(alpha: 0.35)),
                             ),
-                            child: Text(
-                              subscription.status.label,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: statusColor,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                subscription.status.label,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: statusColor,
+                                ),
                               ),
                             ),
                           ),
@@ -504,210 +520,80 @@ class _SubscriptionCard extends ConsumerWidget {
               Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '₹${subscription.priceAfterDiscountPerDelivery.toStringAsFixed(2)} / delivery',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryBlue,
-                          ),
-                        ),
-                        Text(
-                          '₹${subscription.monthlyCost.toStringAsFixed(0)} / month',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        if (subscription.status ==
-                            SubscriptionStatus.active) ...[
-                          OutlinedButton.icon(
-                            onPressed: () async {
-                              try {
-                                await ref
-                                    .read(subscriptionProvider.notifier)
-                                    .skipNextDelivery(subscription.id);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content: Text(
-                                            'Next ${subscription.product.title} delivery skipped')),
-                                  );
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content: Text('Failed to skip: $e')),
-                                  );
-                                }
-                              }
-                            },
-                            icon: const Icon(Icons.skip_next_rounded,
-                                size: 16, color: Color(0xFFE65100)),
-                            label: const Text(
-                              'Skip',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFE65100),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isNarrow = constraints.maxWidth < 480;
+                    final actionButtons = _buildActionButtons(context, ref);
+                    if (isNarrow) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            alignment: WrapAlignment.spaceBetween,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 8,
+                            runSpacing: 4,
+                            children: [
+                              Text(
+                                '₹${subscription.priceAfterDiscountPerDelivery.toStringAsFixed(2)} / delivery',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryBlue,
+                                ),
                               ),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(0, 32),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 6),
-                              side: const BorderSide(
-                                  color: Color(0xFFE65100)),
-                              shape: const RoundedRectangleBorder(
-                                  borderRadius: AppSizes.borderMedium),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
+                              Text(
+                                '₹${subscription.monthlyCost.toStringAsFixed(0)} / mo',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
                           ),
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              ref
-                                  .read(subscriptionProvider.notifier)
-                                  .pauseSubscription(subscription.id);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text(
-                                        '${subscription.product.title} subscription paused')),
-                              );
-                            },
-                            icon: const Icon(Icons.pause_rounded,
-                                size: 16, color: AppColors.primaryBlue),
-                            label: const Text(
-                              'Pause',
-                              style: TextStyle(
-                                fontSize: 12,
+                          if (actionButtons.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
+                              children: actionButtons,
+                            ),
+                          ],
+                        ],
+                      );
+                    }
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '₹${subscription.priceAfterDiscountPerDelivery.toStringAsFixed(2)} / delivery',
+                              style: const TextStyle(
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.primaryBlue,
                               ),
                             ),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(0, 32),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 6),
-                              side: const BorderSide(
-                                  color: AppColors.primaryBlue),
-                              shape: const RoundedRectangleBorder(
-                                  borderRadius: AppSizes.borderMedium),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              ref
-                                  .read(subscriptionProvider.notifier)
-                                  .cancelSubscription(subscription.id);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text(
-                                        '${subscription.product.title} subscription cancelled')),
-                              );
-                            },
-                            icon: const Icon(Icons.cancel_outlined,
-                                size: 16, color: AppColors.error),
-                            label: const Text(
-                              'Cancel',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.error,
+                            Text(
+                              '₹${subscription.monthlyCost.toStringAsFixed(0)} / month',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textSecondary,
                               ),
                             ),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(0, 32),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 6),
-                              side: const BorderSide(color: AppColors.error),
-                              shape: const RoundedRectangleBorder(
-                                  borderRadius: AppSizes.borderMedium),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
+                          ],
+                        ),
+                        if (actionButtons.isNotEmpty)
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: actionButtons,
                           ),
-                        ],
-                        if (subscription.status ==
-                            SubscriptionStatus.paused) ...[
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              ref
-                                  .read(subscriptionProvider.notifier)
-                                  .resumeSubscription(subscription.id);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text(
-                                        '${subscription.product.title} subscription resumed')),
-                              );
-                            },
-                            icon: const Icon(Icons.play_arrow_rounded,
-                                size: 16, color: AppColors.freshGreen),
-                            label: const Text(
-                              'Resume',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.freshGreen,
-                              ),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(0, 32),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 6),
-                              side:
-                                  const BorderSide(color: AppColors.freshGreen),
-                              shape: const RoundedRectangleBorder(
-                                  borderRadius: AppSizes.borderMedium),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              ref
-                                  .read(subscriptionProvider.notifier)
-                                  .cancelSubscription(subscription.id);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text(
-                                        '${subscription.product.title} subscription cancelled')),
-                              );
-                            },
-                            icon: const Icon(Icons.cancel_outlined,
-                                size: 16, color: AppColors.error),
-                            label: const Text(
-                              'Cancel',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.error,
-                              ),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(0, 32),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 6),
-                              side: const BorderSide(color: AppColors.error),
-                              shape: const RoundedRectangleBorder(
-                                  borderRadius: AppSizes.borderMedium),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                          ),
-                        ],
                       ],
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ),
             ],
@@ -715,6 +601,175 @@ class _SubscriptionCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  List<Widget> _buildActionButtons(BuildContext context, WidgetRef ref) {
+    return [
+      if (subscription.status == SubscriptionStatus.active) ...[
+        OutlinedButton.icon(
+          onPressed: () async {
+            try {
+              await ref
+                  .read(subscriptionProvider.notifier)
+                  .skipNextDelivery(subscription.id);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text(
+                          'Next ${subscription.product.title} delivery skipped')),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to skip: $e')),
+                );
+              }
+            }
+          },
+          icon: const Icon(Icons.skip_next_rounded,
+              size: 16, color: Color(0xFFE65100)),
+          label: const Text(
+            'Skip',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFFE65100),
+            ),
+          ),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(0, 32),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            side: const BorderSide(color: Color(0xFFE65100)),
+            shape: const RoundedRectangleBorder(
+                borderRadius: AppSizes.borderMedium),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+        OutlinedButton.icon(
+          onPressed: () {
+            ref
+                .read(subscriptionProvider.notifier)
+                .pauseSubscription(subscription.id);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                  content: Text(
+                      '${subscription.product.title} subscription paused')),
+            );
+          },
+          icon: const Icon(Icons.pause_rounded,
+              size: 16, color: AppColors.primaryBlue),
+          label: const Text(
+            'Pause',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: AppColors.primaryBlue,
+            ),
+          ),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(0, 32),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            side: const BorderSide(color: AppColors.primaryBlue),
+            shape: const RoundedRectangleBorder(
+                borderRadius: AppSizes.borderMedium),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+        OutlinedButton.icon(
+          onPressed: () {
+            ref
+                .read(subscriptionProvider.notifier)
+                .cancelSubscription(subscription.id);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                  content: Text(
+                      '${subscription.product.title} subscription cancelled')),
+            );
+          },
+          icon: const Icon(Icons.cancel_outlined,
+              size: 16, color: AppColors.error),
+          label: const Text(
+            'Cancel',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: AppColors.error,
+            ),
+          ),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(0, 32),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            side: const BorderSide(color: AppColors.error),
+            shape: const RoundedRectangleBorder(
+                borderRadius: AppSizes.borderMedium),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+      ],
+      if (subscription.status == SubscriptionStatus.paused) ...[
+        OutlinedButton.icon(
+          onPressed: () {
+            ref
+                .read(subscriptionProvider.notifier)
+                .resumeSubscription(subscription.id);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                  content: Text(
+                      '${subscription.product.title} subscription resumed')),
+            );
+          },
+          icon: const Icon(Icons.play_arrow_rounded,
+              size: 16, color: AppColors.freshGreen),
+          label: const Text(
+            'Resume',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: AppColors.freshGreen,
+            ),
+          ),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(0, 32),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            side: const BorderSide(color: AppColors.freshGreen),
+            shape: const RoundedRectangleBorder(
+                borderRadius: AppSizes.borderMedium),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+        OutlinedButton.icon(
+          onPressed: () {
+            ref
+                .read(subscriptionProvider.notifier)
+                .cancelSubscription(subscription.id);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                  content: Text(
+                      '${subscription.product.title} subscription cancelled')),
+            );
+          },
+          icon: const Icon(Icons.cancel_outlined,
+              size: 16, color: AppColors.error),
+          label: const Text(
+            'Cancel',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: AppColors.error,
+            ),
+          ),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(0, 32),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            side: const BorderSide(color: AppColors.error),
+            shape: const RoundedRectangleBorder(
+                borderRadius: AppSizes.borderMedium),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+      ],
+    ];
   }
 
   Widget _buildDetailRow(IconData icon, String label, String value) {

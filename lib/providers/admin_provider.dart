@@ -14,6 +14,7 @@ import '../models/kpi_data.dart';
 import '../models/order.dart' as order;
 import '../models/order_model.dart';
 import '../models/product_model.dart';
+import '../models/staff_member.dart';
 import '../repositories/firestore_product_repository.dart';
 import '../models/subscription.dart';
 import '../services/complaint_service.dart';
@@ -35,6 +36,15 @@ class AdminProvider extends ChangeNotifier {
   String _orderStatusTimeFilter = 'Today';
   int _unreadNotifications = 0;
   bool _isDarkMode = false;
+
+  FirebaseFirestore? get _firestore {
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        return FirebaseFirestore.instance;
+      }
+    } catch (_) {}
+    return null;
+  }
 
   List<DairyProduct> _products = [];
   List<DairyCategory> _categories = [];
@@ -1342,14 +1352,31 @@ class AdminProvider extends ChangeNotifier {
 
   // ─── Users & Delivery Agents Firestore Listeners ────────────────────
 
+  List<StaffMember> _staffMembers = [];
   List<Map<String, String>> _staffList = [];
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _lastUserDocs = [];
 
-  List<Map<String, String>> get staffList => _staffList;
+  List<StaffMember> get staffMembers => _staffMembers;
+
+  List<Map<String, String>> get staffList {
+    if (_staffMembers.isNotEmpty) {
+      return _staffMembers
+          .map((s) => {
+                'id': s.id,
+                'name': s.name,
+                'email': s.email,
+                'role': s.roleTitle,
+                'status': s.status,
+              })
+          .toList();
+    }
+    return _staffList;
+  }
 
   void _rebuildCustomers() {
     int custCount = 0;
     final List<DairyCustomer> custList = [];
+    final List<StaffMember> staffMemberList = [];
     final List<Map<String, String>> staff = [];
 
     for (final doc in _lastUserDocs) {
@@ -1367,7 +1394,10 @@ class AdminProvider extends ChangeNotifier {
           role == 'manager' ||
           role == 'dispatcher') {
         // Administrative / Staff account
+        final staffMember = StaffMember.fromFirestore(doc);
+        staffMemberList.add(staffMember);
         staff.add({
+          'id': doc.id,
           'name': name.isNotEmpty ? name : 'Admin User',
           'email': email.isNotEmpty ? email : 'admin@sawariyadairy.com',
           'role': role == 'admin'
@@ -1419,6 +1449,7 @@ class AdminProvider extends ChangeNotifier {
 
     _customers = custList;
     _customersCount = custCount;
+    _staffMembers = staffMemberList;
     _staffList = staff;
 
     if (_selectedCustomer != null) {
@@ -1432,6 +1463,119 @@ class AdminProvider extends ChangeNotifier {
     _usersLoading = false;
     _usersError = null;
     notifyListeners();
+  }
+
+  /// Create / Onboard a new staff member with assigned role and permissions.
+  Future<void> addStaffMember({
+    required String name,
+    required String email,
+    required String phone,
+    required String role,
+    required List<String> permissions,
+  }) async {
+    final fs = _firestore;
+    if (fs == null) throw Exception('Firestore is not initialized');
+
+    final cleanRole = role.toLowerCase().trim();
+    final roleTitle = StaffRolePresets.getDisplayTitleForRole(cleanRole);
+    final effectivePerms = permissions.isNotEmpty
+        ? permissions
+        : StaffRolePresets.getPermissionsForRole(cleanRole);
+
+    final docRef = fs.collection('users').doc();
+    await docRef.set({
+      'uid': docRef.id,
+      'name': name.trim(),
+      'email': email.trim(),
+      'phone': phone.trim(),
+      'role': cleanRole,
+      'roleTitle': roleTitle,
+      'status': 'Active',
+      'permissions': effectivePerms,
+      'isAdmin': cleanRole == 'admin',
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    if (cleanRole == 'admin') {
+      await fs.collection('admins').doc(docRef.id).set({
+        'uid': docRef.id,
+        'name': name.trim(),
+        'email': email.trim(),
+        'phone': phone.trim(),
+        'role': 'superadmin',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
+  }
+
+  /// Update an existing staff member's details, role, and permissions.
+  Future<void> updateStaffMember({
+    required String staffId,
+    required String name,
+    required String email,
+    required String phone,
+    required String role,
+    required List<String> permissions,
+    required String status,
+  }) async {
+    final fs = _firestore;
+    if (fs == null) throw Exception('Firestore is not initialized');
+
+    final cleanRole = role.toLowerCase().trim();
+    final roleTitle = StaffRolePresets.getDisplayTitleForRole(cleanRole);
+
+    await fs.collection('users').doc(staffId).update({
+      'name': name.trim(),
+      'email': email.trim(),
+      'phone': phone.trim(),
+      'role': cleanRole,
+      'roleTitle': roleTitle,
+      'status': status.trim(),
+      'permissions': permissions,
+      'isAdmin': cleanRole == 'admin',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    if (cleanRole == 'admin') {
+      await fs.collection('admins').doc(staffId).set({
+        'uid': staffId,
+        'name': name.trim(),
+        'email': email.trim(),
+        'phone': phone.trim(),
+        'role': 'superadmin',
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } else {
+      // Remove from admins collection if demoted
+      final adminDoc = await fs.collection('admins').doc(staffId).get();
+      if (adminDoc.exists) {
+        await fs.collection('admins').doc(staffId).delete();
+      }
+    }
+  }
+
+  /// Toggle active/inactive status of a staff member.
+  Future<void> toggleStaffStatus(String staffId, String newStatus) async {
+    final fs = _firestore;
+    if (fs == null) throw Exception('Firestore is not initialized');
+
+    await fs.collection('users').doc(staffId).update({
+      'status': newStatus.trim(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Delete / Revoke staff access permanently.
+  Future<void> deleteStaffMember(String staffId) async {
+    final fs = _firestore;
+    if (fs == null) throw Exception('Firestore is not initialized');
+
+    await fs.collection('users').doc(staffId).delete();
+    final adminDoc = await fs.collection('admins').doc(staffId).get();
+    if (adminDoc.exists) {
+      await fs.collection('admins').doc(staffId).delete();
+    }
   }
 
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _lastDeliveryDocs = [];

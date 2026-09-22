@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 abstract class AppColors {
   // Brand Colors (Logo & Banner Palette: Forest Green & Soft Cream)
   static const Color primaryBlue = Color(0xFF28541C);
+  static const Color primaryGreen = Color(0xFF0F4A2F);
   static const Color secondaryBlue = Color(0xFF437D2A);
   static const Color lightBlue = Color(0xFFE8F2DD);
   static const Color accentBlue = Color(0xFF62A044);
@@ -164,6 +165,24 @@ abstract class AppColors {
           color: const Color(0xFF0F172A).withValues(alpha: 0.10),
           blurRadius: 24,
           offset: const Offset(0, 10),
+        ),
+      ];
+
+  static const Color emeraldGreen = Color(0xFF005F38);
+  static const Color mintAccent = Color(0xFFE8F5E9);
+  static const Color goldAccent = Color(0xFFF59E0B);
+  static const Color glassWhite = Color(0xF5FFFFFF);
+
+  static List<BoxShadow> get floatingBarShadow => [
+        BoxShadow(
+          color: const Color(0xFF0F172A).withValues(alpha: 0.12),
+          blurRadius: 24,
+          offset: const Offset(0, 8),
+        ),
+        BoxShadow(
+          color: emeraldGreen.withValues(alpha: 0.08),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
         ),
       ];
 

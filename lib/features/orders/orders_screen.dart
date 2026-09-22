@@ -100,6 +100,8 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
             }).toList();
 
             return SingleChildScrollView(
+              physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics()),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -109,9 +111,10 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                     child: Text(
                       'My Orders',
                       style: TextStyle(
-                        fontSize: 24,
+                        fontSize: 22,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF172033),
+                        color: Color(0xFF0F172A),
+                        letterSpacing: -0.4,
                       ),
                     ),
                   ),
@@ -119,7 +122,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                   // Deliver Banner
                   Padding(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: AspectRatio(
@@ -151,16 +154,17 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                           physics: const NeverScrollableScrollPhysics(),
                           padding: EdgeInsets.symmetric(
                             horizontal: context.responsiveHorizontalPadding,
-                            vertical: 10,
+                            vertical: 8,
                           ),
                           itemCount: filteredOrders.length,
                           itemBuilder: (context, index) {
                             return Padding(
-                              padding: const EdgeInsets.only(bottom: 14),
+                              padding: const EdgeInsets.only(bottom: 12),
                               child: _OrderCard(order: filteredOrders[index]),
                             );
                           },
                         ),
+                  const SizedBox(height: 70), // Safe clearance for floating bottom bar
                 ],
               ),
             );

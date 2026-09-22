@@ -349,7 +349,7 @@ void main() {
       // Old demo coordinate (22.7320, 75.8745) must NOT be present
       expect(markerLayer.markers.any((m) => m.point.latitude == 22.7320), isFalse);
 
-      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(seconds: 4));
     });
 
     testWidgets('Renders real agent marker when valid real location is streamed from Firestore', (tester) async {
@@ -393,7 +393,7 @@ void main() {
       // Old demo coordinate must NOT be present
       expect(markerLayer.markers.any((m) => m.point.latitude == 22.7320), isFalse);
 
-      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(seconds: 4));
     });
 
     testWidgets('Selected order marker with highlighted badge renders without RenderFlex overflow', (tester) async {
@@ -451,7 +451,7 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('ORD-2026-0301-1234'), findsOneWidget);
 
-      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(seconds: 4));
     });
   });
 }

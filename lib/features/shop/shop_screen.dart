@@ -171,6 +171,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,13 +182,35 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Shop',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF005F38),
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Shop',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F4A2F),
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${filteredProducts.length} items',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   if (isMobile)
                     Stack(
@@ -214,7 +237,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(3),
                               decoration: const BoxDecoration(
-                                color: Color(0xFF1E6BFF),
+                                color: Color(0xFFF97316),
                                 shape: BoxShape.circle,
                               ),
                               constraints: const BoxConstraints(
@@ -236,7 +259,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                     ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               // ── Promotional Banner ──
               _buildPromoBanner(),
               const SizedBox(height: 16),
@@ -276,7 +299,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                           case 'cat_paneer':
                             return const Color(0xFF70AD47);
                           default:
-                            return const Color(0xFF005F38);
+                            return const Color(0xFF0F4A2F);
                         }
                       }
 
@@ -305,35 +328,35 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                         },
                         child: AnimatedScale(
                           duration: const Duration(milliseconds: 200),
-                          scale: isSelected ? 1.08 : 0.95,
+                          scale: isSelected ? 1.05 : 0.96,
                           child: SizedBox(
                             width: 80,
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Container(
-                                  height: 76,
-                                  width: 76,
+                                  height: 74,
+                                  width: 74,
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(20),
                                     color: getBgColor(cat['id']),
                                     border: Border.all(
                                       color:
                                           getBorderColor(cat['id']),
-                                      width: isSelected ? 3.0 : 1.5,
+                                      width: isSelected ? 2.5 : 1.2,
                                     ),
                                     boxShadow: [
                                       if (isSelected)
                                         BoxShadow(
                                           color: getBorderColor(
                                                   cat['id'])
-                                              .withOpacity(0.25),
+                                              .withValues(alpha: 0.25),
                                           blurRadius: 8,
                                           offset: const Offset(0, 3),
                                         )
                                       else
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.03),
+                                          color: Colors.black.withValues(alpha: 0.03),
                                           blurRadius: 4,
                                           offset: const Offset(0, 1.5),
                                         ),
@@ -374,19 +397,19 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 6),
                                 Text(
                                   cat['id'] == 'cat_all'
                                       ? 'ALL'
                                       : (cat['title'] ?? ''),
                                   style: TextStyle(
-                                    fontSize: 12.5,
+                                    fontSize: 12.0,
                                     fontWeight: isSelected
                                         ? FontWeight.w900
-                                        : FontWeight.w500,
+                                        : FontWeight.w600,
                                     color: isSelected
-                                        ? const Color(0xFF005F38)
-                                        : const Color(0xFF667085),
+                                        ? const Color(0xFF0F4A2F)
+                                        : const Color(0xFF64748B),
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -399,7 +422,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
 
               // ── Dynamic Title Row ──
               Row(
@@ -410,27 +433,29 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                         ? 'Products'
                         : '${selectedCat['title']} Products',
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 15.5,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF172033),
+                      color: Color(0xFF0F172A),
                     ),
                   ),
-                  TextButton(
-                    onPressed: _resetFilters,
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: const Text(
-                      'View All',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF667085),
+                  if (selectedCategoryId != 'cat_all' || searchQuery.isNotEmpty)
+                    TextButton.icon(
+                      onPressed: _resetFilters,
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      icon: const Icon(Icons.close_rounded, size: 14, color: Color(0xFF64748B)),
+                      label: const Text(
+                        'Clear',
+                        style: TextStyle(
+                          fontSize: 12.0,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF64748B),
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -455,9 +480,15 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                       physics: const NeverScrollableScrollPhysics(),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: isMobile ? 2 : 3,
-                        crossAxisSpacing: 14,
-                        mainAxisSpacing: 14,
-                        childAspectRatio: isMobile ? 0.73 : 0.79,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: isMobile
+                            ? (MediaQuery.sizeOf(context).width < 360
+                                ? 0.63
+                                : (MediaQuery.sizeOf(context).width < 400
+                                    ? 0.67
+                                    : 0.70))
+                            : 0.78,
                       ),
                       itemCount: filteredProducts.length,
                       itemBuilder: (context, index) {
@@ -509,7 +540,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                       height: 5,
                       decoration: BoxDecoration(
                         color: isActive
-                            ? const Color(0xFF005F38)
+                            ? const Color(0xFF0F4A2F)
                             : const Color(0xFFCBD5E1),
                         borderRadius: BorderRadius.circular(4),
                       ),
@@ -517,11 +548,11 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                   );
                 }),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               // ── Bottom Benefits Strip ──
               _buildBenefitsRow(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 70), // Safe clearance for floating cart
             ],
           ),
         ),
@@ -726,7 +757,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                   Container(
                     width: 110,
                     height: 110,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppColors.primary,
                       shape: BoxShape.circle,
                     ),
@@ -745,7 +776,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                 // Title
                 Text(
                   cat['title']!,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
                     color: AppColors.primary,

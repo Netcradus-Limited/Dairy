@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -16,6 +17,7 @@ class DeliveryStaffScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<AdminProvider>();
     final isDesktop = ResponsiveLayout.isDesktop(context);
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
     final cardBg = AppColors.cardBgOf(context);
     final cardBorder = AppColors.cardBorderOf(context);
     final textPrimary = AppColors.textPrimaryOf(context);
@@ -42,34 +44,27 @@ class DeliveryStaffScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Delivery Staff & Fleet',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Fleet drivers, electric delivery vehicles, assigned zones, and live duty status.',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        color: textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
+          if (isMobile) ...[
+            Text(
+              'Delivery Staff & Fleet',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: textPrimary,
               ),
-              const SizedBox(width: 12),
-              ElevatedButton.icon(
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Fleet drivers, electric delivery vehicles, assigned zones, and live duty status.',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                color: textSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
                 onPressed: () => _showRiderDialog(context, provider, null),
                 icon: const Icon(Icons.person_add_alt_1_rounded,
                     size: 18, color: Colors.white),
@@ -89,8 +84,58 @@ class DeliveryStaffScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10)),
                 ),
               ),
-            ],
-          ),
+            ),
+          ] else ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Delivery Staff & Fleet',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Fleet drivers, electric delivery vehicles, assigned zones, and live duty status.',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          color: textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: () => _showRiderDialog(context, provider, null),
+                  icon: const Icon(Icons.person_add_alt_1_rounded,
+                      size: 18, color: Colors.white),
+                  label: Text(
+                    'Add Delivery Staff',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 16),
 
           // Error Banner
@@ -180,7 +225,7 @@ class DeliveryStaffScreen extends StatelessWidget {
                       itemCount: filteredRiders.length,
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: isDesktop ? 2 : 1,
-                        mainAxisExtent: 195,
+                        mainAxisExtent: isMobile ? 225 : 195,
                         crossAxisSpacing: 16,
                         mainAxisSpacing: 16,
                       ),
@@ -302,62 +347,136 @@ class DeliveryStaffScreen extends StatelessWidget {
                                   ],
                                 ),
                                 Divider(color: dividerColor),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Deliveries: ${rider.totalDeliveriesToday} done (${rider.pendingDeliveries} pending)',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: textPrimary,
-                                      ),
+                                if (isMobile) ...[
+                                  Text(
+                                    'Deliveries: ${rider.totalDeliveriesToday} done (${rider.pendingDeliveries} pending)',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: textPrimary,
                                     ),
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.star_rounded,
-                                            size: 16, color: Colors.amber),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          rider.rating != null
-                                              ? '${rider.rating!.toStringAsFixed(1)} Rating'
-                                              : '— Rating',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.star_rounded,
+                                              size: 16, color: Colors.amber),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            rider.rating != null
+                                                ? '${rider.rating!.toStringAsFixed(1)} Rating'
+                                                : '— Rating',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: textPrimary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(Icons.edit_outlined,
+                                                size: 16,
+                                                color: AppColors.ordersBlue),
+                                            tooltip: 'Edit Staff',
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(
+                                                minWidth: 24, minHeight: 24),
+                                            onPressed: () => _showRiderDialog(
+                                                context, provider, rider),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          IconButton(
+                                            icon: const Icon(
+                                                Icons.delete_outline_rounded,
+                                                size: 16,
+                                                color: Color(0xFFEF4444)),
+                                            tooltip: 'Delete Staff',
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(
+                                                minWidth: 24, minHeight: 24),
+                                            onPressed: () =>
+                                                _showDeleteConfirmation(
+                                                    context, provider, rider),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ] else ...[
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          'Deliveries: ${rider.totalDeliveriesToday} done (${rider.pendingDeliveries} pending)',
                                           style: GoogleFonts.plusJakartaSans(
                                             fontSize: 12,
-                                            fontWeight: FontWeight.w700,
+                                            fontWeight: FontWeight.w600,
                                             color: textPrimary,
                                           ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                        const SizedBox(width: 8),
-                                        IconButton(
-                                          icon: const Icon(Icons.edit_outlined,
-                                              size: 16,
-                                              color: AppColors.ordersBlue),
-                                          tooltip: 'Edit Staff',
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(
-                                              minWidth: 24, minHeight: 24),
-                                          onPressed: () => _showRiderDialog(
-                                              context, provider, rider),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(
-                                              Icons.delete_outline_rounded,
-                                              size: 16,
-                                              color: Color(0xFFEF4444)),
-                                          tooltip: 'Delete Staff',
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(
-                                              minWidth: 24, minHeight: 24),
-                                          onPressed: () =>
-                                              _showDeleteConfirmation(
-                                                  context, provider, rider),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.star_rounded,
+                                              size: 16, color: Colors.amber),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            rider.rating != null
+                                                ? '${rider.rating!.toStringAsFixed(1)} Rating'
+                                                : '— Rating',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: textPrimary,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          IconButton(
+                                            icon: const Icon(
+                                                Icons.edit_outlined,
+                                                size: 16,
+                                                color: AppColors.ordersBlue),
+                                            tooltip: 'Edit Staff',
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(
+                                                minWidth: 24, minHeight: 24),
+                                            onPressed: () => _showRiderDialog(
+                                                context, provider, rider),
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(
+                                                Icons.delete_outline_rounded,
+                                                size: 16,
+                                                color: Color(0xFFEF4444)),
+                                            tooltip: 'Delete Staff',
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(
+                                                minWidth: 24, minHeight: 24),
+                                            onPressed: () =>
+                                                _showDeleteConfirmation(
+                                                    context, provider, rider),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -433,7 +552,7 @@ class DeliveryStaffScreen extends StatelessWidget {
           ],
         ),
         content: SizedBox(
-          width: 460,
+          width: math.min(460.0, MediaQuery.sizeOf(context).width - 32),
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -579,7 +698,9 @@ _buildDetailRow(
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
+        builder: (ctx, setState) {
+          final isNarrow = MediaQuery.sizeOf(ctx).width < 500;
+          return AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
@@ -587,7 +708,7 @@ _buildDetailRow(
             style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
           ),
           content: SizedBox(
-            width: 440,
+            width: math.min(440.0, MediaQuery.sizeOf(ctx).width - 32),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -598,70 +719,110 @@ _buildDetailRow(
                         const InputDecoration(labelText: 'Staff Full Name *'),
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: phoneCtrl,
-                          decoration: const InputDecoration(
-                              labelText: 'Phone Number *'),
+                  if (isNarrow) ...[
+                    TextField(
+                      controller: phoneCtrl,
+                      decoration:
+                          const InputDecoration(labelText: 'Phone Number *'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: emailCtrl,
+                      decoration:
+                          const InputDecoration(labelText: 'Email Address'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: vehicleCtrl,
+                      decoration: const InputDecoration(
+                          labelText: 'Vehicle Model / Type'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: vehicleNumCtrl,
+                      decoration: const InputDecoration(
+                          labelText: 'Registration No.'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: zoneCtrl,
+                      decoration: const InputDecoration(
+                          labelText: 'Assigned Delivery Zone'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: ratingCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
+                      decoration: const InputDecoration(
+                          labelText: 'Rating (optional)'),
+                    ),
+                  ] else ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: phoneCtrl,
+                            decoration: const InputDecoration(
+                                labelText: 'Phone Number *'),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextField(
-                          controller: emailCtrl,
-                          decoration:
-                              const InputDecoration(labelText: 'Email Address'),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: emailCtrl,
+                            decoration:
+                                const InputDecoration(labelText: 'Email Address'),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: vehicleCtrl,
-                          decoration: const InputDecoration(
-                              labelText: 'Vehicle Model / Type'),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: vehicleCtrl,
+                            decoration: const InputDecoration(
+                                labelText: 'Vehicle Model / Type'),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextField(
-                          controller: vehicleNumCtrl,
-                          decoration: const InputDecoration(
-                              labelText: 'Registration No.'),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: vehicleNumCtrl,
+                            decoration: const InputDecoration(
+                                labelText: 'Registration No.'),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: zoneCtrl,
-                          decoration: const InputDecoration(
-                              labelText: 'Assigned Delivery Zone'),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: zoneCtrl,
+                            decoration: const InputDecoration(
+                                labelText: 'Assigned Delivery Zone'),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextField(
-                          controller: ratingCtrl,
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
-                          decoration: const InputDecoration(
-                              labelText: 'Rating (optional)'),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: ratingCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                            decoration: const InputDecoration(
+                                labelText: 'Rating (optional)'),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: selectedStatus,
+                    initialValue: selectedStatus,
                     decoration: const InputDecoration(labelText: 'Status'),
                     items: const [
                       DropdownMenuItem(
@@ -762,10 +923,11 @@ _buildDetailRow(
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
+        );
+      },
+    ),
+  );
+}
 
   void _showDeleteConfirmation(
       BuildContext context, AdminProvider provider, DeliveryRider rider) {
