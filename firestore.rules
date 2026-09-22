@@ -47,6 +47,13 @@ service cloud.firestore {
       );
     }
 
+    function canManageCatalog() {
+      return isSignedIn() && (
+        currentRole() in ['admin', 'superadmin', 'owner', 'manager']
+        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
     function isStaffMember() {
       return isSignedIn() && (
         currentRole() in ['admin', 'superadmin', 'owner', 'manager', 'dispatcher', 'staff']
@@ -176,8 +183,8 @@ service cloud.firestore {
       // Any signed-in user can browse products in the shop
       allow read: if isSignedIn();
 
-      // Only Admins can create, edit, or delete products
-      allow create, update, delete: if isAdmin();
+      // Only authorized catalog managers can create, edit, or delete products
+      allow create, update, delete: if canManageCatalog();
     }
 
     // ── 7. categories Collection ────────────────────────────────────────────
@@ -185,8 +192,8 @@ service cloud.firestore {
       // Any signed-in user can view categories
       allow read: if isSignedIn();
 
-      // Only Admins can manage product categories
-      allow create, update, delete: if isAdmin();
+      // Only authorized catalog managers can manage product categories
+      allow create, update, delete: if canManageCatalog();
     }
 
     // ── 8. orders Collection ────────────────────────────────────────────────
