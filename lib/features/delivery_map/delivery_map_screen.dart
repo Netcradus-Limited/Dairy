@@ -7,6 +7,7 @@ import '../../core/constants/app_colors.dart';
 import '../../models/delivery_boy_model.dart';
 import '../../providers/delivery_live_location_provider.dart';
 import '../../providers/delivery_provider.dart';
+import '../../services/route_service.dart';
 
 /// Physical hub constants and default initial map view.
 class _MapConstants {
@@ -48,12 +49,30 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen> {
   bool _followAgent = false;
   bool _hasInitiallyCentered = false;
 
+  // --- Task 6: route state ------------------------------------------------
+  /// The last computed route result. Null when no drawable route is available.
+  RouteResult? _routeResult;
+
+  /// Agent position used for the last route calculation — used for the
+  /// 50 m threshold guard so we do not rebuild on every GPS tick.
+  LatLng? _lastAgentPos;
+
+  /// Order ID used for the last route calculation — recalculate whenever the
+  /// selected order changes.
+  String? _lastOrderId;
+  // -------------------------------------------------------------------------
+
   void _focusOn(LatLng point, {double zoom = 14}) {
     _mapController.move(point, zoom);
   }
 
   void _selectOrder(DeliveryOrder order) {
-    setState(() => _selectedOrder = order);
+    setState(() {
+      _selectedOrder = order;
+      // Force route rebuild on order selection change, even if agent has not
+      // moved, by resetting the last order guard.
+      _lastOrderId = null;
+    });
     final loc = _MapConstants.locationForOrder(order);
     if (loc != null) {
       _focusOn(loc, zoom: 15);
@@ -68,6 +87,47 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen> {
       );
     }
   }
+
+  // --- Task 6: threshold-guarded route builder ----------------------------
+  /// Rebuilds [_routeResult] using [RouteService] only when the selected order
+  /// changes or the agent has moved by more than [RouteService.minMovementMeters]
+  /// (50 m). Returns immediately without updating state when the threshold has
+  /// not been crossed, preventing unnecessary rebuilds on every GPS tick.
+  ///
+  /// Lines are **straight-line fallback segments** (coordinate-to-coordinate).
+  /// No external road-routing API is called.
+  void _maybeRebuildRoute(LatLng? agentPos) {
+    final order = _selectedOrder;
+    final orderIdChanged = order?.id != _lastOrderId;
+    final agentMovedEnough = RouteService.hasCoordinatesChangedEnough(
+      _lastAgentPos,
+      agentPos,
+    );
+
+    // Only skip rebuild when nothing relevant has changed.
+    if (!orderIdChanged && !agentMovedEnough) return;
+
+    LatLng? pickupPos;
+    LatLng? customerPos;
+
+    if (order != null) {
+      pickupPos = _MapConstants.pickupLocationForOrder(order) ??
+          _MapConstants.pickupHub;
+      customerPos = _MapConstants.locationForOrder(order);
+    }
+
+    final result = RouteService.buildStraightLineRoute(
+      agentPos: agentPos,
+      pickupPos: pickupPos,
+      customerPos: customerPos,
+    );
+
+    // Update guards and state together.
+    _lastOrderId = order?.id;
+    _lastAgentPos = agentPos;
+    _routeResult = result;
+  }
+  // -------------------------------------------------------------------------
 
   void _toggleLiveLocation() {
     ref.read(agentLiveLocationProvider.notifier).toggle();
@@ -236,19 +296,12 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen> {
                   o.status != DeliveryOrderStatus.declined)
               .toList();
 
-          final route = <LatLng>[];
-          if (_selectedOrder != null) {
-            final orderLoc = _MapConstants.locationForOrder(_selectedOrder!);
-            if (orderLoc != null) {
-              final pickupLoc = _MapConstants.pickupLocationForOrder(_selectedOrder!) ??
-                  _MapConstants.pickupHub;
-              route.add(pickupLoc);
-              if (agentPos != null) {
-                route.add(agentPos);
-              }
-              route.add(orderLoc);
-            }
-          }
+          // Task 6: rebuild route only when order or agent position changes
+          // beyond the 50 m threshold (inside build() is fine because
+          // _maybeRebuildRoute is idempotent and updates state in-place;
+          // the setState guard in _selectOrder and the threshold guard in
+          // RouteService ensure we never trigger infinite rebuild loops).
+          _maybeRebuildRoute(agentPos);
 
           return Stack(
             children: [
@@ -270,11 +323,13 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen> {
                       // Gracefully absorb tile network errors when offline
                     },
                   ),
-                  if (route.length >= 2)
+                  // Task 6: draw polyline from RouteService result.
+                  // Lines are straight-line fallback segments (not road routes).
+                  if (_routeResult != null && _routeResult!.isDrawable)
                     PolylineLayer(
                       polylines: [
                         Polyline(
-                          points: route,
+                          points: _routeResult!.points,
                           strokeWidth: 4,
                           color: AppColors.primaryBlue
                               .withValues(alpha: 0.7),
@@ -298,6 +353,19 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen> {
                   hasError: agentLocationAsync.hasError,
                 ),
               ),
+              // Task 6: straight-line route legend badge.
+              // Shown only when a route is visible so the user understands
+              // the line is a coordinate-to-coordinate fallback, NOT a real
+              // road route (no routing API is configured for this project).
+              if (_routeResult != null && _routeResult!.isDrawable)
+                Positioned(
+                  bottom: 72,
+                  left: 12,
+                  child: _RouteLegendBadge(
+                    description: _routeResult!.segmentDescription,
+                    isFallback: _routeResult!.isStraightLineFallback,
+                  ),
+                ),
               Positioned(
                 right: 12,
                 bottom: 12,
@@ -787,6 +855,79 @@ class _MapPin extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _RouteLegendBadge  (Task 6)
+// ---------------------------------------------------------------------------
+
+/// A small floating badge displayed on the map whenever a route polyline is
+/// visible.
+///
+/// Clearly communicates to the user that the line drawn is a
+/// **straight-line coordinate-to-coordinate segment**, NOT a real road route.
+/// This is required because no road-routing API (OSRM, Google Directions,
+/// OpenRouteService, etc.) is configured for this project.
+class _RouteLegendBadge extends StatelessWidget {
+  /// Human-readable description of the segments shown (e.g. "Agent → Pickup → Customer").
+  final String description;
+
+  /// Whether the route is a straight-line fallback (always true currently).
+  final bool isFallback;
+
+  const _RouteLegendBadge({
+    required this.description,
+    required this.isFallback,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primaryBlue.withValues(alpha: 0.35)),
+        boxShadow: AppColors.cardShadowSm,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 18,
+            height: 3,
+            decoration: BoxDecoration(
+              color: AppColors.primaryBlue.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                description,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              if (isFallback)
+                const Text(
+                  'Straight-line route (no road routing)',
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
