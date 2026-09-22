@@ -167,7 +167,8 @@ class OrderService {
         if (deliveryAddress.longitude != null)
           'longitude': deliveryAddress.longitude,
       },
-      'paymentMethod': paymentMethod,
+      'paymentMethod': 'Cash on Delivery',
+      'paymentStatus': 'Pending',
       'deliveryDate': Timestamp.fromDate(now),
       'createdAt': FieldValue.serverTimestamp(),
     });
@@ -180,7 +181,6 @@ class OrderService {
     }
 
     try {
-      final isCash = paymentMethod.toLowerCase().contains('cash');
       await _firestore.collection('payments').doc(paymentDocId).set({
         'id': paymentDocId,
         'orderId': docRef.id,
@@ -191,11 +191,11 @@ class OrderService {
             : 'Customer',
         'customerPhone': deliveryAddress.mobileNumber,
         'amount': totals.total,
-        'method': paymentMethod,
-        'paymentMethod': paymentMethod,
-        'status': isCash ? 'Pending' : 'Success',
-        'paymentStatus': isCash ? 'Pending' : 'Success',
-        'transactionId': isCash ? null : 'TXN_${docRef.id}',
+        'method': 'Cash on Delivery',
+        'paymentMethod': 'Cash on Delivery',
+        'status': 'Pending',
+        'paymentStatus': 'Pending',
+        'transactionId': null,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });

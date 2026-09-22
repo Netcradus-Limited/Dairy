@@ -3,36 +3,24 @@ import '../constants/app_colors.dart';
 import '../constants/app_sizes.dart';
 import '../localization/app_language.dart';
 
-enum PaymentMethodType { cashOnDelivery, onlinePayment }
+enum PaymentMethodType { cashOnDelivery }
 
-/// Payment Method Selectable Option Tile
+/// Payment Method Display Tile (Cash on Delivery)
 class PaymentOptionTile extends StatelessWidget {
   final PaymentMethodType method;
   final PaymentMethodType selectedMethod;
-  final ValueChanged<PaymentMethodType> onSelected;
+  final ValueChanged<PaymentMethodType>? onSelected;
 
   const PaymentOptionTile({
     super.key,
     required this.method,
     required this.selectedMethod,
-    required this.onSelected,
+    this.onSelected,
   });
 
   @override
   Widget build(BuildContext context) {
     final isSelected = method == selectedMethod;
-
-    final String title = method == PaymentMethodType.cashOnDelivery
-        ? tr('Cash on Delivery (COD)')
-        : tr('Online Payment (UPI / Cards / NetBanking)');
-
-    final String subtitle = method == PaymentMethodType.cashOnDelivery
-        ? tr('Pay cash or UPI upon fresh delivery at your doorstep')
-        : tr('Instant 100% secure payment via GPay, PhonePe, Paytm or Card');
-
-    final IconData icon = method == PaymentMethodType.cashOnDelivery
-        ? Icons.payments_rounded
-        : Icons.account_balance_wallet_rounded;
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSizes.p12),
@@ -45,7 +33,7 @@ class PaymentOptionTile extends StatelessWidget {
         ),
       ),
       child: InkWell(
-        onTap: () => onSelected(method),
+        onTap: onSelected != null ? () => onSelected!(method) : null,
         borderRadius: AppSizes.borderMedium,
         child: Padding(
           padding: const EdgeInsets.all(AppSizes.p14),
@@ -65,11 +53,9 @@ class PaymentOptionTile extends StatelessWidget {
                   ),
                 ),
               ),
-              Icon(
-                icon,
-                color: isSelected
-                    ? AppColors.primaryBlue
-                    : AppColors.textSecondary,
+              const Icon(
+                Icons.payments_rounded,
+                color: AppColors.primaryBlue,
                 size: 24,
               ),
               const SizedBox(width: 12),
@@ -78,7 +64,7 @@ class PaymentOptionTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      title,
+                      tr('Cash on Delivery (COD)'),
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -89,7 +75,7 @@ class PaymentOptionTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      subtitle,
+                      tr('Pay cash or UPI upon fresh delivery at your doorstep'),
                       style: const TextStyle(
                         fontSize: 11,
                         color: AppColors.textSecondary,

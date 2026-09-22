@@ -98,15 +98,6 @@ class ProfileScreen extends ConsumerWidget {
                                     height: 1, color: Color(0xFFF1F5F9)),
                                 _buildMenuTile(
                                   context,
-                                  Icons.payment_outlined,
-                                  'Payment Methods',
-                                  'Manage your payment options',
-                                  () {},
-                                ),
-                                const Divider(
-                                    height: 1, color: Color(0xFFF1F5F9)),
-                                _buildMenuTile(
-                                  context,
                                   Icons.autorenew_rounded,
                                   'My Subscriptions',
                                   'Manage milk & product subscriptions',

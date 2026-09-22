@@ -63,10 +63,7 @@ class CheckoutScreen extends ConsumerWidget {
       return;
     }
 
-    final paymentMethod = ref.read(paymentMethodProvider);
-    final paymentName = paymentMethod == PaymentMethodType.cashOnDelivery
-        ? 'Cash on Delivery'
-        : 'Online Payment';
+    const paymentName = 'Cash on Delivery';
 
     // Show a loading indicator while the order is persisted to Firestore.
     showDialog(
@@ -518,13 +515,13 @@ class CheckoutScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.payment_rounded, color: AppColors.primaryBlue),
-              SizedBox(width: 8),
+              const Icon(Icons.payments_rounded, color: AppColors.primaryBlue),
+              const SizedBox(width: 8),
               Text(
-                'Payment Method',
-                style: TextStyle(
+                tr('Payment Method'),
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: AppColors.textPrimary,
@@ -535,12 +532,6 @@ class CheckoutScreen extends ConsumerWidget {
           const SizedBox(height: AppSizes.p12),
           PaymentOptionTile(
             method: PaymentMethodType.cashOnDelivery,
-            selectedMethod: paymentMethod,
-            onSelected: (m) =>
-                ref.read(paymentMethodProvider.notifier).state = m,
-          ),
-          PaymentOptionTile(
-            method: PaymentMethodType.onlinePayment,
             selectedMethod: paymentMethod,
             onSelected: (m) =>
                 ref.read(paymentMethodProvider.notifier).state = m,
