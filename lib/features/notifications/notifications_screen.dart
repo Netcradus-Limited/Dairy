@@ -42,6 +42,8 @@ class NotificationsScreen extends ConsumerWidget {
       }
     }
 
+    if (!context.mounted) return;
+
     // 2. Navigate only if actionable or has valid route/orderId
     final rawOrderId = item.orderId?.trim();
     if (rawOrderId != null && rawOrderId.isNotEmpty) {

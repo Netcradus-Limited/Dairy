@@ -92,18 +92,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Compatibility stub for forgot password flow
-  Future<bool> sendOtp(String mobileNumber) async {
-    return startSignIn(mobileNumber);
-  }
-
-  /// Compatibility stub for reset password flow
-  Future<bool> resetPassword(String newPassword) async {
-    state = state.copyWith(status: const AsyncLoading());
-    await Future.delayed(const Duration(milliseconds: 1000));
-    state = state.copyWith(status: const AsyncData(null));
-    return true;
-  }
 
   /// Initiates Firebase OTP sending for Sign In
   Future<bool> startSignIn(String mobileNumber) async {

@@ -27,10 +27,19 @@ final paymentMethodProvider = StateProvider<PaymentMethodType>((ref) {
 });
 
 /// Sawariya Dairy Phase 6 — Checkout Screen
-class CheckoutScreen extends ConsumerWidget {
+class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
 
-  Future<void> _onPlaceOrder(BuildContext context, WidgetRef ref) async {
+  @override
+  ConsumerState<CheckoutScreen> createState() => _CheckoutScreenState();
+}
+
+class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
+  bool _isPlacingOrder = false;
+
+  Future<void> _onPlaceOrder() async {
+    if (_isPlacingOrder) return;
+
     final cartItems = ref.read(cartItemsProvider);
     if (cartItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -63,6 +72,10 @@ class CheckoutScreen extends ConsumerWidget {
       return;
     }
 
+    setState(() {
+      _isPlacingOrder = true;
+    });
+
     const paymentName = 'Cash on Delivery';
 
     // Show a loading indicator while the order is persisted to Firestore.
@@ -81,12 +94,25 @@ class CheckoutScreen extends ConsumerWidget {
             paymentMethod: paymentName,
           );
     } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isPlacingOrder = false;
+        });
+      }
+      if (!context.mounted) return;
       Navigator.pop(context); // close loading dialog
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not place order: $e')),
       );
       return;
     }
+
+    if (mounted) {
+      setState(() {
+        _isPlacingOrder = false;
+      });
+    }
+    if (!context.mounted) return;
     Navigator.pop(context); // close loading dialog
 
     // Firestore stream will automatically reflect the new order.
@@ -161,7 +187,9 @@ class CheckoutScreen extends ConsumerWidget {
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.pop(dialogCtx); // close dialog
-                    Navigator.pop(context); // close checkout page
+                    if (context.mounted) {
+                      Navigator.pop(context); // close checkout page
+                    }
 
                     // Navigate to Home
                     ref.read(navigationProvider.notifier).setIndex(0);
@@ -187,7 +215,7 @@ class CheckoutScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final cartItems = ref.watch(cartItemsProvider);
     final subtotal = ref.watch(cartSubtotalProvider);
     final delivery = ref.watch(cartDeliveryChargeProvider);
@@ -219,9 +247,9 @@ class CheckoutScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildAddressSection(context, ref, selectedAddress),
+                          _buildAddressSection(context, selectedAddress),
                           const SizedBox(height: AppSizes.p20),
-                          _buildPaymentSection(ref, paymentMethod),
+                          _buildPaymentSection(paymentMethod),
                           const SizedBox(height: AppSizes.p20),
                           _buildCartItemsReview(cartItems),
                         ],
@@ -237,9 +265,11 @@ class CheckoutScreen extends ConsumerWidget {
                         deliveryCharge: delivery,
                         discount: discount,
                         grandTotal: grandTotal,
-                        actionButtonText: 'Place Order Now',
-                        onActionButtonPressed: () =>
-                            _onPlaceOrder(context, ref),
+                        actionButtonText: _isPlacingOrder
+                            ? 'Processing...'
+                            : 'Place Order Now',
+                        onActionButtonPressed:
+                            _isPlacingOrder ? () {} : _onPlaceOrder,
                       ),
                     ),
                   ],
@@ -247,9 +277,9 @@ class CheckoutScreen extends ConsumerWidget {
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildAddressSection(context, ref, selectedAddress),
+                    _buildAddressSection(context, selectedAddress),
                     const SizedBox(height: AppSizes.p16),
-                    _buildPaymentSection(ref, paymentMethod),
+                    _buildPaymentSection(paymentMethod),
                     const SizedBox(height: AppSizes.p16),
                     _buildCartItemsReview(cartItems),
                     const SizedBox(height: AppSizes.p20),
@@ -258,8 +288,11 @@ class CheckoutScreen extends ConsumerWidget {
                       deliveryCharge: delivery,
                       discount: discount,
                       grandTotal: grandTotal,
-                      actionButtonText: 'Place Order Now',
-                      onActionButtonPressed: () => _onPlaceOrder(context, ref),
+                      actionButtonText: _isPlacingOrder
+                          ? 'Processing...'
+                          : 'Place Order Now',
+                      onActionButtonPressed:
+                          _isPlacingOrder ? () {} : _onPlaceOrder,
                     ),
                   ],
                 ),
@@ -269,7 +302,7 @@ class CheckoutScreen extends ConsumerWidget {
   }
 
   Widget _buildAddressSection(
-      BuildContext context, WidgetRef ref, Address? selectedAddress) {
+      BuildContext context, Address? selectedAddress) {
     return Container(
       padding: const EdgeInsets.all(AppSizes.p16),
       decoration: BoxDecoration(
@@ -504,7 +537,7 @@ class CheckoutScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildPaymentSection(WidgetRef ref, PaymentMethodType paymentMethod) {
+  Widget _buildPaymentSection(PaymentMethodType paymentMethod) {
     return Container(
       padding: const EdgeInsets.all(AppSizes.p16),
       decoration: BoxDecoration(

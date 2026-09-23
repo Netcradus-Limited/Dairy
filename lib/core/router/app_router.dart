@@ -9,11 +9,9 @@ import '../../screens/admin_main_shell.dart';
 
 import '../../features/address/add_address_screen.dart';
 import '../../features/address/address_screen.dart';
-import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/otp_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
-import '../../features/auth/screens/reset_password_screen.dart';
 import '../../features/cart/cart_screen.dart';
 import '../../features/checkout/checkout_screen.dart';
 import '../../features/delivery_panel/delivery_panel_screen.dart';
@@ -61,9 +59,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           path == '/register' ||
           path == '/otp' ||
           path == '/splash' ||
-          path == '/onboarding' ||
-          path == '/forgot-password' ||
-          path == '/reset-password';
+          path == '/onboarding';
 
       String? targetRoute;
 
@@ -165,22 +161,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           if (extra is Map<String, dynamic>) {
             return OtpScreen(
               targetDestination: extra['targetDestination'] as String?,
-              isPasswordResetFlow:
-                  extra['isPasswordResetFlow'] as bool? ?? false,
             );
           } else if (extra is String) {
             return OtpScreen(targetDestination: extra);
           }
           return const OtpScreen();
         },
-      ),
-      GoRoute(
-        path: '/forgot-password',
-        builder: (context, state) => const ForgotPasswordScreen(),
-      ),
-      GoRoute(
-        path: '/reset-password',
-        builder: (context, state) => const ResetPasswordScreen(),
       ),
       GoRoute(
         path: '/home',

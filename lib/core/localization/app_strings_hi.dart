@@ -324,7 +324,6 @@ const Map<String, String> appStringsHi = {
 
   // ─── Profile screen extras ────────────────────────────────────────────────
   'Delivery Partner': 'डिलीवरी पार्टनर',
-  'Payment Methods': 'भुगतान के तरीके',
   'Processing': 'प्रोसेसिंग',
 
   // ─── Delivery panel profile tab extras ────────────────────────────────────

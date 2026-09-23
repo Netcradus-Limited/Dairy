@@ -324,7 +324,6 @@ const Map<String, String> appStringsEn = {
 
   // ─── Profile screen extras ────────────────────────────────────────────────
   'Delivery Partner': 'Delivery Partner',
-  'Payment Methods': 'Payment Methods',
   'Processing': 'Processing',
 
   // ─── Delivery panel profile tab extras ────────────────────────────────────

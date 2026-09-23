@@ -14,12 +14,10 @@ import '../widgets/otp_input_field.dart';
 /// Sawariya Dairy OTP Verification Screen Component
 class OtpScreen extends ConsumerStatefulWidget {
   final String? targetDestination;
-  final bool isPasswordResetFlow;
 
   const OtpScreen({
     super.key,
     this.targetDestination,
-    this.isPasswordResetFlow = false,
   });
 
   @override
