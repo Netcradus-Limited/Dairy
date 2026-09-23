@@ -359,6 +359,12 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
         digits == '911234567890';
   }
 
+  static String _maskPhone(String phone) {
+    final clean = phone.trim();
+    if (clean.length <= 4) return '***';
+    return '***-***-${clean.substring(clean.length - 4)}';
+  }
+
   static bool _isLegacyMockVehicle(String? val) {
     if (val == null) return false;
     final s = val.trim().toLowerCase();
@@ -578,7 +584,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
         final double? realRating = (data['rating'] as num?)?.toDouble();
 
         debugPrint('DeliveryNotifier: Loaded name = $realName');
-        debugPrint('DeliveryNotifier: Loaded phone = $realPhone');
+        debugPrint('DeliveryNotifier: Loaded phone = ${_maskPhone(realPhone)}');
         debugPrint('DeliveryNotifier: Loaded vehicle = $realVehicle');
         debugPrint('DeliveryNotifier: Loaded vehicleType = ${(data['vehicleType'] as String?)?.trim() ?? realVehicle}');
         debugPrint('DeliveryNotifier: Loaded vehicleNumber = $realVehicleNumber');
@@ -641,7 +647,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
             final cleanZone = _isLegacyMockZone(uZone) ? '' : uZone;
 
             debugPrint('DeliveryNotifier: Loaded name = $cleanName');
-            debugPrint('DeliveryNotifier: Loaded phone = $cleanPhone');
+            debugPrint('DeliveryNotifier: Loaded phone = ${_maskPhone(cleanPhone)}');
             debugPrint('DeliveryNotifier: Loaded vehicle = $cleanVehicle');
             debugPrint('DeliveryNotifier: Loaded vehicleType = $cleanVehicle');
             debugPrint('DeliveryNotifier: Loaded vehicleNumber = $cleanVehicleNum');
@@ -691,7 +697,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
                 : _currentUser.phone.trim());
 
         debugPrint('DeliveryNotifier: Loaded name = $fallbackName');
-        debugPrint('DeliveryNotifier: Loaded phone = $fallbackPhone');
+        debugPrint('DeliveryNotifier: Loaded phone = ${_maskPhone(fallbackPhone)}');
         debugPrint('DeliveryNotifier: Loaded vehicle = ');
         debugPrint('DeliveryNotifier: Loaded vehicleType = ');
         debugPrint('DeliveryNotifier: Loaded vehicleNumber = ');

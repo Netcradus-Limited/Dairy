@@ -287,6 +287,22 @@ service cloud.firestore {
           && setsCancelled;
     }
 
+    // Valid delivery status transition state machine
+    function isValidDeliveryStatusTransition(fromStatus, toStatus) {
+      let fromLower = (fromStatus is string) ? fromStatus.lower() : '';
+      let toLower = (toStatus is string) ? toStatus.lower() : '';
+
+      let isUnchanged = fromLower == toLower;
+      let fromAccepted = (fromLower in ['accepted', 'confirmed'])
+          && (toLower in ['accepted', 'confirmed', 'preparing', 'pickup', 'outfordelivery', 'out for delivery', 'cancelled']);
+      let fromPreparing = (fromLower in ['preparing', 'pickup'])
+          && (toLower in ['preparing', 'pickup', 'outfordelivery', 'out for delivery', 'cancelled']);
+      let fromOutForDelivery = (fromLower in ['outfordelivery', 'out for delivery'])
+          && (toLower in ['outfordelivery', 'out for delivery', 'delivered', 'cancelled']);
+
+      return isUnchanged || fromAccepted || fromPreparing || fromOutForDelivery;
+    }
+
     // Delivery-agent order mutation guard
     function canUpdateAssignedOrder() {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
@@ -297,13 +313,21 @@ service cloud.firestore {
           || resource.data.assignedAgentId == '')
           && (resource.data.status in ['Pending', 'pending', 'placed']);
       let claimsSelf = ('assignedAgentId' in request.resource.data)
-          && request.resource.data.assignedAgentId == request.auth.uid;
+          && request.resource.data.assignedAgentId == request.auth.uid
+          && (request.resource.data.status.lower() in ['accepted', 'confirmed', 'preparing', 'pickup', 'outfordelivery', 'out for delivery']);
       let releases = ('assignedAgentId' in request.resource.data)
-          && request.resource.data.assignedAgentId == null;
+          && request.resource.data.assignedAgentId == null
+          && (request.resource.data.status.lower() in ['pending', 'placed']);
+
+      let isNonTerminal = !(resource.data.status.lower() in ['delivered', 'cancelled']);
+      let validTransition = !('status' in request.resource.data)
+          || isValidDeliveryStatusTransition(resource.data.status, request.resource.data.status);
 
       return isMine
-          ? (changed.hasOnly(['status', 'acceptedAt', 'deliveredAt', 'deliveryConfirmed', 'cancellationReason', 'updatedAt'])
-              || (changed.hasOnly(['status', 'assignedAgentId', 'acceptedAt', 'updatedAt']) && releases))
+          ? isNonTerminal && validTransition && (
+              changed.hasOnly(['status', 'acceptedAt', 'deliveredAt', 'deliveryConfirmed', 'cancellationReason', 'updatedAt'])
+              || (changed.hasOnly(['status', 'assignedAgentId', 'acceptedAt', 'updatedAt']) && releases)
+            )
           : (isUnassigned
               ? changed.hasOnly(['status', 'assignedAgentId', 'acceptedAt', 'updatedAt']) && claimsSelf
               : false);
@@ -440,15 +464,26 @@ service cloud.firestore {
               || (('customerId' in request.resource.data) && request.resource.data.customerId == request.auth.uid)
              ));
 
-      // Admins & staff with updatePaymentStatus have full management; Delivery agents can update status on cash collection
+      // Admins & staff with updatePaymentStatus have full management; Delivery agents can update status on cash collection for their assigned orders only
       allow update: if isSuperAdmin()
           || hasPermission('updatePaymentStatus')
           || isAdmin()
           || (isDelivery()
+              && isPaymentAssignedToDeliveryAgent()
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'paymentStatus', 'updatedAt']));
 
       // Only Super Admins / authorized staff can delete payment records
       allow delete: if isSuperAdmin() || hasPermission('updatePaymentStatus');
+    }
+
+    function isPaymentAssignedToDeliveryAgent() {
+      let hasOrderId = ('orderId' in resource.data) && resource.data.orderId != null && resource.data.orderId != '';
+      let orderDoc = hasOrderId && exists(/databases/$(database)/documents/orders/$(resource.data.orderId))
+          ? get(/databases/$(database)/documents/orders/$(resource.data.orderId)).data
+          : null;
+      return orderDoc != null
+          && ('assignedAgentId' in orderDoc)
+          && orderDoc.assignedAgentId == request.auth.uid;
     }
 
     // ── 13. admins Collection ───────────────────────────────────────────────
