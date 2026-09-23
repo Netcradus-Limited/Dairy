@@ -13,7 +13,7 @@ import '../../core/widgets/section_header.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/navigation_provider.dart';
 
-/// Sawariya Dairy — Pixel-Perfect Modern Home Screen
+/// Sawariya Dairy — Pixel-Perfect Home Screen matching attached design
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -36,27 +36,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final isDesktop = context.isDesktop;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.background,
       body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 12),
 
-            // ─── 1. Hero Banner (banner1v.mp4 Video Banner) ───
+            // ─── 2. Hero Banner (banner1v.mp4 Video Banner) ───
             _HeroPromotionalBanner(
               onTap: () => ref.read(navigationProvider.notifier).setIndex(1),
             ),
 
-            const SizedBox(height: AppSizes.p20),
+            const SizedBox(height: AppSizes.p24),
 
             // ─── 3. Categories Section ──────────────────────────────────────────
             categoriesAsync.when(
               loading: () => const SizedBox(
                 height: 205,
-                child: Center(child: CircularProgressIndicator(color: Color(0xFF0F4A2F))),
+                child: Center(child: CircularProgressIndicator()),
               ),
               error: (_, __) => const SizedBox.shrink(),
               data: (categories) => Column(
@@ -66,7 +65,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     title: tr('Categories'),
                     subtitle: tr('Farm fresh dairy essentials delivered daily'),
                   ),
-                  const SizedBox(height: AppSizes.p12),
+                  const SizedBox(height: AppSizes.p14),
                   SizedBox(
                     height: 205,
                     child: ScrollConfiguration(
@@ -108,12 +107,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
 
-            const SizedBox(height: AppSizes.p20),
+            const SizedBox(height: AppSizes.p24),
 
             // ─── 3.5. Middle Promotional Banner (banner4 & banner5) ───────────────────
             const _CategoryPromotionalBanner(),
 
-            const SizedBox(height: AppSizes.p20),
+            const SizedBox(height: AppSizes.p24),
 
             // ─── 4. Bottom Split Row: Track Order & Freshness Banner ─────────────
             if (isDesktop)
@@ -161,12 +160,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               ),
 
-            const SizedBox(height: AppSizes.p20),
+            const SizedBox(height: AppSizes.p24),
 
             // ─── Why Choose Us Banner ───
             const _WhyChooseUsVideo(),
 
-            const SizedBox(height: 70), // Safe bottom clearance for floating cart
+            const SizedBox(height: 36),
           ],
         ),
       ),
@@ -175,7 +174,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. Hero Promotional Banner ("Pure Goodness, Delivered to Your Doorstep")
+// 2. Hero Promotional Banner ("Pure Goodness, Delivered to Your Doorstep")
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _HeroPromotionalBanner extends StatefulWidget {
