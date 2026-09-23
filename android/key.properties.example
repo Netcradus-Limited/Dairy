@@ -1,0 +1,15 @@
+# ==============================================================================
+# Sawariya Dairy — Android Release Keystore Configuration Template
+# ==============================================================================
+# Instructions:
+# 1. Copy this file to `android/key.properties` (this file is git-ignored).
+# 2. Generate a secure release keystore using keytool:
+#    keytool -genkey -v -keystore sawariya-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias sawariya_release
+# 3. Fill in the values below:
+#
+# DO NOT COMMIT key.properties OR *.jks / *.keystore FILES TO GIT.
+# ==============================================================================
+keyAlias=sawariya_release
+keyPassword=YOUR_KEY_PASSWORD
+storeFile=sawariya-release.jks
+storePassword=YOUR_STORE_PASSWORD
