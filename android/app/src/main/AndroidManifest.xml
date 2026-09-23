@@ -23,6 +23,9 @@
     <!-- Notifications (required for Android 13+ to show push alerts) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Battery optimization exemption request for uninterrupted delivery GPS tracking -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <application
         android:label="Sawariya Dairy"
         android:name="${applicationName}"

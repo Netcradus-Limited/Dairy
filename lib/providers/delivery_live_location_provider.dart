@@ -9,6 +9,7 @@ import '../models/delivery_boy_model.dart';
 import '../services/delivery_tracking_service.dart';
 import '../services/location_service.dart';
 import '../services/network_connectivity_service.dart';
+import 'battery_optimization_provider.dart';
 import 'delivery_provider.dart';
 
 /// Toggles the delivery agent's live GPS tracking. While the agent is online,
@@ -76,6 +77,9 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
     // Task 7: Request background location permission (Android 10+).
     // Result is intentionally ignored for graceful foreground-only degradation.
     await location.requestBackgroundLocationPermission();
+
+    // Task 3: Check battery optimization status when tracking starts
+    unawaited(_ref.read(batteryOptimizationProvider.notifier).checkStatus());
 
     state = true;
     _writeCurrentPosition();

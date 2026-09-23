@@ -10,6 +10,7 @@ import '../../providers/cart_provider.dart';
 import '../../providers/delivery_live_location_provider.dart';
 import '../../providers/delivery_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../providers/battery_optimization_provider.dart';
 import '../../services/fcm_service.dart';
 import '../../services/network_connectivity_service.dart';
 import 'screens/requests_tab.dart';
@@ -17,6 +18,7 @@ import 'screens/active_delivery_tab.dart';
 import 'screens/orders_tab.dart';
 import 'screens/earnings_tab.dart';
 import 'screens/profile_tab.dart';
+import 'widgets/battery_optimization_warning_banner.dart';
 
 class _BottomNavItem {
   final IconData icon;
@@ -39,7 +41,8 @@ class DeliveryPanelScreen extends ConsumerStatefulWidget {
       _DeliveryPanelScreenState();
 }
 
-class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen> {
+class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
+    with WidgetsBindingObserver {
   static const List<_BottomNavItem> _navItems = [
     _BottomNavItem(
         icon: Icons.assignment_outlined,
@@ -72,9 +75,24 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkLastTappedOrder();
+      ref.read(batteryOptimizationProvider.notifier).checkStatus();
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(batteryOptimizationProvider.notifier).checkStatus();
+    }
   }
 
   void _checkLastTappedOrder() {
@@ -114,6 +132,7 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen> {
     final bodyContent = Column(
       children: [
         if (!isNetworkOnline) _buildOfflineBanner(context),
+        const BatteryOptimizationWarningBanner(),
         Expanded(
           child: IndexedStack(
             index: currentIndex,
