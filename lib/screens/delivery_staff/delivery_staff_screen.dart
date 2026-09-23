@@ -855,60 +855,74 @@ _buildDetailRow(
                       ? double.tryParse(ratingText)
                       : null;
 
-                  if (isEdit) {
-                    await provider.updateRider(
-                      existing.copyWith(
-                        name: nameCtrl.text.trim(),
-                        phone: phoneCtrl.text.trim(),
-                        email: emailCtrl.text.trim(),
-                        vehicle: vehicleCtrl.text.trim(),
-                        vehicleNumber: vehicleNumCtrl.text.trim().toUpperCase(),
-                        assignedZone: zoneCtrl.text.trim(),
-                        status: selectedStatus,
-                        rating: rating,
-                        isOnline: isOnline,
-                      ),
-                    );
+                  try {
+                    if (isEdit) {
+                      await provider.updateRider(
+                        existing.copyWith(
+                          name: nameCtrl.text.trim(),
+                          phone: phoneCtrl.text.trim(),
+                          email: emailCtrl.text.trim(),
+                          vehicle: vehicleCtrl.text.trim(),
+                          vehicleNumber: vehicleNumCtrl.text.trim().toUpperCase(),
+                          assignedZone: zoneCtrl.text.trim(),
+                          status: selectedStatus,
+                          rating: rating,
+                          isOnline: isOnline,
+                        ),
+                      );
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                'Staff "${nameCtrl.text}" updated successfully!'),
+                            backgroundColor: AppColors.revenueGreen,
+                          ),
+                        );
+                      }
+                    } else {
+                      final riderId =
+                          'RDR-${DateTime.now().millisecondsSinceEpoch}';
+                      await provider.addRider(
+                        DeliveryRider(
+                          id: riderId,
+                          name: nameCtrl.text.trim(),
+                          phone: phoneCtrl.text.trim(),
+                          email: emailCtrl.text.trim().isEmpty
+                              ? '${nameCtrl.text.toLowerCase().replaceAll(' ', '')}@sawariyadairy.com'
+                              : emailCtrl.text.trim(),
+                          vehicle: vehicleCtrl.text.trim(),
+                          vehicleNumber: vehicleNumCtrl.text.trim().toUpperCase(),
+                          assignedZone: zoneCtrl.text.trim(),
+                          totalDeliveriesToday: 0,
+                          pendingDeliveries: 0,
+                          rating: rating,
+                          status: selectedStatus,
+                          isOnline: isOnline,
+                          joinedDate:
+                              DateFormat('dd MMM yyyy').format(DateTime.now()),
+                        ),
+                      );
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                'Staff member "${nameCtrl.text}" added successfully!'),
+                            backgroundColor: AppColors.revenueGreen,
+                          ),
+                        );
+                      }
+                    }
+                  } catch (e) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                            content: Text(
-                                'Staff "${nameCtrl.text}" updated successfully!')),
+                          content: Text('Failed to save delivery staff: $e'),
+                          backgroundColor: AppColors.error,
+                        ),
                       );
                     }
-                  } else {
-                    final riderId =
-                        'RDR-${DateTime.now().millisecondsSinceEpoch}';
-                    await provider.addRider(
-                      DeliveryRider(
-                        id: riderId,
-                        name: nameCtrl.text.trim(),
-                        phone: phoneCtrl.text.trim(),
-                        email: emailCtrl.text.trim().isEmpty
-                            ? '${nameCtrl.text.toLowerCase().replaceAll(' ', '')}@sawariyadairy.com'
-                            : emailCtrl.text.trim(),
-                        vehicle: vehicleCtrl.text.trim(),
-                        vehicleNumber: vehicleNumCtrl.text.trim().toUpperCase(),
-                        assignedZone: zoneCtrl.text.trim(),
-                        totalDeliveriesToday: 0,
-                        pendingDeliveries: 0,
-                        rating: rating,
-                        status: selectedStatus,
-                        isOnline: isOnline,
-                        joinedDate:
-                            DateFormat('dd MMM yyyy').format(DateTime.now()),
-                      ),
-                    );
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text(
-                                'Staff member "${nameCtrl.text}" added successfully!')),
-                      );
-                    }
-                  }
-                  if (ctx.mounted) {
-                    Navigator.pop(ctx);
                   }
                 }
               },
@@ -957,16 +971,28 @@ _buildDetailRow(
           ),
           ElevatedButton(
             onPressed: () async {
-              await provider.deleteRider(rider.id);
-              if (ctx.mounted) {
-                Navigator.pop(ctx);
-              }
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
+              try {
+                await provider.deleteRider(rider.id);
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
                       content: Text(
-                          'Staff member "${rider.name}" removed successfully.')),
-                );
+                          'Staff member "${rider.name}" removed successfully.'),
+                      backgroundColor: AppColors.revenueGreen,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to delete delivery staff: $e'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
               }
             },
             style: ElevatedButton.styleFrom(

@@ -793,6 +793,7 @@ class AdminProvider extends ChangeNotifier {
     } catch (e) {
       _error = 'Failed to delete product: $e';
       notifyListeners();
+      rethrow;
     }
   }
 
@@ -806,6 +807,7 @@ class AdminProvider extends ChangeNotifier {
     } catch (e) {
       _error = 'Failed to toggle stock: $e';
       notifyListeners();
+      rethrow;
     }
   }
 
@@ -819,6 +821,7 @@ class AdminProvider extends ChangeNotifier {
     } catch (e) {
       _error = 'Failed to toggle best seller: $e';
       notifyListeners();
+      rethrow;
     }
   }
 
@@ -1250,6 +1253,7 @@ class AdminProvider extends ChangeNotifier {
       debugPrint('AdminProvider: Failed to add customer to Firestore: $e');
       _usersError = 'Failed to add customer: $e';
       notifyListeners();
+      rethrow;
     }
   }
 
@@ -1275,6 +1279,7 @@ class AdminProvider extends ChangeNotifier {
       debugPrint('AdminProvider: Failed to update customer in Firestore: $e');
       _usersError = 'Failed to update customer: $e';
       notifyListeners();
+      rethrow;
     }
   }
 
@@ -1286,6 +1291,7 @@ class AdminProvider extends ChangeNotifier {
       debugPrint('AdminProvider: Failed to delete customer from Firestore: $e');
       _usersError = 'Failed to delete customer: $e';
       notifyListeners();
+      rethrow;
     }
   }
 
@@ -1345,6 +1351,7 @@ class AdminProvider extends ChangeNotifier {
           'AdminProvider: Failed to add delivery staff to Firestore: $e');
       _usersError = 'Failed to add delivery staff: $e';
       notifyListeners();
+      rethrow;
     }
   }
 
@@ -1393,6 +1400,7 @@ class AdminProvider extends ChangeNotifier {
           'AdminProvider: Failed to update delivery staff in Firestore: $e');
       _usersError = 'Failed to update delivery staff: $e';
       notifyListeners();
+      rethrow;
     }
   }
 
@@ -1408,6 +1416,7 @@ class AdminProvider extends ChangeNotifier {
       debugPrint('AdminProvider: Failed to delete delivery staff: $e');
       _usersError = 'Failed to delete delivery staff: $e';
       notifyListeners();
+      rethrow;
     }
   }
 
@@ -1724,7 +1733,25 @@ class AdminProvider extends ChangeNotifier {
       }
     }
 
-    // 4. If promoted to Admin, also sync with admins collection
+    // 4. Sync staff pre-provision & role metadata to admins collection
+    // This allows unauthenticated / first-time OTP staff sign-ins to authoritatively resolve their role & permissions
+    if (normalizedPhone.isNotEmpty) {
+      await fs.collection('admins').doc(normalizedPhone).set({
+        'uid': targetDocId,
+        'phone': phone.trim(),
+        'normalizedPhone': normalizedPhone,
+        if (name.trim().isNotEmpty) 'name': name.trim(),
+        if (email.trim().isNotEmpty) 'email': email.trim(),
+        'role': cleanRole,
+        'roleTitle': roleTitle,
+        'permissions': effectivePerms,
+        'status': 'Active',
+        'isAdmin': cleanRole == 'admin',
+        'isPreProvisioned': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
+
     if (cleanRole == 'admin') {
       await fs.collection('admins').doc(targetDocId).set({
         'uid': targetDocId,
@@ -1732,6 +1759,8 @@ class AdminProvider extends ChangeNotifier {
         'email': email.trim(),
         'phone': phone.trim(),
         'role': 'superadmin',
+        'roleTitle': 'Super Admin',
+        'permissions': effectivePerms,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     }
@@ -1752,6 +1781,7 @@ class AdminProvider extends ChangeNotifier {
 
     final cleanRole = UserRole.sanitize(role);
     final roleTitle = StaffRolePresets.getDisplayTitleForRole(cleanRole);
+    final normalizedPhone = PhoneAuthUtils.normalize(phone);
 
     await fs.collection('users').doc(staffId).set({
       if (name.trim().isNotEmpty) 'name': name.trim(),
@@ -1765,6 +1795,21 @@ class AdminProvider extends ChangeNotifier {
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
+    if (normalizedPhone.isNotEmpty) {
+      await fs.collection('admins').doc(normalizedPhone).set({
+        'uid': staffId,
+        if (name.trim().isNotEmpty) 'name': name.trim(),
+        if (email.trim().isNotEmpty) 'email': email.trim(),
+        if (phone.trim().isNotEmpty) 'phone': phone.trim(),
+        'role': cleanRole,
+        'roleTitle': roleTitle,
+        'status': status.trim(),
+        'permissions': permissions,
+        'isAdmin': cleanRole == 'admin',
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
+
     if (cleanRole == 'admin') {
       await fs.collection('admins').doc(staffId).set({
         'uid': staffId,
@@ -1772,6 +1817,8 @@ class AdminProvider extends ChangeNotifier {
         'email': email.trim(),
         'phone': phone.trim(),
         'role': 'superadmin',
+        'roleTitle': 'Super Admin',
+        'permissions': permissions,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } else {
@@ -1801,6 +1848,10 @@ class AdminProvider extends ChangeNotifier {
     final fs = _firestore;
     if (fs == null) throw Exception('Firestore is not initialized');
 
+    final userDoc = await fs.collection('users').doc(staffId).get();
+    final userPhone = (userDoc.data()?['phone'] as String? ?? '').trim();
+    final normalizedPhone = PhoneAuthUtils.normalize(userPhone);
+
     await fs.collection('users').doc(staffId).set({
       'role': UserRole.customerValue,
       'roleTitle': FieldValue.delete(),
@@ -1813,6 +1864,13 @@ class AdminProvider extends ChangeNotifier {
     final adminDoc = await fs.collection('admins').doc(staffId).get();
     if (adminDoc.exists) {
       await fs.collection('admins').doc(staffId).delete();
+    }
+
+    if (normalizedPhone.isNotEmpty) {
+      final phoneAdminDoc = await fs.collection('admins').doc(normalizedPhone).get();
+      if (phoneAdminDoc.exists) {
+        await fs.collection('admins').doc(normalizedPhone).delete();
+      }
     }
   }
 

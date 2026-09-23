@@ -714,80 +714,94 @@ class CustomersScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               if (nameCtrl.text.trim().isNotEmpty) {
-                if (isEdit) {
-                  await provider.updateCustomer(
-                    existing.copyWith(
-                      name: nameCtrl.text.trim(),
-                      phone: phoneCtrl.text.trim().isEmpty
-                          ? existing.phone
-                          : phoneCtrl.text.trim(),
-                      email: emailCtrl.text.trim().isEmpty
-                          ? existing.email
-                          : emailCtrl.text.trim(),
-                      address: addressCtrl.text.trim().isEmpty
-                          ? existing.address
-                          : addressCtrl.text.trim(),
-                      deliveryZone: zoneCtrl.text.trim().isEmpty
-                          ? existing.deliveryZone
-                          : zoneCtrl.text.trim(),
-                      subscriptionPlan: planCtrl.text.trim().isEmpty
-                          ? existing.subscriptionPlan
-                          : planCtrl.text.trim(),
-                      milkPreference: milkCtrl.text.trim().isEmpty
-                          ? existing.milkPreference
-                          : milkCtrl.text.trim(),
-                      walletBalance: double.tryParse(walletCtrl.text) ??
-                          existing.walletBalance,
-                    ),
-                  );
+                try {
+                  if (isEdit) {
+                    await provider.updateCustomer(
+                      existing.copyWith(
+                        name: nameCtrl.text.trim(),
+                        phone: phoneCtrl.text.trim().isEmpty
+                            ? existing.phone
+                            : phoneCtrl.text.trim(),
+                        email: emailCtrl.text.trim().isEmpty
+                            ? existing.email
+                            : emailCtrl.text.trim(),
+                        address: addressCtrl.text.trim().isEmpty
+                            ? existing.address
+                            : addressCtrl.text.trim(),
+                        deliveryZone: zoneCtrl.text.trim().isEmpty
+                            ? existing.deliveryZone
+                            : zoneCtrl.text.trim(),
+                        subscriptionPlan: planCtrl.text.trim().isEmpty
+                            ? existing.subscriptionPlan
+                            : planCtrl.text.trim(),
+                        milkPreference: milkCtrl.text.trim().isEmpty
+                            ? existing.milkPreference
+                            : milkCtrl.text.trim(),
+                        walletBalance: double.tryParse(walletCtrl.text) ??
+                            existing.walletBalance,
+                      ),
+                    );
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                              'Customer "${nameCtrl.text}" updated successfully!'),
+                          backgroundColor: AppColors.revenueGreen,
+                        ),
+                      );
+                    }
+                  } else {
+                    final customerId =
+                        'CUST-${DateTime.now().millisecondsSinceEpoch % 100000}';
+                    await provider.addCustomer(
+                      DairyCustomer(
+                        id: customerId,
+                        name: nameCtrl.text.trim(),
+                        phone: phoneCtrl.text.trim().isEmpty
+                            ? '+91 99999 00000'
+                            : phoneCtrl.text.trim(),
+                        email: emailCtrl.text.trim().isEmpty
+                            ? '${nameCtrl.text.toLowerCase().replaceAll(' ', '')}@sawariyadairy.com'
+                            : emailCtrl.text.trim(),
+                        address: addressCtrl.text.trim().isEmpty
+                            ? 'Noida, Uttar Pradesh'
+                            : addressCtrl.text.trim(),
+                        deliveryZone: zoneCtrl.text.trim().isEmpty
+                            ? 'Central Noida Hub'
+                            : zoneCtrl.text.trim(),
+                        subscriptionPlan: planCtrl.text.trim().isEmpty
+                            ? 'Daily Morning (2 Litres)'
+                            : planCtrl.text.trim(),
+                        milkPreference: milkCtrl.text.trim().isEmpty
+                            ? 'Pure A2 Cow Milk'
+                            : milkCtrl.text.trim(),
+                        walletBalance: double.tryParse(walletCtrl.text) ?? 500.0,
+                        status: 'Active',
+                        joinedDate:
+                            DateFormat('dd MMM yyyy').format(DateTime.now()),
+                      ),
+                    );
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                              'Customer "${nameCtrl.text}" added successfully!'),
+                          backgroundColor: AppColors.revenueGreen,
+                        ),
+                      );
+                    }
+                  }
+                } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                          content: Text(
-                              'Customer "${nameCtrl.text}" updated successfully!')),
+                        content: Text('Failed to save customer: $e'),
+                        backgroundColor: AppColors.error,
+                      ),
                     );
                   }
-                } else {
-                  final customerId =
-                      'CUST-${DateTime.now().millisecondsSinceEpoch % 100000}';
-                  await provider.addCustomer(
-                    DairyCustomer(
-                      id: customerId,
-                      name: nameCtrl.text.trim(),
-                      phone: phoneCtrl.text.trim().isEmpty
-                          ? '+91 99999 00000'
-                          : phoneCtrl.text.trim(),
-                      email: emailCtrl.text.trim().isEmpty
-                          ? '${nameCtrl.text.toLowerCase().replaceAll(' ', '')}@sawariyadairy.com'
-                          : emailCtrl.text.trim(),
-                      address: addressCtrl.text.trim().isEmpty
-                          ? 'Noida, Uttar Pradesh'
-                          : addressCtrl.text.trim(),
-                      deliveryZone: zoneCtrl.text.trim().isEmpty
-                          ? 'Central Noida Hub'
-                          : zoneCtrl.text.trim(),
-                      subscriptionPlan: planCtrl.text.trim().isEmpty
-                          ? 'Daily Morning (2 Litres)'
-                          : planCtrl.text.trim(),
-                      milkPreference: milkCtrl.text.trim().isEmpty
-                          ? 'Pure A2 Cow Milk'
-                          : milkCtrl.text.trim(),
-                      walletBalance: double.tryParse(walletCtrl.text) ?? 500.0,
-                      status: 'Active',
-                      joinedDate:
-                          DateFormat('dd MMM yyyy').format(DateTime.now()),
-                    ),
-                  );
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text(
-                              'Customer "${nameCtrl.text}" added successfully!')),
-                    );
-                  }
-                }
-                if (ctx.mounted) {
-                  Navigator.pop(ctx);
                 }
               }
             },
@@ -834,16 +848,28 @@ class CustomersScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () async {
-              await provider.deleteCustomer(customer.id);
-              if (ctx.mounted) {
-                Navigator.pop(ctx);
-              }
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
+              try {
+                await provider.deleteCustomer(customer.id);
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
                       content: Text(
-                          'Customer "${customer.name}" deleted successfully.')),
-                );
+                          'Customer "${customer.name}" deleted successfully.'),
+                      backgroundColor: AppColors.revenueGreen,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to delete customer: $e'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
               }
             },
             style: ElevatedButton.styleFrom(

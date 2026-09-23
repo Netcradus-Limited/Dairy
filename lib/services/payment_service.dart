@@ -137,12 +137,16 @@ class PaymentService {
 
     try {
       await _paymentsRef.doc(cleanId).update(updates);
-    } catch (_) {
+    } catch (primaryError) {
       if (!cleanId.startsWith('PAY_')) {
         try {
           await _paymentsRef.doc('PAY_$cleanId').update(updates);
-        } catch (_) {}
+          return;
+        } catch (_) {
+          // Fall through to rethrow primary error
+        }
       }
+      rethrow;
     }
   }
 

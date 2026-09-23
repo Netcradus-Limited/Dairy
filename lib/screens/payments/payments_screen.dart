@@ -645,6 +645,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     DairyPayment payment,
     AdminProvider provider,
   ) {
+    bool isUpdating = false;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -652,65 +654,116 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return StatefulBuilder(
+          builder: (modalCtx, setModalState) {
+            return Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Payment Details',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Payment Details',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      StatusBadge.fromString(payment.status),
+                    ],
                   ),
-                  StatusBadge.fromString(payment.status),
-                ],
-              ),
-              const Divider(height: 24),
-              _buildModalRow('Payment ID', payment.id),
-              _buildModalRow('Order Reference', payment.orderOrWalletId),
-              _buildModalRow('Customer Name', payment.customerName),
-              if (payment.customerPhone != null && payment.customerPhone!.isNotEmpty)
-                _buildModalRow('Customer Phone', payment.customerPhone!),
-              _buildModalRow('Payment Method', payment.method),
-              _buildModalRow('Amount', '₹${payment.amount.toStringAsFixed(2)}'),
-              if (payment.transactionId != null)
-                _buildModalRow('Transaction ID', payment.transactionId!),
-              _buildModalRow('Timestamp', payment.timestamp),
-              const SizedBox(height: 20),
+                  const Divider(height: 24),
+                  _buildModalRow('Payment ID', payment.id),
+                  _buildModalRow('Order Reference', payment.orderOrWalletId),
+                  _buildModalRow('Customer Name', payment.customerName),
+                  if (payment.customerPhone != null &&
+                      payment.customerPhone!.isNotEmpty)
+                    _buildModalRow('Customer Phone', payment.customerPhone!),
+                  _buildModalRow('Payment Method', payment.method),
+                  _buildModalRow('Amount', '₹${payment.amount.toStringAsFixed(2)}'),
+                  if (payment.transactionId != null)
+                    _buildModalRow('Transaction ID', payment.transactionId!),
+                  _buildModalRow('Timestamp', payment.timestamp),
+                  const SizedBox(height: 20),
 
-              // Action Buttons for Pending Payments
-              if (payment.status == 'Pending') ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.revenueGreen,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                  // Action Buttons for Pending Payments
+                  if (payment.status == 'Pending') ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.revenueGreen,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            icon: isUpdating
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.check_circle_outline, size: 18),
+                            label: Text(
+                              isUpdating
+                                  ? 'Updating Status...'
+                                  : 'Mark as Paid (Success)',
+                            ),
+                            onPressed: isUpdating
+                                ? null
+                                : () async {
+                                    setModalState(() => isUpdating = true);
+                                    try {
+                                      await provider.updatePaymentStatus(
+                                          payment.id, 'Success');
+                                      if (ctx.mounted) Navigator.pop(ctx);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Payment ${payment.id} marked as Paid (Success).',
+                                            ),
+                                            backgroundColor:
+                                                AppColors.revenueGreen,
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (modalCtx.mounted) {
+                                        setModalState(() => isUpdating = false);
+                                      }
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Failed to update payment status: $e',
+                                            ),
+                                            backgroundColor: AppColors.error,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
                           ),
                         ),
-                        icon: const Icon(Icons.check_circle_outline, size: 18),
-                        label: const Text('Mark as Paid (Success)'),
-                        onPressed: () async {
-                          Navigator.pop(ctx);
-                          await provider.updatePaymentStatus(payment.id, 'Success');
-                        },
-                      ),
+                      ],
                     ),
                   ],
-                ),
-              ],
-            ],
-          ),
+                ],
+              ),
+            );
+          },
         );
       },
     );

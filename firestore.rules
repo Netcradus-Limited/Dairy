@@ -37,19 +37,19 @@ service cloud.firestore {
 
     function currentRole() {
       let data = getUserData();
-      return data != null && ('role' in data) ? data.role : null;
+      if (data != null && ('role' in data) && data.role != null) {
+        return data.role;
+      }
+      if (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid))) {
+        let adminData = get(/databases/$(database)/documents/admins/$(request.auth.uid)).data;
+        return adminData != null && ('role' in adminData) ? adminData.role : null;
+      }
+      return null;
     }
 
     function isSuperAdmin() {
       return isSignedIn() && (
         currentRole() in ['admin', 'superadmin', 'owner']
-        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-      );
-    }
-
-    function canManageCatalog() {
-      return isSignedIn() && (
-        currentRole() in ['admin', 'superadmin', 'owner', 'manager']
         || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
@@ -65,6 +65,29 @@ service cloud.firestore {
       return isStaffMember();
     }
 
+    // Checks granular staff permission in users/{uid}.permissions or admins/{uid}.permissions
+    function hasPermission(permKey) {
+      let data = getUserData();
+      let hasUserPerm = data != null && ('permissions' in data) && data.permissions is list && permKey in data.permissions;
+      let hasAdminPerm = isSignedIn()
+          && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+          && ('permissions' in get(/databases/$(database)/documents/admins/$(request.auth.uid)).data)
+          && permKey in get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.permissions;
+
+      return isSuperAdmin() || hasUserPerm || hasAdminPerm;
+    }
+
+    function canManageCatalog() {
+      return isSuperAdmin()
+          || hasPermission('createProduct')
+          || hasPermission('editProduct')
+          || hasPermission('deleteProduct')
+          || hasPermission('createCategory')
+          || hasPermission('editCategory')
+          || hasPermission('deleteCategory')
+          || (isSignedIn() && currentRole() in ['admin', 'superadmin', 'owner', 'manager']);
+    }
+
     function isDelivery() {
       return isSignedIn() && currentRole() == 'delivery';
     }
@@ -78,19 +101,23 @@ service cloud.firestore {
       // Users can read own profile; Staff/Admins can read all users
       allow read: if isAdmin() || isOwnDoc(userId);
 
-      // Self-registration: Strictly allows creating 'customer' profile only.
-      // A user can never self-assign 'admin', 'manager', 'staff', or 'delivery' role.
+      // Self-registration: Strictly allows creating 'customer' profile only,
+      // OR pre-provisioned staff role if record exists in admins collection.
       // Super Admins can create any user profile with any role.
       allow create: if isSuperAdmin()
           || (isOwnDoc(userId)
               && request.resource.data.uid == request.auth.uid
-              && request.resource.data.role == 'customer');
+              && (request.resource.data.role == 'customer'
+                  || (exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+                      && request.resource.data.role == get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role)));
 
       // Profile Update:
-      // Super Admins can update any user profile (roles, permissions, details).
+      // Super Admins and authorized staff managers can update user profile.
       // Owners can update own profile, but MUST NEVER mutate 'role', 'uid', 'isAdmin', 'permissions', or 'walletBalance'.
       // They are explicitly allowed to update their name, email, phone, profileImageUrl, fcmToken, fcmTokens, etc.
       allow update: if isSuperAdmin()
+          || hasPermission('manageStaff')
+          || hasPermission('editCustomer')
           || (isOwnDoc(userId)
               && (!('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid)
               && (!('role' in request.resource.data) || (('role' in resource.data) && request.resource.data.role == resource.data.role))
@@ -98,8 +125,8 @@ service cloud.firestore {
               && (!('permissions' in request.resource.data) || (('permissions' in resource.data) && request.resource.data.permissions == resource.data.permissions))
               && (!('walletBalance' in request.resource.data) || (('walletBalance' in resource.data) && request.resource.data.walletBalance == resource.data.walletBalance)));
 
-      // User deletion: Super Admin only
-      allow delete: if isSuperAdmin();
+      // User deletion: Super Admin or authorized staff manager only
+      allow delete: if isSuperAdmin() || hasPermission('manageStaff') || hasPermission('deleteCustomer');
     }
 
     // ── 2. users/{userId}/addresses Subcollection ───────────────────────────
@@ -113,8 +140,8 @@ service cloud.firestore {
       // Owners read own notifications; Admins read all
       allow read: if isAdmin() || isOwnDoc(userId);
 
-      // Only Admins (or trusted server SDK) can create/broadcast notifications
-      allow create: if isAdmin();
+      // Only Admins / staff with sendNotifications can create/broadcast notifications
+      allow create: if isSuperAdmin() || hasPermission('sendNotifications') || isAdmin();
 
       // Owners can only update 'isRead' status; Admins have full update access
       allow update: if isAdmin()
@@ -153,14 +180,14 @@ service cloud.firestore {
     // ── 5c. subscriptions Root Collection ────────────────────────────────────
     match /subscriptions/{subscriptionId} {
       // Customers read own subscriptions; Admins read all subscriptions
-      allow read: if isAdmin()
+      allow read: if isAdmin() || hasPermission('viewSubscriptions')
           || (isCustomer() && (resource.data.userId == request.auth.uid || resource.data.uid == request.auth.uid));
 
       // Customer CREATE:
       // - authenticated customer
       // - request.resource.data.userId == request.auth.uid
       // Admins have full access
-      allow create: if isAdmin()
+      allow create: if isSuperAdmin() || hasPermission('createSubscription') || isAdmin()
           || (isCustomer()
               && (request.resource.data.userId == request.auth.uid || request.resource.data.uid == request.auth.uid));
 
@@ -168,13 +195,13 @@ service cloud.firestore {
       // - existing resource.data.userId == request.auth.uid
       // - new request.resource.data.userId == request.auth.uid (customer can never change ownership)
       // Admins have full access
-      allow update: if isAdmin()
+      allow update: if isSuperAdmin() || hasPermission('editSubscription') || isAdmin()
           || (isCustomer()
               && (resource.data.userId == request.auth.uid || resource.data.uid == request.auth.uid)
               && (request.resource.data.userId == request.auth.uid || request.resource.data.uid == request.auth.uid));
 
       // Subscriptions are retained for history; Admins or owners can delete
-      allow delete: if isAdmin()
+      allow delete: if isSuperAdmin() || hasPermission('cancelSubscription') || isAdmin()
           || (isCustomer() && (resource.data.userId == request.auth.uid || resource.data.uid == request.auth.uid));
     }
 
@@ -184,7 +211,9 @@ service cloud.firestore {
       allow read: if isSignedIn();
 
       // Only authorized catalog managers can create, edit, or delete products
-      allow create, update, delete: if canManageCatalog();
+      allow create: if isSuperAdmin() || hasPermission('createProduct') || canManageCatalog();
+      allow update: if isSuperAdmin() || hasPermission('editProduct') || canManageCatalog();
+      allow delete: if isSuperAdmin() || hasPermission('deleteProduct') || canManageCatalog();
     }
 
     // ── 7. categories Collection ────────────────────────────────────────────
@@ -193,16 +222,19 @@ service cloud.firestore {
       allow read: if isSignedIn();
 
       // Only authorized catalog managers can manage product categories
-      allow create, update, delete: if canManageCatalog();
+      allow create: if isSuperAdmin() || hasPermission('createCategory') || canManageCatalog();
+      allow update: if isSuperAdmin() || hasPermission('editCategory') || canManageCatalog();
+      allow delete: if isSuperAdmin() || hasPermission('deleteCategory') || canManageCatalog();
     }
 
     // ── 8. orders Collection ────────────────────────────────────────────────
     match /orders/{orderId} {
       // Customers: read own orders.
       // Delivery: read pending unassigned orders (to accept) or assigned orders.
-      // Delivery agents CANNOT read orders assigned to other agents.
-      // Admins: read all orders.
-      allow read: if isAdmin()
+      // Admins & staff: read all orders if authorized.
+      allow read: if isSuperAdmin()
+          || hasPermission('viewOrders')
+          || isAdmin()
           || (isSignedIn() && resource.data.userId == request.auth.uid)
           || (isDelivery()
               && (isUnassignedPendingOrder()
@@ -210,8 +242,8 @@ service cloud.firestore {
                       && resource.data.assignedAgentId == request.auth.uid)));
 
       // Customers can create legitimate orders owned by themselves starting in 'Pending' state.
-      // They cannot forge ownership, totals, or assigned delivery agents.
-      allow create: if isAdmin()
+      allow create: if isSuperAdmin()
+          || isAdmin()
           || (isSignedIn()
               && request.resource.data.userId == request.auth.uid
               && request.resource.data.status in ['Pending', 'pending', 'placed']
@@ -219,15 +251,19 @@ service cloud.firestore {
               && !('acceptedAt' in request.resource.data));
 
       // Order update:
-      // Admins: Full management.
+      // Admins & staff: Full management based on permissions.
       // Customers: Can cancel their own pending/placed/confirmed orders before dispatch.
       // Delivery Agents: Controlled state transition and assignment operations.
-      allow update: if isAdmin()
+      allow update: if isSuperAdmin()
+          || hasPermission('editOrders')
+          || hasPermission('assignDeliveryAgent')
+          || hasPermission('cancelOrders')
+          || isAdmin()
           || (isSignedIn() && canCustomerCancelOrder())
           || (isDelivery() && canUpdateAssignedOrder());
 
-      // Only Admins may delete orders (audit trail retention)
-      allow delete: if isAdmin();
+      // Only Super Admins or authorized staff may delete orders
+      allow delete: if isSuperAdmin() || hasPermission('cancelOrders');
     }
 
     // Guard for checking pending unassigned orders that agents may browse
@@ -354,9 +390,11 @@ service cloud.firestore {
 
     // ── 11. complaints Collection ───────────────────────────────────────────
     match /complaints/{complaintId} {
-      // Customer reads own support tickets; Admins read all
+      // Customer reads own support tickets; Admins & authorized staff read all
       // Delivery users do NOT have access unless they are admins or viewing their own ticket
-      allow read: if isAdmin()
+      allow read: if isSuperAdmin()
+          || hasPermission('viewComplaints')
+          || isAdmin()
           || (isSignedIn() && (
               resource.data.customerId == request.auth.uid
               || (('userId' in resource.data) && resource.data.userId == request.auth.uid)
@@ -364,7 +402,9 @@ service cloud.firestore {
 
       // Customers can file a support ticket owned by themselves in 'Open' / 'Pending' status
       // Cannot set adminReply upon creation
-      allow create: if isAdmin()
+      allow create: if isSuperAdmin()
+          || hasPermission('replyComplaint')
+          || isAdmin()
           || (isSignedIn()
               && (
                   request.resource.data.customerId == request.auth.uid
@@ -373,62 +413,72 @@ service cloud.firestore {
               && request.resource.data.status in ['Open', 'open', 'Pending', 'pending']
               && (!('adminReply' in request.resource.data) || request.resource.data.adminReply == null || request.resource.data.adminReply == ''));
 
-      // Only Admins can update ticket status, attach resolutions, or add admin replies
-      allow update: if isAdmin();
+      // Only Admins / staff with replyComplaint can update ticket status, attach resolutions, or add admin replies
+      allow update: if isSuperAdmin() || hasPermission('replyComplaint') || isAdmin();
 
-      // Only Admins can delete complaints
-      allow delete: if isAdmin();
+      // Only Super Admins / authorized staff can delete complaints
+      allow delete: if isSuperAdmin() || hasPermission('replyComplaint') || isSuperAdmin();
     }
 
     // ── 12. payments Collection ─────────────────────────────────────────────
     match /payments/{paymentId} {
       // Users read own payments; Admins read all payments
-      allow read: if isAdmin()
+      allow read: if isSuperAdmin()
+          || hasPermission('viewPayments')
+          || isAdmin()
           || (isSignedIn() && (
               resource.data.userId == request.auth.uid
               || (('customerId' in resource.data) && resource.data.customerId == request.auth.uid)
              ));
 
       // Users can create a payment record corresponding to their own order during checkout
-      allow create: if isAdmin()
+      allow create: if isSuperAdmin()
+          || hasPermission('updatePaymentStatus')
+          || isAdmin()
           || (isSignedIn() && (
               request.resource.data.userId == request.auth.uid
               || (('customerId' in request.resource.data) && request.resource.data.customerId == request.auth.uid)
              ));
 
-      // Admins have full management; Delivery agents can update status on cash collection
-      allow update: if isAdmin()
+      // Admins & staff with updatePaymentStatus have full management; Delivery agents can update status on cash collection
+      allow update: if isSuperAdmin()
+          || hasPermission('updatePaymentStatus')
+          || isAdmin()
           || (isDelivery()
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'paymentStatus', 'updatedAt']));
 
-      // Only Admins can delete payment records
-      allow delete: if isAdmin();
+      // Only Super Admins / authorized staff can delete payment records
+      allow delete: if isSuperAdmin() || hasPermission('updatePaymentStatus');
     }
 
     // ── 13. admins Collection ───────────────────────────────────────────────
     match /admins/{adminId} {
       // Signed-in users can read admins collection for role verification / discovery
       allow read: if isSignedIn();
-      // Only authenticated Super Admins may create, update, or delete admin records
-      allow write: if isSuperAdmin();
+      // Super Admins or Staff Managers may create, update, or delete admin records
+      allow write: if isSuperAdmin() || hasPermission('manageStaff');
     }
 
     // ── 14. delivery_batches Collection ────────────────────────────────────
     match /delivery_batches/{batchId} {
-      // Admins have full access.
+      // Admins & authorized staff have full access.
       // Delivery agents can read batches assigned to them.
       // Customers cannot access delivery batches.
-      allow read: if isAdmin()
+      allow read: if isSuperAdmin()
+          || hasPermission('viewDelivery')
+          || isAdmin()
           || (isDelivery() && (
               resource.data.agentId == request.auth.uid
               || resource.data.staffName == request.auth.uid
              ));
 
-      // Only Admins can create or delete delivery batches
-      allow create, delete: if isAdmin();
+      // Only Admins / staff with manageDelivery can create or delete delivery batches
+      allow create, delete: if isSuperAdmin() || hasPermission('manageDelivery') || isAdmin();
 
       // Admins have full update; Assigned delivery agents can only update status/completedOrders/pendingOrders/updatedAt
-      allow update: if isAdmin()
+      allow update: if isSuperAdmin()
+          || hasPermission('manageDelivery')
+          || isAdmin()
           || (isDelivery()
               && (
                   resource.data.agentId == request.auth.uid
@@ -440,20 +490,24 @@ service cloud.firestore {
 
     // ── 15. delivery_routes Collection ─────────────────────────────────────
     match /delivery_routes/{routeId} {
-      // Admins have full access.
+      // Admins & authorized staff have full access.
       // Delivery agents can read routes assigned to them.
       // Customers cannot access delivery routes.
-      allow read: if isAdmin()
+      allow read: if isSuperAdmin()
+          || hasPermission('viewDelivery')
+          || isAdmin()
           || (isDelivery() && (
               resource.data.agentId == request.auth.uid
               || resource.data.riderName == request.auth.uid
              ));
 
-      // Only Admins can create or delete delivery routes
-      allow create, delete: if isAdmin();
+      // Only Admins / staff with manageDelivery can create or delete delivery routes
+      allow create, delete: if isSuperAdmin() || hasPermission('manageDelivery') || isAdmin();
 
       // Admins have full update; Assigned delivery agents can only update status/completedOrders/updatedAt
-      allow update: if isAdmin()
+      allow update: if isSuperAdmin()
+          || hasPermission('manageDelivery')
+          || isAdmin()
           || (isDelivery()
               && (
                   resource.data.agentId == request.auth.uid

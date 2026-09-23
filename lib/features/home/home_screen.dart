@@ -43,16 +43,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 10),
-
-            // ─── 1. Quick Commerce Delivery Promise Pill ───
-            _DeliveryPromisePill(
-              onTap: () => ref.read(navigationProvider.notifier).setIndex(1),
-            ),
-
             const SizedBox(height: 12),
 
-            // ─── 2. Hero Banner (banner1v.mp4 Video Banner) ───
+            // ─── 1. Hero Banner (banner1v.mp4 Video Banner) ───
             _HeroPromotionalBanner(
               onTap: () => ref.read(navigationProvider.notifier).setIndex(1),
             ),
@@ -182,85 +175,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. Delivery Promise Pill
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _DeliveryPromisePill extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _DeliveryPromisePill({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFE6F4EA), Color(0xFFD1E7DD)],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: const Color(0xFFB1D5C0),
-              width: 1.0,
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF0F4A2F),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.electric_bolt_rounded,
-                  color: Colors.amber,
-                  size: 13,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: RichText(
-                  text: TextSpan(
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: Color(0xFF0F4A2F),
-                    ),
-                    children: [
-                      TextSpan(
-                        text: tr('Next Morning Delivery: '),
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      TextSpan(
-                        text: tr('6:00 AM – 7:30 AM • Order before 10 PM'),
-                        style: const TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                size: 16,
-                color: Color(0xFF0F4A2F),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 2. Hero Promotional Banner ("Pure Goodness, Delivered to Your Doorstep")
+// 1. Hero Promotional Banner ("Pure Goodness, Delivered to Your Doorstep")
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _HeroPromotionalBanner extends StatefulWidget {

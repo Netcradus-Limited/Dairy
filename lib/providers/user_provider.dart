@@ -9,6 +9,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../core/auth/app_role.dart';
 import '../core/router/auth_refresh.dart';
+import '../models/staff_member.dart';
 import '../models/user.dart';
 
 const User guestUser = User(
@@ -146,13 +147,62 @@ class UserNotifier extends StateNotifier<User> {
 
     // 2. Check `admins` collection
     try {
+      Future<String> linkAdminMatch(Map<String, dynamic> data, String sourceDocId) async {
+        final rawRole = (data['role'] as String?)?.trim() ?? 'admin';
+        final resolvedRole = UserRole.sanitize(rawRole);
+        final roleTitle = data['roleTitle'] as String? ??
+            StaffRolePresets.getDisplayTitleForRole(resolvedRole);
+        final perms = data['permissions'] is List
+            ? (data['permissions'] as List)
+                .map((p) => p.toString().trim())
+                .where((p) => p.isNotEmpty)
+                .toList()
+            : StaffRolePresets.getPermissionsForRole(resolvedRole);
+        final status = (data['status'] as String? ?? 'Active').trim();
+        final name = (data['name'] as String? ?? '').trim();
+        final email = (data['email'] as String? ?? '').trim();
+
+        debugPrint(
+            '[AUTH ROLE DEBUG] Linking admin/staff match (docId: $sourceDocId, role: $resolvedRole, perms: ${perms.length}) to auth user $uid');
+
+        try {
+          await firestore.collection('users').doc(uid).set({
+            'uid': uid,
+            'role': resolvedRole,
+            'roleTitle': roleTitle,
+            'permissions': perms,
+            'status': status,
+            'isAdmin': resolvedRole == 'admin',
+            if (name.isNotEmpty) 'name': name,
+            if (email.isNotEmpty) 'email': email,
+            if (effectivePhone.isNotEmpty) 'phone': effectivePhone,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+
+          await firestore.collection('admins').doc(uid).set({
+            'uid': uid,
+            'role': resolvedRole == 'admin' ? 'superadmin' : resolvedRole,
+            'roleTitle': roleTitle,
+            'permissions': perms,
+            'status': status,
+            if (name.isNotEmpty) 'name': name,
+            if (email.isNotEmpty) 'email': email,
+            if (effectivePhone.isNotEmpty) 'phone': effectivePhone,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+        } catch (linkErr) {
+          debugPrint('[AUTH ROLE DEBUG] Error auto-linking admin doc: $linkErr');
+        }
+
+        return resolvedRole;
+      }
+
       // 2a. Check by direct doc ID == uid
       final adminDocByUid =
           await firestore.collection('admins').doc(uid).get();
       if (adminDocByUid.exists && adminDocByUid.data() != null) {
         final data = adminDocByUid.data()!;
-        final rawRole = (data['role'] as String?)?.trim() ?? 'admin';
-        final resolvedRole = UserRole.sanitize(rawRole);
+        final resolvedRole = await linkAdminMatch(data, uid);
         debugPrint(
             '[AUTH ROLE DEBUG] Admin lookup result: FOUND in admins collection by doc ID (docId: $uid, data: $data)');
         debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
@@ -168,8 +218,7 @@ class UserNotifier extends StateNotifier<User> {
       if (adminQueryByUid.docs.isNotEmpty) {
         final doc = adminQueryByUid.docs.first;
         final data = doc.data();
-        final rawRole = (data['role'] as String?)?.trim() ?? 'admin';
-        final resolvedRole = UserRole.sanitize(rawRole);
+        final resolvedRole = await linkAdminMatch(data, doc.id);
         debugPrint(
             '[AUTH ROLE DEBUG] Admin lookup result: FOUND in admins collection by uid field (docId: ${doc.id}, data: $data)');
         debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
@@ -186,10 +235,9 @@ class UserNotifier extends StateNotifier<User> {
         if (adminQueryByPhone.docs.isNotEmpty) {
           final doc = adminQueryByPhone.docs.first;
           final data = doc.data();
-          final rawRole = (data['role'] as String?)?.trim() ?? 'admin';
-          final resolvedRole = UserRole.sanitize(rawRole);
+          final resolvedRole = await linkAdminMatch(data, doc.id);
           debugPrint(
-              '[AUTH ROLE DEBUG] Admin lookup result: FOUND in admins collection by phone field match (docId: ${doc.id}, matchedPhone: ${data['phone']}, role: $rawRole)');
+              '[AUTH ROLE DEBUG] Admin lookup result: FOUND in admins collection by phone field match (docId: ${doc.id}, matchedPhone: ${data['phone']})');
           debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
           return resolvedRole;
         }
@@ -202,8 +250,7 @@ class UserNotifier extends StateNotifier<User> {
               .get();
           if (adminDocByPhone.exists && adminDocByPhone.data() != null) {
             final data = adminDocByPhone.data()!;
-            final rawRole = (data['role'] as String?)?.trim() ?? 'admin';
-            final resolvedRole = UserRole.sanitize(rawRole);
+            final resolvedRole = await linkAdminMatch(data, adminDocByPhone.id);
             debugPrint(
                 '[AUTH ROLE DEBUG] Admin lookup result: FOUND in admins collection by doc ID==phone (docId: ${adminDocByPhone.id}, data: $data)');
             debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
