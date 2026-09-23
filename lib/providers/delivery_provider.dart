@@ -116,9 +116,18 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
     id: order.id,
     orderId: order.id,
     orderCode: order.displayOrderCode,
-    customerName: order.deliveryAddress.fullName,
-    customerPhone: order.deliveryAddress.mobileNumber,
-    customerAddress: order.deliveryAddress.fullAddressText,
+    customerName: order.deliveryAddress.fullName.trim().isNotEmpty
+        ? order.deliveryAddress.fullName.trim()
+        : 'Customer',
+    customerPhone: order.deliveryAddress.mobileNumber.trim().isNotEmpty
+        ? order.deliveryAddress.mobileNumber.trim()
+        : '—',
+    customerAddress: order.deliveryAddress.fullAddressText
+            .replaceAll(RegExp(r'[, \-]'), '')
+            .trim()
+            .isNotEmpty
+        ? order.deliveryAddress.fullAddressText.trim()
+        : 'Address not specified',
     pickupLocation: resolvedPickupLocation,
     pickupPhone: resolvedPickupPhone,
     pickupLatitude: resolvedPickupLat,

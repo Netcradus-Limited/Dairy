@@ -10,6 +10,7 @@ import '../../../core/responsive/responsive_layout.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_network_image.dart';
 import '../../../models/delivery_boy_model.dart';
+import '../../../providers/delivery_live_location_provider.dart';
 import '../../../providers/delivery_provider.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../providers/settings_provider.dart';
@@ -1182,6 +1183,7 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
+              ref.read(agentLiveLocationProvider.notifier).stopTracking();
               ref.read(cartProvider.notifier).clearLocalCart();
               await ref.read(userProvider.notifier).clearSession();
               // Navigation will be handled by router redirect

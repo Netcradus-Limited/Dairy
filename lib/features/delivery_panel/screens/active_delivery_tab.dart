@@ -432,41 +432,93 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
 
   Widget _buildActionButtons(DeliveryOrder order) {
     final isProcessing = _processingOrderIds.contains(order.id);
+
+    Widget buildSecondaryRow(Widget navigateButton) {
+      return Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () => _callCustomer(order.customerPhone),
+              icon: const Icon(Icons.call_rounded, size: 16),
+              label: Text(
+                'Call',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.info,
+                side: const BorderSide(color: AppColors.info),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: navigateButton,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed:
+                  isProcessing ? null : () => _showDeliveryFailureDialog(order),
+              icon: const Icon(Icons.cancel_outlined, size: 16),
+              label: Text(
+                'Issue',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.error,
+                side: const BorderSide(color: AppColors.error),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     switch (order.status) {
       case DeliveryOrderStatus.accepted:
-        return Row(
+        return Column(
           children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _callCustomer(order.customerPhone),
-                icon: const Icon(Icons.call_rounded, size: 18),
-                label: const Text('Call Customer'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.info,
-                  side: const BorderSide(color: AppColors.info),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton.icon(
+            buildSecondaryRow(
+              OutlinedButton.icon(
                 onPressed: () => _navigateToPickup(order),
-                icon: const Icon(Icons.navigation_rounded, size: 18),
-                label: const Text('Navigate to Pickup'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                icon: const Icon(Icons.store_rounded, size: 16),
+                label: Text(
+                  'Pickup Map',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: isProcessing
                     ? null
@@ -478,55 +530,59 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : const Icon(Icons.inventory_2_rounded, size: 18),
-                label: const Text('Start Pickup'),
+                label: Text(
+                  isProcessing ? 'Starting Pickup...' : 'Start Pickup',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.success,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
           ],
         );
+
       case DeliveryOrderStatus.pickup:
-        return Row(
+        return Column(
           children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _callCustomer(order.customerPhone),
-                icon: const Icon(Icons.call_rounded, size: 18),
-                label: const Text('Call Customer'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.info,
-                  side: const BorderSide(color: AppColors.info),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton.icon(
+            buildSecondaryRow(
+              OutlinedButton.icon(
                 onPressed: () => _navigateToCustomer(order.customerAddress),
-                icon: const Icon(Icons.navigation_rounded, size: 18),
-                label: const Text('Navigate to Customer'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                icon: const Icon(Icons.navigation_rounded, size: 16),
+                label: Text(
+                  'Deliver Map',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: isProcessing
                     ? null
@@ -538,55 +594,59 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : const Icon(Icons.local_shipping_rounded, size: 18),
-                label: const Text('Start Delivery'),
+                label: Text(
+                  isProcessing ? 'Starting Delivery...' : 'Start Delivery',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.info,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
           ],
         );
+
       case DeliveryOrderStatus.outForDelivery:
-        return Row(
+        return Column(
           children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _callCustomer(order.customerPhone),
-                icon: const Icon(Icons.call_rounded, size: 18),
-                label: const Text('Call Customer'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.info,
-                  side: const BorderSide(color: AppColors.info),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton.icon(
+            buildSecondaryRow(
+              OutlinedButton.icon(
                 onPressed: () => _navigateToCustomer(order.customerAddress),
-                icon: const Icon(Icons.navigation_rounded, size: 18),
-                label: const Text('Navigate'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                icon: const Icon(Icons.navigation_rounded, size: 16),
+                label: Text(
+                  'Navigate',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: isProcessing
                     ? null
@@ -596,21 +656,31 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : const Icon(Icons.check_circle_rounded, size: 18),
-                label: const Text('Mark Delivered'),
+                label: Text(
+                  'Mark Delivered',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.success,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
           ],
         );
+
       default:
         return const SizedBox.shrink();
     }
@@ -772,6 +842,178 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showDeliveryFailureDialog(DeliveryOrder order) {
+    if (_processingOrderIds.contains(order.id)) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    final reasons = [
+      'Customer unreachable / not available',
+      'Incorrect or incomplete address',
+      'Customer refused delivery',
+      'Damaged goods / other issue',
+    ];
+    String selectedReason = reasons.first;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        bool isSubmitting = false;
+        return StatefulBuilder(
+          builder: (dContext, setDialogState) => AlertDialog(
+            title: Row(
+              children: [
+                const Icon(Icons.cancel_outlined,
+                    color: AppColors.error, size: 24),
+                const SizedBox(width: 8),
+                Text(
+                  'Delivery Issue',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Select reason for delivery failure for Order #${order.displayCode}:',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 14),
+                ),
+                const SizedBox(height: 12),
+                ...reasons.map((reason) {
+                  final isSelected = selectedReason == reason;
+                  return InkWell(
+                    onTap: isSubmitting
+                        ? null
+                        : () => setDialogState(() => selectedReason = reason),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 8, horizontal: 4),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isSelected
+                                ? Icons.radio_button_checked_rounded
+                                : Icons.radio_button_off_rounded,
+                            size: 18,
+                            color: isSelected
+                                ? AppColors.error
+                                : AppColors.textSecondaryOf(dContext),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              reason,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: isSelected
+                                    ? AppColors.error
+                                    : AppColors.textPrimaryOf(dContext),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: isSubmitting ? null : () => navigator.pop(),
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: AppColors.textSecondaryOf(dContext),
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: isSubmitting
+                    ? null
+                    : () async {
+                        setDialogState(() => isSubmitting = true);
+                        setState(() => _processingOrderIds.add(order.id));
+                        try {
+                          final agentId = ref.read(deliveryAgentProvider).id;
+                          await ref
+                              .read(orderServiceProvider)
+                              .failDelivery(order.id, selectedReason);
+
+                          if (agentId.isNotEmpty) {
+                            await ref
+                                .read(deliveryTrackingServiceProvider)
+                                .clearActiveOrder(agentId);
+                          }
+
+                          if (mounted) {
+                            setState(() {
+                              _processingOrderIds.remove(order.id);
+                              if (_selectedOrder?.id == order.id) {
+                                _selectedOrder = null;
+                              }
+                            });
+                            navigator.pop();
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Order #${order.displayCode} marked as delivery failed',
+                                ),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            setState(
+                                () => _processingOrderIds.remove(order.id));
+                            navigator.pop();
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Could not record delivery failure. Check your connection and try again.',
+                                ),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                  foregroundColor: Colors.white,
+                ),
+                child: isSubmitting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        'Report Failure',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

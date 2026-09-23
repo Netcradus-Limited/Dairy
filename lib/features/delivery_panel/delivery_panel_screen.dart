@@ -454,6 +454,7 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
     );
 
     if (shouldLogout == true && context.mounted) {
+      ref.read(agentLiveLocationProvider.notifier).stopTracking();
       ref.read(cartProvider.notifier).clearLocalCart();
       await ref.read(userProvider.notifier).clearSession();
       if (context.mounted) {
