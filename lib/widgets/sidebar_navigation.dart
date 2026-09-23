@@ -10,11 +10,20 @@ import '../providers/admin_provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/user_provider.dart';
 
+import '../models/staff_member.dart';
+
 class NavItemData {
+  final int index;
   final String title;
   final IconData icon;
+  final String? permission;
 
-  const NavItemData({required this.title, required this.icon});
+  const NavItemData({
+    required this.index,
+    required this.title,
+    required this.icon,
+    this.permission,
+  });
 }
 
 class SidebarNavigation extends ConsumerWidget {
@@ -22,28 +31,59 @@ class SidebarNavigation extends ConsumerWidget {
 
   const SidebarNavigation({super.key, this.isDrawer = false});
 
-  static const List<NavItemData> navItems = [
-    NavItemData(title: 'Dashboard', icon: Icons.dashboard_rounded),
-    NavItemData(title: 'Customers', icon: Icons.people_alt_outlined),
-    NavItemData(title: 'Subscriptions', icon: Icons.calendar_month_rounded),
-    NavItemData(title: 'Products', icon: Icons.inventory_2_outlined),
-    NavItemData(title: 'Categories', icon: Icons.grid_view_rounded),
-    NavItemData(title: 'Orders', icon: Icons.receipt_long_rounded),
+  static const List<NavItemData> allNavItems = [
+    NavItemData(index: 0, title: 'Dashboard', icon: Icons.dashboard_rounded, permission: StaffPermission.viewDashboard),
+    NavItemData(index: 1, title: 'Customers', icon: Icons.people_alt_outlined, permission: StaffPermission.viewCustomers),
+    NavItemData(index: 2, title: 'Subscriptions', icon: Icons.calendar_month_rounded, permission: StaffPermission.viewSubscriptions),
+    NavItemData(index: 3, title: 'Products', icon: Icons.inventory_2_outlined, permission: StaffPermission.viewProducts),
+    NavItemData(index: 4, title: 'Categories', icon: Icons.grid_view_rounded, permission: StaffPermission.viewCategories),
+    NavItemData(index: 5, title: 'Orders', icon: Icons.receipt_long_rounded, permission: StaffPermission.viewOrders),
     NavItemData(
-        title: 'Delivery Management', icon: Icons.local_shipping_outlined),
-    NavItemData(title: 'Delivery Staff', icon: Icons.directions_bike_rounded),
-    NavItemData(title: 'Payments', icon: Icons.credit_card_rounded),
-    NavItemData(title: 'Notifications', icon: Icons.notifications_none_rounded),
+        index: 6,
+        title: 'Delivery Management',
+        icon: Icons.local_shipping_outlined,
+        permission: StaffPermission.viewDelivery),
     NavItemData(
-        title: 'Support / Complaints', icon: Icons.chat_bubble_outline_rounded),
-    NavItemData(title: 'Admin Profile', icon: Icons.account_circle_outlined),
-    NavItemData(title: 'Staff & Roles', icon: Icons.manage_accounts_outlined),
+        index: 7,
+        title: 'Delivery Staff',
+        icon: Icons.directions_bike_rounded,
+        permission: StaffPermission.manageDelivery),
+    NavItemData(
+        index: 8,
+        title: 'Payments',
+        icon: Icons.credit_card_rounded,
+        permission: StaffPermission.viewPayments),
+    NavItemData(
+        index: 9,
+        title: 'Notifications',
+        icon: Icons.notifications_none_rounded,
+        permission: StaffPermission.viewNotifications),
+    NavItemData(
+        index: 10,
+        title: 'Support / Complaints',
+        icon: Icons.chat_bubble_outline_rounded,
+        permission: StaffPermission.viewComplaints),
+    NavItemData(
+        index: 11,
+        title: 'Admin Profile',
+        icon: Icons.account_circle_outlined,
+        permission: null),
+    NavItemData(
+        index: 12,
+        title: 'Staff & Roles',
+        icon: Icons.manage_accounts_outlined,
+        permission: StaffPermission.viewStaff),
   ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final provider = context.watch<AdminProvider>();
     final user = ref.watch(userProvider);
+
+    final visibleNavItems = allNavItems.where((item) {
+      if (item.permission == null) return true;
+      return user.hasPermission(item.permission!);
+    }).toList();
 
     return Container(
       width: 260,
@@ -123,17 +163,17 @@ class SidebarNavigation extends ConsumerWidget {
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              itemCount: navItems.length,
+              itemCount: visibleNavItems.length,
               separatorBuilder: (ctx, idx) => const SizedBox(height: 4),
               itemBuilder: (ctx, idx) {
-                final item = navItems[idx];
-                final isSelected = provider.selectedNavIndex == idx;
+                final item = visibleNavItems[idx];
+                final isSelected = provider.selectedNavIndex == item.index;
 
                 return Material(
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: () {
-                      provider.setNavIndex(idx);
+                      provider.setNavIndex(item.index);
                       if (isDrawer) {
                         Navigator.of(context).pop();
                       }
@@ -293,7 +333,7 @@ class SidebarNavigation extends ConsumerWidget {
                             user.name.trim().isNotEmpty &&
                                     user.name.trim() != 'Guest Customer'
                                 ? user.name.trim()
-                                : 'Sawariya Admin',
+                                : (user.isAdmin ? 'Sawariya Admin' : 'Sawariya Staff'),
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -303,7 +343,7 @@ class SidebarNavigation extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            user.isAdmin ? 'Super Admin' : 'Admin User',
+                            user.roleTitle ?? (user.isAdmin ? 'Super Admin' : 'Staff Member'),
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 10,
                               fontWeight: FontWeight.w500,

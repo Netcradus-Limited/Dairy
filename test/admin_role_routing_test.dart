@@ -124,5 +124,45 @@ void main() {
       expect(customerUser.isCustomer, isTrue);
       expect(customerUser.userRole.homeRoute, '/home');
     });
+
+    test('8. UserRole.fromString maps dispatcher, manager, staff to UserRole.staff and /admin', () {
+      expect(UserRole.fromString('dispatcher'), UserRole.staff);
+      expect(UserRole.fromString('DISPATCHER'), UserRole.staff);
+      expect(UserRole.fromString('route_dispatcher'), UserRole.staff);
+      expect(UserRole.fromString('manager'), UserRole.staff);
+      expect(UserRole.fromString('staff'), UserRole.staff);
+
+      expect(UserRole.fromString('dispatcher').homeRoute, '/admin');
+      expect(UserRole.fromString('manager').homeRoute, '/admin');
+      expect(UserRole.fromString('staff').homeRoute, '/admin');
+
+      expect(UserRole.fromString('dispatcher').canAccessAdminPortal, isTrue);
+      expect(UserRole.fromString('dispatcher').isStaff, isTrue);
+      expect(UserRole.fromString('dispatcher').isAdmin, isFalse);
+    });
+
+    test('9. User model preserves dispatcher roleTitle, permissions and checks access', () {
+      final dispatcherUser = User.fromMap({
+        'id': 'sam_auth_uid_123',
+        'name': 'sam',
+        'phone': '+917817956637',
+        'role': 'dispatcher',
+        'roleTitle': 'Route Dispatcher',
+        'status': 'Active',
+        'permissions': ['viewDashboard', 'viewOrders', 'assignDeliveryAgent'],
+      });
+
+      expect(dispatcherUser.id, equals('sam_auth_uid_123'));
+      expect(dispatcherUser.role, equals('dispatcher'));
+      expect(dispatcherUser.roleTitle, equals('Route Dispatcher'));
+      expect(dispatcherUser.isStaff, isTrue);
+      expect(dispatcherUser.canAccessAdminPortal, isTrue);
+      expect(dispatcherUser.isAdmin, isFalse);
+      expect(dispatcherUser.isCustomer, isFalse);
+      expect(dispatcherUser.userRole.homeRoute, equals('/admin'));
+      expect(dispatcherUser.hasPermission('viewOrders'), isTrue);
+      expect(dispatcherUser.hasPermission('assignDeliveryAgent'), isTrue);
+      expect(dispatcherUser.hasPermission('manageStaff'), isFalse);
+    });
   });
 }

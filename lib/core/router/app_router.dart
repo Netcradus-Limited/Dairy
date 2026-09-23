@@ -51,7 +51,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final user = ref.read(userProvider);
       final isLoggedIn = user.id.isNotEmpty;
-      final isAdmin = user.isAdmin;
+      final canAccessAdmin = user.canAccessAdminPortal;
       final isDelivery = user.isDelivery;
 
       final path = state.matchedLocation;
@@ -88,7 +88,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             orderId: pendingDest.orderId,
             type: pendingDest.type,
           );
-        } else if (isAdmin) {
+        } else if (canAccessAdmin) {
           targetRoute = '/admin';
         } else if (isDelivery) {
           targetRoute = '/delivery';
@@ -96,9 +96,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           targetRoute = '/home';
         }
       }
-      // 3. Admin-only routes: strictly enforce Admin authorization
+      // 3. Admin & Staff portal routes: strictly enforce Admin/Staff authorization
       else if (path == '/admin' || path.startsWith('/admin/')) {
-        if (!isAdmin) {
+        if (!canAccessAdmin) {
           targetRoute = isDelivery ? '/delivery' : '/home';
         }
       }
@@ -107,10 +107,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           path == '/delivery-map' ||
           path.startsWith('/delivery/')) {
         if (!isDelivery) {
-          targetRoute = isAdmin ? '/admin' : '/home';
+          targetRoute = canAccessAdmin ? '/admin' : '/home';
         }
       }
-      // 5. Role confinement: Admin and Delivery are routed to their respective panels
+      // 5. Role confinement: Admin/Staff and Delivery are routed to their respective panels
       else {
         final isCustomerRoute = path == '/home' ||
             path == '/shop' ||
@@ -124,7 +124,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path.startsWith('/orders');
 
         if (isCustomerRoute) {
-          if (isAdmin) {
+          if (canAccessAdmin) {
             targetRoute = '/admin';
           } else if (isDelivery) {
             targetRoute = '/delivery';
@@ -133,7 +133,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       debugPrint(
-          '[AUTH ROLE DEBUG] Final route: ${targetRoute ?? path} (currentLocation=$path, userId=${user.id}, role=${user.role}, isAdmin=$isAdmin, isDelivery=$isDelivery)');
+          '[AUTH ROLE DEBUG] Final route: ${targetRoute ?? path} (currentLocation=$path, userId=${user.id}, role=${user.role}, canAccessAdmin=$canAccessAdmin, isDelivery=$isDelivery)');
 
       return targetRoute;
     },

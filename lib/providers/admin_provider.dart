@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../core/auth/app_role.dart';
 import '../core/constants/app_colors.dart';
 import '../models/category_model.dart';
 import '../models/complaint_model.dart' as complaint_model;
@@ -22,6 +23,7 @@ import '../services/delivery_management_service.dart';
 import '../services/order_service.dart';
 import '../services/payment_service.dart';
 import '../services/subscription_service.dart';
+import 'user_provider.dart';
 
 class AdminProvider extends ChangeNotifier {
   final FirestoreProductRepository _repo;
@@ -1364,31 +1366,40 @@ class AdminProvider extends ChangeNotifier {
     final List<DairyCustomer> custList = [];
     final List<StaffMember> staffMemberList = [];
     final List<Map<String, String>> staff = [];
+    final Set<String> seenStaffPhones = {};
 
     for (final doc in _lastUserDocs) {
       final data = doc.data();
-      final role = (data['role'] as String? ?? 'customer').toLowerCase();
+      final rawRole = data['role'] as String?;
+      final parsedRole = UserRole.fromString(rawRole);
+      final cleanRole = UserRole.sanitize(rawRole);
       final name = (data['name'] as String? ?? '').trim();
       final phone = (data['phone'] as String? ?? '').trim();
       final email = (data['email'] as String? ?? '').trim();
+      final normalizedPhone = PhoneAuthUtils.normalize(phone);
 
-      if (role == 'delivery') {
+      if (parsedRole.isDelivery) {
         // Delivery agent account - excluded from customers
         continue;
-      } else if (role == 'admin' ||
-          role == 'staff' ||
-          role == 'manager' ||
-          role == 'dispatcher') {
+      } else if (parsedRole.canAccessAdminPortal) {
         // Administrative / Staff account
+        // Deduplicate if multiple documents exist for the same staff member phone
+        if (normalizedPhone.isNotEmpty && seenStaffPhones.contains(normalizedPhone)) {
+          continue;
+        }
+        if (normalizedPhone.isNotEmpty) {
+          seenStaffPhones.add(normalizedPhone);
+        }
+
         final staffMember = StaffMember.fromFirestore(doc);
         staffMemberList.add(staffMember);
         staff.add({
           'id': doc.id,
           'name': name.isNotEmpty ? name : 'Admin User',
           'email': email.isNotEmpty ? email : 'admin@sawariyadairy.com',
-          'role': role == 'admin'
+          'role': parsedRole.isAdmin
               ? 'Super Admin'
-              : (data['roleTitle'] as String? ?? 'Staff Member'),
+              : (data['roleTitle'] as String? ?? StaffRolePresets.getDisplayTitleForRole(cleanRole)),
           'status': (data['status'] as String? ?? 'Active'),
         });
       } else {
@@ -1451,7 +1462,8 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Create / Onboard a new staff member with assigned role and permissions.
+  /// Create / Promote a staff member with assigned role and permissions.
+  /// Looks up existing customer document by phone to avoid creating duplicate documents.
   Future<void> addStaffMember({
     required String name,
     required String email,
@@ -1462,36 +1474,101 @@ class AdminProvider extends ChangeNotifier {
     final fs = _firestore;
     if (fs == null) throw Exception('Firestore is not initialized');
 
-    final cleanRole = role.toLowerCase().trim();
+    final cleanRole = UserRole.sanitize(role);
     final roleTitle = StaffRolePresets.getDisplayTitleForRole(cleanRole);
     final effectivePerms = permissions.isNotEmpty
         ? permissions
         : StaffRolePresets.getPermissionsForRole(cleanRole);
 
-    final docRef = fs.collection('users').doc();
-    await docRef.set({
-      'uid': docRef.id,
-      'name': name.trim(),
-      'email': email.trim(),
+    final normalizedPhone = PhoneAuthUtils.normalize(phone);
+    final phoneVariants = PhoneAuthUtils.generateVariants(phone);
+
+    // 1. Search existing users collection for a matching user phone number
+    DocumentSnapshot<Map<String, dynamic>>? existingDoc;
+    List<DocumentSnapshot<Map<String, dynamic>>> allMatchingDocs = [];
+
+    if (phoneVariants.isNotEmpty) {
+      final querySnapshot = await fs
+          .collection('users')
+          .where('phone', whereIn: phoneVariants)
+          .get();
+      allMatchingDocs = querySnapshot.docs;
+    }
+
+    // Fallback: search in-memory across _lastUserDocs in case of phone formatting variations
+    if (allMatchingDocs.isEmpty && normalizedPhone.isNotEmpty) {
+      for (final d in _lastUserDocs) {
+        final dPhone = (d.data()['phone'] as String? ?? '').trim();
+        if (PhoneAuthUtils.normalize(dPhone) == normalizedPhone) {
+          allMatchingDocs.add(d);
+        }
+      }
+    }
+
+    // Identify primary target document to promote:
+    // If multiple documents exist with this phone number, prioritize the authentic Auth UID document:
+    // Firebase Auth UIDs are 28 characters, auto-generated IDs are 20 characters.
+    if (allMatchingDocs.isNotEmpty) {
+      existingDoc = allMatchingDocs.first;
+      for (final d in allMatchingDocs) {
+        final dData = d.data() ?? {};
+        if (d.id.length > 25 ||
+            dData['walletBalance'] != null ||
+            dData['address'] != null ||
+            dData['uid'] == d.id) {
+          existingDoc = d;
+          break;
+        }
+      }
+    }
+
+    final String targetDocId;
+    if (existingDoc != null) {
+      targetDocId = existingDoc.id;
+      debugPrint('[STAFF PROMOTION] Found existing user doc: $targetDocId for phone: $phone');
+    } else {
+      final newDocRef = fs.collection('users').doc();
+      targetDocId = newDocRef.id;
+      debugPrint('[STAFF PROVISION] Pre-provisioning new staff doc: $targetDocId for phone: $phone');
+    }
+
+    // 2. Update/Promote user with Staff / RBAC fields using merge semantics
+    // Preserves existing customer data (orders, addresses, profile history, walletBalance, etc.)
+    await fs.collection('users').doc(targetDocId).set({
+      'uid': targetDocId,
+      if (name.trim().isNotEmpty) 'name': name.trim(),
+      if (email.trim().isNotEmpty) 'email': email.trim(),
       'phone': phone.trim(),
       'role': cleanRole,
       'roleTitle': roleTitle,
       'status': 'Active',
       'permissions': effectivePerms,
       'isAdmin': cleanRole == 'admin',
-      'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    }, SetOptions(merge: true));
 
+    // 3. Clean up any duplicate orphaned docs for this phone now that the primary doc is updated
+    for (final orphan in allMatchingDocs) {
+      if (orphan.id != targetDocId) {
+        try {
+          await fs.collection('users').doc(orphan.id).delete();
+          debugPrint('[STAFF CLEANUP] Removed duplicate orphaned doc: ${orphan.id}');
+        } catch (e) {
+          debugPrint('[STAFF CLEANUP] Error deleting orphaned doc ${orphan.id}: $e');
+        }
+      }
+    }
+
+    // 4. If promoted to Admin, also sync with admins collection
     if (cleanRole == 'admin') {
-      await fs.collection('admins').doc(docRef.id).set({
-        'uid': docRef.id,
+      await fs.collection('admins').doc(targetDocId).set({
+        'uid': targetDocId,
         'name': name.trim(),
         'email': email.trim(),
         'phone': phone.trim(),
         'role': 'superadmin',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
     }
   }
 
@@ -1508,20 +1585,20 @@ class AdminProvider extends ChangeNotifier {
     final fs = _firestore;
     if (fs == null) throw Exception('Firestore is not initialized');
 
-    final cleanRole = role.toLowerCase().trim();
+    final cleanRole = UserRole.sanitize(role);
     final roleTitle = StaffRolePresets.getDisplayTitleForRole(cleanRole);
 
-    await fs.collection('users').doc(staffId).update({
-      'name': name.trim(),
-      'email': email.trim(),
-      'phone': phone.trim(),
+    await fs.collection('users').doc(staffId).set({
+      if (name.trim().isNotEmpty) 'name': name.trim(),
+      if (email.trim().isNotEmpty) 'email': email.trim(),
+      if (phone.trim().isNotEmpty) 'phone': phone.trim(),
       'role': cleanRole,
       'roleTitle': roleTitle,
       'status': status.trim(),
       'permissions': permissions,
       'isAdmin': cleanRole == 'admin',
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    }, SetOptions(merge: true));
 
     if (cleanRole == 'admin') {
       await fs.collection('admins').doc(staffId).set({
@@ -1546,21 +1623,93 @@ class AdminProvider extends ChangeNotifier {
     final fs = _firestore;
     if (fs == null) throw Exception('Firestore is not initialized');
 
-    await fs.collection('users').doc(staffId).update({
+    await fs.collection('users').doc(staffId).set({
       'status': newStatus.trim(),
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    }, SetOptions(merge: true));
   }
 
   /// Delete / Revoke staff access permanently.
+  /// Demotes back to Customer and clears permissions rather than deleting the user document,
+  /// preserving customer orders, addresses, and history.
   Future<void> deleteStaffMember(String staffId) async {
     final fs = _firestore;
     if (fs == null) throw Exception('Firestore is not initialized');
 
-    await fs.collection('users').doc(staffId).delete();
+    await fs.collection('users').doc(staffId).set({
+      'role': UserRole.customerValue,
+      'roleTitle': FieldValue.delete(),
+      'permissions': <String>[],
+      'isAdmin': false,
+      'status': 'Active',
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
     final adminDoc = await fs.collection('admins').doc(staffId).get();
     if (adminDoc.exists) {
       await fs.collection('admins').doc(staffId).delete();
+    }
+  }
+
+  /// Reconciles duplicate/orphaned staff documents across Firestore users collection.
+  Future<void> reconcileOrphanedStaffDocs() async {
+    final fs = _firestore;
+    if (fs == null) return;
+    try {
+      final userDocsSnapshot = await fs.collection('users').get();
+      final Map<String, List<QueryDocumentSnapshot<Map<String, dynamic>>>> phoneMap = {};
+
+      for (final doc in userDocsSnapshot.docs) {
+        final phone = (doc.data()['phone'] as String? ?? '').trim();
+        final normalized = PhoneAuthUtils.normalize(phone);
+        if (normalized.isNotEmpty) {
+          phoneMap.putIfAbsent(normalized, () => []).add(doc);
+        }
+      }
+
+      for (final entry in phoneMap.entries) {
+        final docs = entry.value;
+        if (docs.length > 1) {
+          // Identify genuine Auth UID document (Firebase Auth UIDs are 28 chars, auto-IDs are 20 chars)
+          // or document with existing customer subcollections/profile data
+          QueryDocumentSnapshot<Map<String, dynamic>> primaryDoc = docs.firstWhere(
+            (d) => d.id.length > 25 || d.data()['walletBalance'] != null || d.data()['address'] != null,
+            orElse: () => docs.first,
+          );
+
+          QueryDocumentSnapshot<Map<String, dynamic>>? staffOrphanDoc;
+          for (final d in docs) {
+            if (d.id != primaryDoc.id) {
+              final role = (d.data()['role'] as String? ?? '').toLowerCase().trim();
+              if (role == 'admin' || role == 'dispatcher' || role == 'manager' || role == 'staff') {
+                staffOrphanDoc = d;
+                break;
+              }
+            }
+          }
+
+          if (staffOrphanDoc != null && primaryDoc.id != staffOrphanDoc.id) {
+            final staffData = staffOrphanDoc.data();
+            debugPrint('[ADMIN RECONCILE] Migrating staff data from orphan ${staffOrphanDoc.id} into primary ${primaryDoc.id}');
+            await fs.collection('users').doc(primaryDoc.id).set({
+              'role': staffData['role'],
+              'roleTitle': staffData['roleTitle'],
+              'permissions': staffData['permissions'],
+              'status': staffData['status'] ?? 'Active',
+              'isAdmin': staffData['isAdmin'] ?? false,
+              'updatedAt': FieldValue.serverTimestamp(),
+            }, SetOptions(merge: true));
+
+            final verify = await fs.collection('users').doc(primaryDoc.id).get();
+            if (verify.exists && verify.data()?['role'] == staffData['role']) {
+              await fs.collection('users').doc(staffOrphanDoc.id).delete();
+              debugPrint('[ADMIN RECONCILE] Orphan ${staffOrphanDoc.id} deleted successfully.');
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[ADMIN RECONCILE] Error during orphaned staff docs reconciliation: $e');
     }
   }
 
@@ -1766,6 +1915,7 @@ class AdminProvider extends ChangeNotifier {
           _lastUserDocs = snap.docs;
           _rebuildCustomers();
           _rebuildRidersCombined();
+          reconcileOrphanedStaffDocs();
         },
         onError: (e) {
           _usersError = 'Failed to load users: $e';

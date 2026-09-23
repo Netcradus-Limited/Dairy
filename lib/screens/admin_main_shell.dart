@@ -8,6 +8,8 @@ import '../providers/admin_provider.dart';
 import '../providers/user_provider.dart';
 import '../widgets/app_header.dart';
 import '../widgets/sidebar_navigation.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../models/staff_member.dart';
 import 'categories/categories_screen.dart';
 import 'customers/customers_screen.dart';
 import 'dashboard/dashboard_screen.dart';
@@ -38,8 +40,8 @@ class _AdminMainShellState extends ConsumerState<AdminMainShell> {
     final isDesktop = ResponsiveLayout.isDesktop(context);
     final bgColor = AppColors.bgOf(context);
 
-    // Defense-in-depth: Ensure only authenticated admins can render admin screens
-    if (!user.isAdmin) {
+    // Defense-in-depth: Ensure only authenticated admins/staff can render admin screens
+    if (!user.canAccessAdminPortal) {
       return Scaffold(
         backgroundColor: bgColor,
         body: Center(
@@ -64,7 +66,7 @@ class _AdminMainShellState extends ConsumerState<AdminMainShell> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'You do not have administrative privileges to access the admin portal.',
+                  'You do not have administrative or staff privileges to access the admin portal.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
@@ -103,31 +105,56 @@ class _AdminMainShellState extends ConsumerState<AdminMainShell> {
     Widget getActiveScreen(int index) {
       switch (index) {
         case 0:
-          return const DashboardScreen();
+          return user.hasPermission(StaffPermission.viewDashboard)
+              ? const DashboardScreen()
+              : const _PermissionDeniedCard(moduleName: 'Dashboard');
         case 1:
-          return const CustomersScreen();
+          return user.hasPermission(StaffPermission.viewCustomers)
+              ? const CustomersScreen()
+              : const _PermissionDeniedCard(moduleName: 'Customers');
         case 2:
-          return const AdminSubscriptionsScreen();
+          return user.hasPermission(StaffPermission.viewSubscriptions)
+              ? const AdminSubscriptionsScreen()
+              : const _PermissionDeniedCard(moduleName: 'Subscriptions');
         case 3:
-          return const ProductsScreen();
+          return user.hasPermission(StaffPermission.viewProducts)
+              ? const ProductsScreen()
+              : const _PermissionDeniedCard(moduleName: 'Products');
         case 4:
-          return const CategoriesScreen();
+          return user.hasPermission(StaffPermission.viewCategories)
+              ? const CategoriesScreen()
+              : const _PermissionDeniedCard(moduleName: 'Categories');
         case 5:
-          return const OrdersScreen();
+          return user.hasPermission(StaffPermission.viewOrders)
+              ? const OrdersScreen()
+              : const _PermissionDeniedCard(moduleName: 'Orders');
         case 6:
-          return const DeliveryManagementScreen();
+          return user.hasPermission(StaffPermission.viewDelivery)
+              ? const DeliveryManagementScreen()
+              : const _PermissionDeniedCard(moduleName: 'Delivery Management');
         case 7:
-          return const DeliveryStaffScreen();
+          return user.hasPermission(StaffPermission.manageDelivery)
+              ? const DeliveryStaffScreen()
+              : const _PermissionDeniedCard(moduleName: 'Delivery Staff');
         case 8:
-          return const PaymentsScreen();
+          return user.hasPermission(StaffPermission.viewPayments)
+              ? const PaymentsScreen()
+              : const _PermissionDeniedCard(moduleName: 'Payments');
         case 9:
-          return const NotificationsScreen();
+          return user.hasPermission(StaffPermission.viewNotifications)
+              ? const NotificationsScreen()
+              : const _PermissionDeniedCard(moduleName: 'Notifications');
         case 10:
-          return const SupportScreen();
+          return user.hasPermission(StaffPermission.viewComplaints)
+              ? const SupportScreen()
+              : const _PermissionDeniedCard(moduleName: 'Support');
         case 11:
           return const AdminProfileScreen();
         case 12:
-          return const StaffRolesScreen();
+          return (user.hasPermission(StaffPermission.viewStaff) ||
+                  user.hasPermission(StaffPermission.manageRoles))
+              ? const StaffRolesScreen()
+              : const _PermissionDeniedCard(moduleName: 'Staff & Roles');
         default:
           return const DashboardScreen();
       }
@@ -192,3 +219,42 @@ class _AdminMainShellState extends ConsumerState<AdminMainShell> {
     }
   }
 }
+
+class _PermissionDeniedCard extends StatelessWidget {
+  final String moduleName;
+  const _PermissionDeniedCard({required this.moduleName});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.lock_person_rounded, size: 56, color: Colors.orangeAccent),
+            const SizedBox(height: 16),
+            Text(
+              'Access Restricted: $moduleName',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimaryOf(context),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Your assigned staff role does not have permission to access the $moduleName module.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                color: AppColors.textSecondaryOf(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

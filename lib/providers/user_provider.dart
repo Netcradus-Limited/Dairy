@@ -106,7 +106,7 @@ class UserNotifier extends StateNotifier<User> {
   /// Authoritatively determines the user's role by querying:
   /// 1. `admins` collection (doc ID == uid, `uid` field == uid, or `phone` matching normalized variants)
   /// 2. `delivery_agents` collection (doc ID == uid, `uid` field, or `phone` matching variants)
-  /// 3. `users` collection (doc ID == uid)
+  /// 3. `users` collection (doc ID == uid, or phone match with self-healing orphaned staff doc migration)
   /// 4. Defaults securely to 'customer'
   Future<String> _resolveAuthoritativeRole({
     required String uid,
@@ -136,17 +136,6 @@ class UserNotifier extends StateNotifier<User> {
       return phoneRole.value;
     }
 
-    // 2. Check explicit privileged role if already present
-    if (currentRole != null && currentRole.trim().isNotEmpty) {
-      final parsed = UserRole.fromString(currentRole);
-      if (parsed != UserRole.customer) {
-        debugPrint(
-            '[AUTH ROLE DEBUG] Admin lookup result: FOUND by explicit role string ($currentRole -> role: ${parsed.value})');
-        debugPrint('[AUTH ROLE DEBUG] Detected role: ${parsed.value}');
-        return parsed.value;
-      }
-    }
-
     if (firestore == null || uid.isEmpty) {
       final safeRole = UserRole.fromPhoneAndRole(phone: effectivePhone, role: currentRole).value;
       debugPrint(
@@ -155,22 +144,22 @@ class UserNotifier extends StateNotifier<User> {
       return safeRole;
     }
 
-    // 3. Check `admins` collection
+    // 2. Check `admins` collection
     try {
-      // 1a. Check by direct doc ID == uid
+      // 2a. Check by direct doc ID == uid
       final adminDocByUid =
           await firestore.collection('admins').doc(uid).get();
       if (adminDocByUid.exists && adminDocByUid.data() != null) {
         final data = adminDocByUid.data()!;
         final rawRole = (data['role'] as String?)?.trim() ?? 'admin';
-        final resolvedRole = UserRole.fromString(rawRole).value;
+        final resolvedRole = UserRole.sanitize(rawRole);
         debugPrint(
             '[AUTH ROLE DEBUG] Admin lookup result: FOUND in admins collection by doc ID (docId: $uid, data: $data)');
         debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
         return resolvedRole;
       }
 
-      // 1b. Check by `uid` field
+      // 2b. Check by `uid` field
       final adminQueryByUid = await firestore
           .collection('admins')
           .where('uid', isEqualTo: uid)
@@ -180,14 +169,14 @@ class UserNotifier extends StateNotifier<User> {
         final doc = adminQueryByUid.docs.first;
         final data = doc.data();
         final rawRole = (data['role'] as String?)?.trim() ?? 'admin';
-        final resolvedRole = UserRole.fromString(rawRole).value;
+        final resolvedRole = UserRole.sanitize(rawRole);
         debugPrint(
             '[AUTH ROLE DEBUG] Admin lookup result: FOUND in admins collection by uid field (docId: ${doc.id}, data: $data)');
         debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
         return resolvedRole;
       }
 
-      // 1c. Check by phone field match (e.g. test_admin doc with phone: "+919999999999")
+      // 2c. Check by phone field match (e.g. test_admin doc with phone: "+919999999999")
       if (phoneVariants.isNotEmpty) {
         final adminQueryByPhone = await firestore
             .collection('admins')
@@ -198,14 +187,14 @@ class UserNotifier extends StateNotifier<User> {
           final doc = adminQueryByPhone.docs.first;
           final data = doc.data();
           final rawRole = (data['role'] as String?)?.trim() ?? 'admin';
-          final resolvedRole = UserRole.fromString(rawRole).value;
+          final resolvedRole = UserRole.sanitize(rawRole);
           debugPrint(
               '[AUTH ROLE DEBUG] Admin lookup result: FOUND in admins collection by phone field match (docId: ${doc.id}, matchedPhone: ${data['phone']}, role: $rawRole)');
           debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
           return resolvedRole;
         }
 
-        // 1d. Check by doc ID == normalized phone
+        // 2d. Check by doc ID == normalized phone
         if (normalizedPhone.isNotEmpty) {
           final adminDocByPhone = await firestore
               .collection('admins')
@@ -214,7 +203,7 @@ class UserNotifier extends StateNotifier<User> {
           if (adminDocByPhone.exists && adminDocByPhone.data() != null) {
             final data = adminDocByPhone.data()!;
             final rawRole = (data['role'] as String?)?.trim() ?? 'admin';
-            final resolvedRole = UserRole.fromString(rawRole).value;
+            final resolvedRole = UserRole.sanitize(rawRole);
             debugPrint(
                 '[AUTH ROLE DEBUG] Admin lookup result: FOUND in admins collection by doc ID==phone (docId: ${adminDocByPhone.id}, data: $data)');
             debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
@@ -226,9 +215,9 @@ class UserNotifier extends StateNotifier<User> {
       debugPrint('[AUTH ROLE DEBUG] Admin lookup error: $e');
     }
 
-    // 2. Check `delivery_agents` collection
+    // 3. Check `delivery_agents` collection
     try {
-      // 2a. Check by direct doc ID == uid
+      // 3a. Check by direct doc ID == uid
       final agentDocByUid =
           await firestore.collection('delivery_agents').doc(uid).get();
       if (agentDocByUid.exists && agentDocByUid.data() != null) {
@@ -238,7 +227,7 @@ class UserNotifier extends StateNotifier<User> {
         return UserRole.deliveryValue;
       }
 
-      // 2b. Check by `uid` field
+      // 3b. Check by `uid` field
       final agentQueryByUid = await firestore
           .collection('delivery_agents')
           .where('uid', isEqualTo: uid)
@@ -251,7 +240,7 @@ class UserNotifier extends StateNotifier<User> {
         return UserRole.deliveryValue;
       }
 
-      // 2c. Check by phone field match
+      // 3c. Check by phone field match
       if (phoneVariants.isNotEmpty) {
         final agentQueryByPhone = await firestore
             .collection('delivery_agents')
@@ -269,25 +258,88 @@ class UserNotifier extends StateNotifier<User> {
       debugPrint('[AUTH ROLE DEBUG] Delivery agent lookup error: $e');
     }
 
-    // 3. Check `users` collection for role
+    // 4. Check `users` collection for role on users/{uid}
     try {
       final userDoc = await firestore.collection('users').doc(uid).get();
       if (userDoc.exists && userDoc.data() != null) {
         final data = userDoc.data()!;
         final rawRole = data['role'] as String?;
         if (rawRole != null && rawRole.trim().isNotEmpty) {
-          final userRole = UserRole.fromString(rawRole).value;
-          debugPrint(
-              '[AUTH ROLE DEBUG] Admin lookup result: NOT in admins/delivery_agents. Found in users/$uid with role=$rawRole');
-          debugPrint('[AUTH ROLE DEBUG] Detected role: $userRole');
-          return userRole;
+          final cleanRole = UserRole.sanitize(rawRole);
+          if (cleanRole != UserRole.customerValue) {
+            debugPrint(
+                '[AUTH ROLE DEBUG] Role lookup: Found privileged role in users/$uid with role=$rawRole (clean: $cleanRole)');
+            debugPrint('[AUTH ROLE DEBUG] Detected role: $cleanRole');
+            return cleanRole;
+          }
         }
       }
     } catch (e) {
       debugPrint('[AUTH ROLE DEBUG] User doc role lookup error: $e');
     }
 
-    // 4. Default: Standard customer
+    // 5. Self-Healing Orphaned Staff Document Migration:
+    // If an orphaned staff document exists with this phone number (e.g. added via Add Staff before/after signup),
+    // atomically copy its role, roleTitle, permissions, status to users/{uid} and safely delete the orphan.
+    try {
+      if (phoneVariants.isNotEmpty) {
+        final staffQuery = await firestore
+            .collection('users')
+            .where('phone', whereIn: phoneVariants)
+            .get();
+        for (final sDoc in staffQuery.docs) {
+          if (sDoc.id != uid) {
+            final sData = sDoc.data();
+            final sRoleRaw = sData['role'] as String?;
+            if (sRoleRaw != null && sRoleRaw.trim().isNotEmpty) {
+              final parsed = UserRole.fromString(sRoleRaw);
+              if (parsed == UserRole.admin || parsed == UserRole.staff) {
+                final cleanRole = UserRole.sanitize(sRoleRaw);
+                final roleTitle = (sData['roleTitle'] as String?) ??
+                    (cleanRole == 'dispatcher'
+                        ? 'Route Dispatcher'
+                        : (cleanRole == 'manager'
+                            ? 'Operations Manager'
+                            : (cleanRole == 'admin' ? 'Super Admin' : 'Staff Member')));
+                final perms = sData['permissions'] is List
+                    ? (sData['permissions'] as List)
+                        .map((p) => p.toString().trim())
+                        .where((p) => p.isNotEmpty)
+                        .toList()
+                    : <String>[];
+                final status = (sData['status'] as String? ?? 'Active').trim();
+
+                debugPrint(
+                    '[AUTH ROLE DEBUG] Found orphaned staff doc ${sDoc.id} with role=$cleanRole. Migrating to auth user $uid...');
+
+                await firestore.collection('users').doc(uid).set({
+                  'role': cleanRole,
+                  'roleTitle': roleTitle,
+                  'permissions': perms,
+                  'status': status,
+                  'isAdmin': parsed == UserRole.admin,
+                  'updatedAt': FieldValue.serverTimestamp(),
+                }, SetOptions(merge: true));
+
+                // Verify the primary doc was updated before removing the orphan
+                final verifyDoc = await firestore.collection('users').doc(uid).get();
+                if (verifyDoc.exists && verifyDoc.data()?['role'] == cleanRole) {
+                  await firestore.collection('users').doc(sDoc.id).delete();
+                  debugPrint(
+                      '[AUTH ROLE DEBUG] Migration verified & orphaned doc ${sDoc.id} safely removed.');
+                }
+
+                return cleanRole;
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[AUTH ROLE DEBUG] Orphaned staff doc migration error: $e');
+    }
+
+    // 6. Default: Standard customer
     final fallbackRole = UserRole.sanitize(currentRole);
     debugPrint(
         '[AUTH ROLE DEBUG] Admin lookup result: NOT found in privileged collections. Defaulting to: $fallbackRole');
@@ -315,10 +367,19 @@ class UserNotifier extends StateNotifier<User> {
           debugPrint(
               '[PROFILE DEBUG T4] Firestore listener fired: uid=$uid, docImageUrl=$imageUrl, currentRiverpod=$currentImageUrl, resolvedEffective=$effectiveImageUrl');
 
-          final trustedRole = UserRole.fromPhoneAndRole(
-            phone: (data['phone'] as String?) ?? state.phone,
-            role: data['role'] as String?,
-          ).value;
+          final rawRole = data['role'] as String?;
+          final cleanRole = (rawRole != null && rawRole.trim().isNotEmpty)
+              ? UserRole.sanitize(rawRole)
+              : UserRole.fromPhone(data['phone'] as String? ?? state.phone).value;
+
+          final rawPermissions = data['permissions'];
+          List<String> perms = [];
+          if (rawPermissions is List) {
+            perms = rawPermissions
+                .map((p) => p.toString().trim())
+                .where((p) => p.isNotEmpty)
+                .toList();
+          }
 
           final cleanName = (data['name'] as String?)?.trim().isNotEmpty == true
               ? (data['name'] as String).trim()
@@ -337,21 +398,27 @@ class UserNotifier extends StateNotifier<User> {
                 ? (data['email'] as String).trim()
                 : state.email,
             profileImageUrl: effectiveImageUrl,
-            role: trustedRole,
+            role: cleanRole,
+            roleTitle: data['roleTitle'] as String?,
+            permissions: perms,
+            status: (data['status'] as String? ?? 'Active').trim(),
           );
 
           if (updatedUser.profileImageUrl != currentImageUrl ||
               updatedUser.name != state.name ||
               updatedUser.phone != state.phone ||
               updatedUser.email != state.email ||
-              updatedUser.role != state.role) {
+              updatedUser.role != state.role ||
+              updatedUser.roleTitle != state.roleTitle ||
+              updatedUser.permissions.length != state.permissions.length ||
+              updatedUser.status != state.status) {
             state = updatedUser;
             notifyAuthStateChanged();
             SharedPreferences.getInstance().then((prefs) {
               prefs.setString(_sessionKey, jsonEncode(updatedUser.toMap()));
             });
             debugPrint(
-                '[PROFILE DEBUG T4] State updated by listener: role=${state.role}, profileImageUrl=${state.profileImageUrl}');
+                '[PROFILE DEBUG T4] State updated by listener: role=${state.role}, roleTitle=${state.roleTitle}, perms=${state.permissions.length}, profileImageUrl=${state.profileImageUrl}');
           } else {
             debugPrint(
                 '[PROFILE DEBUG T4] No state change needed: profileImageUrl=${state.profileImageUrl}');
@@ -400,13 +467,16 @@ class UserNotifier extends StateNotifier<User> {
               email: loadedUser.email,
               profileImageUrl: loadedUser.profileImageUrl,
               role: phoneRole.value,
+              roleTitle: loadedUser.roleTitle,
+              permissions: loadedUser.permissions,
+              status: loadedUser.status,
             );
           }
         }
 
         state = loadedUser;
         debugPrint(
-            '[PROFILE DEBUG] loadSession: restored User.fromMap role=${state.role}, phone=${state.phone}, profileImageUrl = ${state.profileImageUrl}');
+            '[PROFILE DEBUG] loadSession: restored User.fromMap role=${state.role}, roleTitle=${state.roleTitle}, phone=${state.phone}, profileImageUrl = ${state.profileImageUrl}');
 
         // Sync authoritative role and profile in background & start real-time listener
         if (state.id.isNotEmpty) {
@@ -447,6 +517,15 @@ class UserNotifier extends StateNotifier<User> {
           debugPrint(
               '[PROFILE DEBUG] _syncFromFirestore: uid=$uid, extracted imageUrl=$imageUrl, current=$currentImageUrl, resolved=$effectiveImageUrl, resolvedRole=$resolvedRole');
 
+          final rawPermissions = data['permissions'];
+          List<String> perms = [];
+          if (rawPermissions is List) {
+            perms = rawPermissions
+                .map((p) => p.toString().trim())
+                .where((p) => p.isNotEmpty)
+                .toList();
+          }
+
           final cleanName = (data['name'] as String?)?.trim().isNotEmpty == true
               ? (data['name'] as String).trim()
               : (state.name.trim() != 'Guest Customer' &&
@@ -465,19 +544,25 @@ class UserNotifier extends StateNotifier<User> {
                 : state.email,
             profileImageUrl: effectiveImageUrl,
             role: resolvedRole,
+            roleTitle: data['roleTitle'] as String?,
+            permissions: perms,
+            status: (data['status'] as String? ?? 'Active').trim(),
           );
 
           if (updatedUser.name != state.name ||
               updatedUser.phone != state.phone ||
               updatedUser.email != state.email ||
               updatedUser.profileImageUrl != state.profileImageUrl ||
-              updatedUser.role != state.role) {
+              updatedUser.role != state.role ||
+              updatedUser.roleTitle != state.roleTitle ||
+              updatedUser.permissions.length != state.permissions.length ||
+              updatedUser.status != state.status) {
             state = updatedUser;
             final prefs = await SharedPreferences.getInstance();
             final sessionJson = jsonEncode(state.toMap());
             await prefs.setString(_sessionKey, sessionJson);
             debugPrint(
-                '[PROFILE DEBUG] _syncFromFirestore: state updated, profileImageUrl=${state.profileImageUrl}');
+                '[PROFILE DEBUG] _syncFromFirestore: state updated, role=${state.role}, perms=${state.permissions.length}');
             notifyAuthStateChanged();
           }
         }
@@ -490,6 +575,9 @@ class UserNotifier extends StateNotifier<User> {
             email: state.email,
             profileImageUrl: state.profileImageUrl,
             role: resolvedRole,
+            roleTitle: state.roleTitle,
+            permissions: state.permissions,
+            status: state.status,
           );
           state = updatedUser;
           final prefs = await SharedPreferences.getInstance();
@@ -525,7 +613,7 @@ class UserNotifier extends StateNotifier<User> {
         final docRef = firestore.collection('users').doc(user.id);
         final doc = await docRef.get();
 
-        // Perform authoritative multi-source role resolution (admins, delivery_agents, users)
+        // Perform authoritative multi-source role resolution (admins, delivery_agents, users, orphaned staff)
         final resolvedRole = await _resolveAuthoritativeRole(
           uid: user.id,
           phone: user.phone,
@@ -536,6 +624,20 @@ class UserNotifier extends StateNotifier<User> {
           final data = doc.data();
           if (data != null) {
             final imageUrl = _extractProfileImageUrl(data);
+
+            final rawPermissions = data['permissions'];
+            List<String> perms = [];
+            if (rawPermissions is List) {
+              perms = rawPermissions
+                  .map((p) => p.toString().trim())
+                  .where((p) => p.isNotEmpty)
+                  .toList();
+            } else if (user.permissions.isNotEmpty) {
+              perms = user.permissions;
+            }
+
+            final roleTitle = data['roleTitle'] as String? ?? user.roleTitle;
+            final status = (data['status'] as String? ?? user.status).trim();
 
             final cleanName = (data['name'] as String?)?.trim().isNotEmpty == true
                 ? (data['name'] as String).trim()
@@ -558,6 +660,9 @@ class UserNotifier extends StateNotifier<User> {
                   ? imageUrl
                   : user.profileImageUrl,
               role: resolvedRole,
+              roleTitle: roleTitle,
+              permissions: perms,
+              status: status,
             );
           }
           await docRef.set({
@@ -577,6 +682,9 @@ class UserNotifier extends StateNotifier<User> {
             email: user.email,
             profileImageUrl: user.profileImageUrl,
             role: resolvedRole,
+            roleTitle: user.roleTitle,
+            permissions: user.permissions,
+            status: user.status,
           );
           await docRef.set({
             'uid': user.id,
@@ -586,6 +694,9 @@ class UserNotifier extends StateNotifier<User> {
             'profileImageUrl': user.profileImageUrl,
             'photoUrl': user.profileImageUrl,
             'role': resolvedRole,
+            if (user.roleTitle != null) 'roleTitle': user.roleTitle,
+            if (user.permissions.isNotEmpty) 'permissions': user.permissions,
+            'status': user.status,
             'createdAt': FieldValue.serverTimestamp(),
             'updatedAt': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
@@ -607,6 +718,9 @@ class UserNotifier extends StateNotifier<User> {
           email: user.email,
           profileImageUrl: user.profileImageUrl,
           role: resolvedRole,
+          roleTitle: user.roleTitle,
+          permissions: user.permissions,
+          status: user.status,
         );
       }
     }
