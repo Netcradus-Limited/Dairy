@@ -124,9 +124,16 @@ class OrderService {
       paymentMethod: paymentMethod,
     );
 
+    final resolvedCustomerName = deliveryAddress.fullName.trim().isNotEmpty
+        ? deliveryAddress.fullName.trim()
+        : 'Customer';
+    final resolvedCustomerPhone = deliveryAddress.mobileNumber.trim();
+
     await docRef.set({
       'orderCode': orderCode,
       'userId': authoritativeUid,
+      'customerName': resolvedCustomerName,
+      'customerPhone': resolvedCustomerPhone,
       'status': 'Pending',
       'items': items
           .map((item) => {

@@ -271,6 +271,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               );
             },
           ),
+          GoRoute(
+            path: 'orders',
+            builder: (context, state) => provider.MultiProvider(
+              providers: [
+                provider.ChangeNotifierProvider(create: (_) {
+                  final p = AdminProvider();
+                  p.setNavIndex(5);
+                  return p;
+                }),
+              ],
+              child: provider.Consumer<AdminProvider>(
+                builder: (context, adminProvider, child) {
+                  return Theme(
+                    data: adminProvider.isDarkMode
+                        ? AdminTheme.darkTheme
+                        : AdminTheme.lightTheme,
+                    child: const AdminMainShell(),
+                  );
+                },
+              ),
+            ),
+          ),
         ],
       ),
       GoRoute(

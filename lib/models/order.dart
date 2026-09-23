@@ -482,6 +482,10 @@ class Order {
   Map<String, dynamic> toFirestore() => {
         'orderCode': orderCode.isNotEmpty ? orderCode : displayOrderCode,
         'status': orderStatusToString(status),
+        'customerName': deliveryAddress.fullName.trim().isNotEmpty
+            ? deliveryAddress.fullName.trim()
+            : 'Customer',
+        'customerPhone': deliveryAddress.mobileNumber.trim(),
         if (userId.isNotEmpty) 'userId': userId,
         'orderType': orderType,
         if (subscriptionId != null) 'subscriptionId': subscriptionId,
