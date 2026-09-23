@@ -48,3 +48,10 @@ app.*.map.json
 node_modules/
 
 .firebase/
+
+# Android signing keys & credentials
+**/key.properties
+**/*.jks
+**/*.keystore
+**/private_key.pe*
+**/serviceAccountKey*.json
