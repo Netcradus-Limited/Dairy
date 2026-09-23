@@ -1134,6 +1134,7 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: NavigationApp.values.map((app) {
+            // ignore: deprecated_member_use
             return RadioListTile<NavigationApp>(
               title: Text(_navLabel(app), style: GoogleFonts.plusJakartaSans()),
               value: app,

@@ -401,13 +401,19 @@ class OrderService {
       }
       final Query<Map<String, dynamic>> query;
       if (agentId.isEmpty) {
-        query = _firestore
-            .collection('orders')
-            .where('status', isEqualTo: 'Pending');
+        query = _firestore.collection('orders').where(
+              Filter.or(
+                Filter('status', isEqualTo: 'Pending'),
+                Filter('status', isEqualTo: 'pending'),
+                Filter('status', isEqualTo: 'placed'),
+              ),
+            );
       } else {
         query = _firestore.collection('orders').where(
               Filter.or(
                 Filter('status', isEqualTo: 'Pending'),
+                Filter('status', isEqualTo: 'pending'),
+                Filter('status', isEqualTo: 'placed'),
                 Filter('assignedAgentId', isEqualTo: agentId),
               ),
             );

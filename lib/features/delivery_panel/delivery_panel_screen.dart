@@ -13,12 +13,16 @@ import '../../providers/user_provider.dart';
 import '../../providers/battery_optimization_provider.dart';
 import '../../services/fcm_service.dart';
 import '../../services/network_connectivity_service.dart';
-import 'screens/requests_tab.dart';
-import 'screens/active_delivery_tab.dart';
-import 'screens/orders_tab.dart';
-import 'screens/earnings_tab.dart';
-import 'screens/profile_tab.dart';
+import 'theme/delivery_theme.dart';
+import 'screens/delivery_home_tab.dart';
+import 'screens/delivery_my_orders_tab.dart';
+import 'screens/delivery_map_tab.dart';
+import 'screens/delivery_earnings_redesigned_tab.dart';
+import 'screens/delivery_profile_redesigned_tab.dart';
+import 'screens/delivery_history_redesigned_screen.dart';
+import 'screens/delivery_settings_redesigned_screen.dart';
 import 'widgets/battery_optimization_warning_banner.dart';
+import 'widgets/delivery_bottom_nav.dart';
 import 'widgets/gps_status_warning_banner.dart';
 
 class _BottomNavItem {
@@ -44,33 +48,42 @@ class DeliveryPanelScreen extends ConsumerStatefulWidget {
 
 class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
     with WidgetsBindingObserver {
+  final Set<int> _loadedTabs = {};
+
   static const List<_BottomNavItem> _navItems = [
     _BottomNavItem(
-        icon: Icons.assignment_outlined,
-        activeIcon: Icons.assignment,
-        label: 'Requests'),
+      icon: Icons.home_outlined,
+      activeIcon: Icons.home_rounded,
+      label: 'Home',
+    ),
     _BottomNavItem(
-        icon: Icons.local_shipping_outlined,
-        activeIcon: Icons.local_shipping,
-        label: 'Active'),
+      icon: Icons.assignment_outlined,
+      activeIcon: Icons.assignment_rounded,
+      label: 'My Orders',
+    ),
     _BottomNavItem(
-        icon: Icons.history_outlined,
-        activeIcon: Icons.history,
-        label: 'Orders'),
+      icon: Icons.location_on_outlined,
+      activeIcon: Icons.location_on_rounded,
+      label: 'Map',
+    ),
     _BottomNavItem(
-        icon: Icons.account_balance_wallet,
-        activeIcon: Icons.account_balance_wallet,
-        label: 'Earnings'),
+      icon: Icons.account_balance_wallet_outlined,
+      activeIcon: Icons.account_balance_wallet_rounded,
+      label: 'Earnings',
+    ),
     _BottomNavItem(
-        icon: Icons.person_outline, activeIcon: Icons.person, label: 'Profile'),
+      icon: Icons.person_outline_rounded,
+      activeIcon: Icons.person_rounded,
+      label: 'Profile',
+    ),
   ];
 
   static const List<Widget> _pages = [
-    RequestsTab(),
-    ActiveDeliveryTab(),
-    OrdersTab(),
-    EarningsTab(),
-    ProfileTab(),
+    DeliveryHomeTab(),
+    DeliveryMyOrdersTab(),
+    DeliveryMapTab(),
+    DeliveryEarningsRedesignedTab(),
+    DeliveryProfileRedesignedTab(),
   ];
 
   @override
@@ -131,6 +144,9 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
     final currentIndex = ref.watch(deliveryPanelTabProvider);
     final isNetworkOnline = ref.watch(networkConnectivityProvider);
 
+    // Lazily mark current tab as loaded so unvisited tabs (e.g. Map) don't mount eagerly
+    _loadedTabs.add(currentIndex);
+
     final bodyContent = Column(
       children: [
         if (!isNetworkOnline) _buildOfflineBanner(context),
@@ -139,7 +155,12 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
         Expanded(
           child: IndexedStack(
             index: currentIndex,
-            children: _pages,
+            children: List<Widget>.generate(
+              _pages.length,
+              (i) => _loadedTabs.contains(i)
+                  ? _pages[i]
+                  : const SizedBox.shrink(),
+            ),
           ),
         ),
       ],
@@ -164,10 +185,196 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
     }
 
     return Scaffold(
-      appBar: _buildMobileAppBar(isOnline, currentIndex, sharing),
+      drawer: _buildAppDrawer(context),
       body: bodyContent,
-      bottomNavigationBar: _buildMobileBottomNav(currentIndex),
+      bottomNavigationBar: DeliveryBottomNav(
+        currentIndex: currentIndex,
+        onTabSelected: (index) =>
+            ref.read(deliveryPanelTabProvider.notifier).setTab(index),
+      ),
     );
+  }
+
+  Widget _buildAppDrawer(BuildContext context) {
+    final agent = ref.watch(deliveryAgentProvider);
+    return Drawer(
+      child: Column(
+        children: [
+          UserAccountsDrawerHeader(
+            decoration: const BoxDecoration(
+              gradient: DeliveryTheme.headerGradient,
+            ),
+            accountName: Text(
+              agent.name.isNotEmpty ? agent.name : 'Delivery Partner',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+                color: Colors.white,
+              ),
+            ),
+            accountEmail: Text(
+              agent.phone.isNotEmpty
+                  ? agent.phone
+                  : 'Sawariya Dairy Delivery Partner',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                color: const Color(0xFFC8E6C9),
+              ),
+            ),
+            currentAccountPicture: CircleAvatar(
+              backgroundColor: Colors.white,
+              backgroundImage: agent.profileImageUrl != null &&
+                      agent.profileImageUrl!.isNotEmpty
+                  ? NetworkImage(agent.profileImageUrl!)
+                  : null,
+              child: agent.profileImageUrl == null ||
+                      agent.profileImageUrl!.isEmpty
+                  ? const Icon(Icons.person_rounded,
+                      size: 36, color: DeliveryTheme.primary)
+                  : null,
+            ),
+          ),
+          ListTile(
+            leading:
+                const Icon(Icons.home_outlined, color: DeliveryTheme.primary),
+            title: Text('Home', style: GoogleFonts.plusJakartaSans()),
+            onTap: () {
+              Navigator.pop(context);
+              ref.read(deliveryPanelTabProvider.notifier).setTab(0);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.assignment_outlined,
+                color: DeliveryTheme.primary),
+            title: Text('My Orders', style: GoogleFonts.plusJakartaSans()),
+            onTap: () {
+              Navigator.pop(context);
+              ref.read(deliveryPanelTabProvider.notifier).setTab(1);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.location_on_outlined,
+                color: DeliveryTheme.primary),
+            title: Text('Map', style: GoogleFonts.plusJakartaSans()),
+            onTap: () {
+              Navigator.pop(context);
+              ref.read(deliveryPanelTabProvider.notifier).setTab(2);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.account_balance_wallet_outlined,
+                color: DeliveryTheme.primary),
+            title: Text('Earnings', style: GoogleFonts.plusJakartaSans()),
+            onTap: () {
+              Navigator.pop(context);
+              ref.read(deliveryPanelTabProvider.notifier).setTab(3);
+            },
+          ),
+          ListTile(
+            leading:
+                const Icon(Icons.history_rounded, color: DeliveryTheme.primary),
+            title:
+                Text('Delivery History', style: GoogleFonts.plusJakartaSans()),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const DeliveryHistoryRedesignedScreen(),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.settings_outlined,
+                color: DeliveryTheme.primary),
+            title: Text('Settings', style: GoogleFonts.plusJakartaSans()),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const DeliverySettingsRedesignedScreen(),
+                ),
+              );
+            },
+          ),
+          const Spacer(),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.logout_rounded,
+                color: DeliveryTheme.statusCancelledText),
+            title: Text(
+              'Logout',
+              style: GoogleFonts.plusJakartaSans(
+                color: DeliveryTheme.statusCancelledText,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            onTap: () {
+              Navigator.pop(context);
+              _confirmLogout();
+            },
+          ),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmLogout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.logout_rounded,
+                color: DeliveryTheme.statusCancelledText, size: 24),
+            const SizedBox(width: 8),
+            Text(
+              'Confirm Logout',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to log out? Live GPS tracking will be safely terminated.',
+          style: GoogleFonts.plusJakartaSans(fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.plusJakartaSans(
+                color: DeliveryTheme.textSecondary,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: DeliveryTheme.statusCancelledText,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(
+              'Logout',
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true && mounted) {
+      ref.read(agentLiveLocationProvider.notifier).stopTracking();
+      ref.read(cartProvider.notifier).clearLocalCart();
+      await ref.read(userProvider.notifier).clearSession();
+      if (mounted) {
+        context.go('/login');
+      }
+    }
   }
 
   Widget _buildOfflineBanner(BuildContext context) {
@@ -217,43 +424,6 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
     );
   }
 
-  Widget _buildMobileBottomNav(int currentIndex) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(
-          top: BorderSide(color: AppColors.border, width: 1.0),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 12,
-            offset: Offset(0, -4),
-          ),
-        ],
-      ),
-      child: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: (index) =>
-            ref.read(deliveryPanelTabProvider.notifier).setTab(index),
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.textSecondary,
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        items: _navItems
-            .map((item) => BottomNavigationBarItem(
-                  icon: Icon(item.icon),
-                  activeIcon: Icon(item.activeIcon),
-                  label: item.label,
-                ))
-            .toList(),
-      ),
-    );
-  }
-
   Widget _buildDesktopSidebar(int currentIndex) {
     final textPrimary = AppColors.textPrimaryOf(context);
     final textSecondary = AppColors.textSecondaryOf(context);
@@ -294,14 +464,21 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
                   margin: const EdgeInsets.only(bottom: 8),
                   child: Material(
                     color: isSelected
-                        ? AppColors.primaryLight.withValues(alpha: 0.1)
+                        ? const Color(0xFFE8F5E9)
                         : Colors.transparent,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                      side: isSelected
+                          ? const BorderSide(
+                              color: Color(0xFF81C784), width: 1.5)
+                          : BorderSide.none,
+                    ),
                     child: ListTile(
                       leading: Icon(
                         isSelected ? item.activeIcon : item.icon,
-                        color: isSelected ? AppColors.primary : textSecondary,
+                        color: isSelected
+                            ? const Color(0xFF43A047)
+                            : textSecondary,
                       ),
                       title: Text(
                         item.label,
@@ -309,7 +486,9 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
                           fontSize: 14,
                           fontWeight:
                               isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: isSelected ? AppColors.primary : textPrimary,
+                          color: isSelected
+                              ? const Color(0xFF2E7D32)
+                              : textPrimary,
                         ),
                       ),
                       selected: isSelected,
@@ -356,7 +535,7 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
+                    color: const Color(0xFF43A047),
                   ),
                 ),
               ],
@@ -369,7 +548,7 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
               borderRadius: BorderRadius.circular(12),
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),
-                onTap: () => _confirmLogout(context),
+                onTap: _confirmLogout,
                 hoverColor: AppColors.error.withValues(alpha: 0.08),
                 splashColor: AppColors.error.withValues(alpha: 0.12),
                 child: Container(
@@ -401,66 +580,6 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
         ],
       ),
     );
-  }
-
-  Future<void> _confirmLogout(BuildContext context) async {
-    final shouldLogout = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.cardBgOf(ctx),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Logout',
-          style: GoogleFonts.plusJakartaSans(
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimaryOf(ctx),
-          ),
-        ),
-        content: Text(
-          'Are you sure you want to logout?',
-          style: GoogleFonts.plusJakartaSans(
-            color: AppColors.textSecondaryOf(ctx),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.plusJakartaSans(
-                color: AppColors.textSecondaryOf(ctx),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: Text(
-              'Logout',
-              style: GoogleFonts.plusJakartaSans(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldLogout == true && context.mounted) {
-      ref.read(agentLiveLocationProvider.notifier).stopTracking();
-      ref.read(cartProvider.notifier).clearLocalCart();
-      await ref.read(userProvider.notifier).clearSession();
-      if (context.mounted) {
-        context.go('/login');
-      }
-    }
   }
 
   Widget _buildDesktopTopBar(bool isOnline, int currentIndex, bool sharing) {
@@ -504,11 +623,11 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               color: isOnline
-                  ? AppColors.success.withValues(alpha: 0.1)
+                  ? const Color(0xFFE8F5E9)
                   : AppColors.error.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: isOnline ? AppColors.success : AppColors.error,
+                color: isOnline ? const Color(0xFF43A047) : AppColors.error,
               ),
             ),
             child: Row(
@@ -518,7 +637,7 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: isOnline ? AppColors.success : AppColors.error,
+                    color: isOnline ? const Color(0xFF43A047) : AppColors.error,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -528,7 +647,7 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: isOnline ? AppColors.success : AppColors.error,
+                    color: isOnline ? const Color(0xFF43A047) : AppColors.error,
                   ),
                 ),
               ],
@@ -536,75 +655,6 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
           ),
         ],
       ),
-    );
-  }
-
-  PreferredSizeWidget _buildMobileAppBar(
-      bool isOnline, int currentIndex, bool sharing) {
-    final textPrimary = AppColors.textPrimaryOf(context);
-    final cardBg = AppColors.cardBgOf(context);
-
-    return AppBar(
-      backgroundColor: cardBg,
-      elevation: 0,
-      title: Text(
-        _navItems[currentIndex].label,
-        style: GoogleFonts.plusJakartaSans(
-          fontSize: 20,
-          fontWeight: FontWeight.w800,
-          color: textPrimary,
-        ),
-      ),
-      actions: [
-        IconButton(
-          tooltip: 'Live Delivery Map',
-          icon: const Icon(Icons.map_rounded),
-          onPressed: () => context.push('/delivery-map'),
-        ),
-        IconButton(
-          tooltip:
-              sharing ? 'Stop sharing live location' : 'Share live location',
-          icon: Icon(
-              sharing ? Icons.location_on_rounded : Icons.location_off_rounded),
-          onPressed: () =>
-              ref.read(agentLiveLocationProvider.notifier).toggle(),
-        ),
-        Container(
-          margin: const EdgeInsets.only(right: 16),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: isOnline
-                ? AppColors.success.withValues(alpha: 0.1)
-                : AppColors.error.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isOnline ? AppColors.success : AppColors.error,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: isOnline ? AppColors.success : AppColors.error,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                isOnline ? 'Online' : 'Offline',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: isOnline ? AppColors.success : AppColors.error,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

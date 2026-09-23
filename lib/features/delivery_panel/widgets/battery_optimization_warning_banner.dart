@@ -20,7 +20,7 @@ class BatteryOptimizationWarningBanner extends ConsumerWidget {
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final warningColor = const Color(0xFFD97706);
+    const warningColor = Color(0xFFD97706);
     final bgColor = isDark
         ? const Color(0xFF291B07)
         : const Color(0xFFFFFBEB);
@@ -47,7 +47,7 @@ class BatteryOptimizationWarningBanner extends ConsumerWidget {
               color: warningColor.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
-            child: Icon(
+            child: const Icon(
               Icons.battery_alert_rounded,
               size: 20,
               color: warningColor,
