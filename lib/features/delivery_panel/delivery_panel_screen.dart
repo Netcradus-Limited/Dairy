@@ -19,6 +19,7 @@ import 'screens/orders_tab.dart';
 import 'screens/earnings_tab.dart';
 import 'screens/profile_tab.dart';
 import 'widgets/battery_optimization_warning_banner.dart';
+import 'widgets/gps_status_warning_banner.dart';
 
 class _BottomNavItem {
   final IconData icon;
@@ -92,6 +93,7 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       ref.read(batteryOptimizationProvider.notifier).checkStatus();
+      ref.read(agentLiveLocationProvider.notifier).refreshStatus();
     }
   }
 
@@ -132,6 +134,7 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
     final bodyContent = Column(
       children: [
         if (!isNetworkOnline) _buildOfflineBanner(context),
+        const GpsStatusWarningBanner(),
         const BatteryOptimizationWarningBanner(),
         Expanded(
           child: IndexedStack(

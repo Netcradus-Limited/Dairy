@@ -77,8 +77,72 @@ class GeocodedAddress {
 /// location & address resolution without requiring paid API keys.
 class LocationService {
   /// Whether location services are enabled on the device.
-  Future<bool> isLocationServiceEnabled() =>
-      Geolocator.isLocationServiceEnabled();
+  Future<bool> isLocationServiceEnabled() async {
+    try {
+      return await Geolocator.isLocationServiceEnabled();
+    } catch (_) {
+      return true;
+    }
+  }
+
+  /// Checks current location permission without prompting the user.
+  Future<LocationPermission> checkPermission() async {
+    try {
+      return await Geolocator.checkPermission();
+    } catch (_) {
+      return LocationPermission.always;
+    }
+  }
+
+  /// Checks whether location services and permissions are granted, requesting
+  /// permissions if needed and returning a granular [LocationResultStatus].
+  Future<LocationResultStatus> checkAndRequestPermissions() async {
+    try {
+      final isServiceEnabled = await isLocationServiceEnabled();
+      if (!isServiceEnabled) {
+        return LocationResultStatus.servicesDisabled;
+      }
+
+      LocationPermission permission = await checkPermission();
+      if (permission == LocationPermission.deniedForever) {
+        return LocationResultStatus.permissionDeniedForever;
+      }
+
+      final granted = await requestLocationPermission();
+      if (!granted) {
+        permission = await checkPermission();
+        if (permission == LocationPermission.deniedForever) {
+          return LocationResultStatus.permissionDeniedForever;
+        }
+        return LocationResultStatus.permissionDenied;
+      }
+
+      // Attempt background location permission upgrade on Android 10+
+      await requestBackgroundLocationPermission();
+      return LocationResultStatus.success;
+    } catch (e) {
+      debugPrint('LocationService: checkAndRequestPermissions error: $e');
+      return LocationResultStatus.timeoutOrError;
+    }
+  }
+
+  /// Opens the device system location settings page (e.g. GPS toggle).
+  Future<bool> openLocationSettings() async {
+    try {
+      return await Geolocator.openLocationSettings();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Opens the app settings page (e.g. to grant permanently denied permissions).
+  Future<bool> openAppSettings() async {
+    try {
+      return await Geolocator.openAppSettings();
+    } catch (_) {
+      return false;
+    }
+  }
 
   /// Requests location permission (if not already granted).
   Future<bool> requestLocationPermission() async {

@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Service responsible for querying and requesting Android battery optimization
@@ -28,9 +27,6 @@ class BatteryOptimizationService {
   /// If platform call fails or throws, gracefully fails safe by returning `true`.
   Future<bool> isIgnoringBatteryOptimizations() async {
     if (kIsWeb || _platform != TargetPlatform.android) {
-      return true;
-    }
-    if (WidgetsBinding.instance == null) {
       return true;
     }
     try {
@@ -63,9 +59,6 @@ class BatteryOptimizationService {
   /// Never throws.
   Future<bool> openBatteryOptimizationSettings() async {
     if (kIsWeb || _platform != TargetPlatform.android) {
-      return false;
-    }
-    if (WidgetsBinding.instance == null) {
       return false;
     }
     try {
