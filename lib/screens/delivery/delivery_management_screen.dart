@@ -727,6 +727,7 @@ class DeliveryManagementScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     if (riders.isNotEmpty) ...[
                       DropdownButtonFormField<String>(
+                        isExpanded: true,
                         value: riders.any((r) => r.id == selectedAgentId)
                             ? selectedAgentId
                             : null,
@@ -736,11 +737,15 @@ class DeliveryManagementScreen extends StatelessWidget {
                         items: [
                           const DropdownMenuItem<String>(
                             value: null,
-                            child: Text('Unassigned / Other'),
+                            child: Text('Unassigned / Other', overflow: TextOverflow.ellipsis),
                           ),
                           ...riders.map((r) => DropdownMenuItem<String>(
                                 value: r.id,
-                                child: Text('${r.name} (${r.phone})'),
+                                child: Text(
+                                  '${r.name} (${r.phone})',
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
                               )),
                         ],
                         onChanged: (val) {
@@ -810,6 +815,7 @@ class DeliveryManagementScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       value: selectedStatus,
                       decoration: const InputDecoration(labelText: 'Status'),
                       items: const [
@@ -1013,6 +1019,7 @@ class DeliveryManagementScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     if (riders.isNotEmpty) ...[
                       DropdownButtonFormField<String>(
+                        isExpanded: true,
                         value: riders.any((r) => r.id == selectedAgentId)
                             ? selectedAgentId
                             : null,
@@ -1022,11 +1029,15 @@ class DeliveryManagementScreen extends StatelessWidget {
                         items: [
                           const DropdownMenuItem<String>(
                             value: null,
-                            child: Text('Unassigned / Other'),
+                            child: Text('Unassigned / Other', overflow: TextOverflow.ellipsis),
                           ),
                           ...riders.map((r) => DropdownMenuItem<String>(
                                 value: r.id,
-                                child: Text('${r.name} (${r.phone})'),
+                                child: Text(
+                                  '${r.name} (${r.phone})',
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
                               )),
                         ],
                         onChanged: (val) {
@@ -1101,6 +1112,7 @@ class DeliveryManagementScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       value: selectedStatus,
                       decoration: const InputDecoration(labelText: 'Status'),
                       items: const [

@@ -14,6 +14,7 @@ import '../models/delivery_staff_model.dart';
 import '../models/kpi_data.dart';
 import '../models/order.dart' as order;
 import '../models/order_model.dart';
+import '../models/product.dart';
 import '../models/product_model.dart';
 import '../models/staff_member.dart';
 import '../repositories/firestore_product_repository.dart';
@@ -25,6 +26,35 @@ import '../services/payment_service.dart';
 import '../services/subscription_service.dart';
 import 'user_provider.dart';
 
+enum DashboardDateFilter {
+  today,
+  yesterday,
+  tomorrow;
+
+  String get displayName {
+    switch (this) {
+      case DashboardDateFilter.today:
+        return 'Today';
+      case DashboardDateFilter.yesterday:
+        return 'Yesterday';
+      case DashboardDateFilter.tomorrow:
+        return 'Tomorrow';
+    }
+  }
+
+  static DashboardDateFilter fromString(String val) {
+    switch (val.toLowerCase().trim()) {
+      case 'yesterday':
+        return DashboardDateFilter.yesterday;
+      case 'tomorrow':
+        return DashboardDateFilter.tomorrow;
+      case 'today':
+      default:
+        return DashboardDateFilter.today;
+    }
+  }
+}
+
 class AdminProvider extends ChangeNotifier {
   final FirestoreProductRepository _repo;
   final OrderService _orderService;
@@ -33,9 +63,9 @@ class AdminProvider extends ChangeNotifier {
   final DeliveryManagementService _deliveryService;
   final SubscriptionService _subscriptionService;
 
-  int _selectedNavIndex = 2;
+  int _selectedNavIndex = 0;
   String _searchQuery = '';
-  String _orderStatusTimeFilter = 'Today';
+  DashboardDateFilter _dashboardDateFilter = DashboardDateFilter.today;
   int _unreadNotifications = 0;
   bool _isDarkMode = false;
 
@@ -96,7 +126,8 @@ class AdminProvider extends ChangeNotifier {
 
   int get selectedNavIndex => _selectedNavIndex;
   String get searchQuery => _searchQuery;
-  String get orderStatusTimeFilter => _orderStatusTimeFilter;
+  DashboardDateFilter get dashboardDateFilter => _dashboardDateFilter;
+  String get orderStatusTimeFilter => _dashboardDateFilter.displayName;
   int get unreadNotifications => _unreadNotifications;
   bool get isDarkMode => _isDarkMode;
 
@@ -161,36 +192,164 @@ class AdminProvider extends ChangeNotifier {
   bool get usersLoading => _usersLoading;
   String? get usersError => _usersError;
 
-  int get totalOrdersCount => _orders.length;
-  int get pendingOrdersCount =>
-      _orders.where((o) => o.status == OrderStatus.pending).length;
-  int get confirmedOrdersCount =>
-      _orders.where((o) => o.status == OrderStatus.confirmed).length;
-  int get preparingOrdersCount =>
-      _orders.where((o) => o.status == OrderStatus.preparing).length;
-  int get outForDeliveryOrdersCount =>
-      _orders.where((o) => o.status == OrderStatus.outForDelivery).length;
-  int get deliveredOrdersCount =>
-      _orders.where((o) => o.status == OrderStatus.delivered).length;
-  int get cancelledOrdersCount =>
-      _orders.where((o) => o.status == OrderStatus.cancelled).length;
-  int get activeOrdersCount => _orders
-      .where((o) =>
-          o.status == OrderStatus.confirmed ||
-          o.status == OrderStatus.preparing ||
-          o.status == OrderStatus.outForDelivery)
+  // ─── Dashboard Date Filter Helpers ─────────────────────────────────────
+
+  /// Computes the start (inclusive) and end (exclusive) local calendar day
+  /// boundaries for the given [filter].
+  ({DateTime start, DateTime end}) _getDateRange(DashboardDateFilter filter) {
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final tomorrowStart = DateTime(now.year, now.month, now.day + 1);
+    final dayAfterTomorrowStart = DateTime(now.year, now.month, now.day + 2);
+    final yesterdayStart = DateTime(now.year, now.month, now.day - 1);
+
+    switch (filter) {
+      case DashboardDateFilter.today:
+        return (start: todayStart, end: tomorrowStart);
+      case DashboardDateFilter.yesterday:
+        return (start: yesterdayStart, end: todayStart);
+      case DashboardDateFilter.tomorrow:
+        return (start: tomorrowStart, end: dayAfterTomorrowStart);
+    }
+  }
+
+  /// Checks whether an order belongs to the local calendar day range [start, end).
+  bool _isOrderInDateRange(order.Order o, DateTime start, DateTime end) {
+    final orderDt = o.orderDate.toLocal();
+    final isInOrderDate =
+        (orderDt.isAtSameMomentAs(start) || orderDt.isAfter(start)) &&
+            orderDt.isBefore(end);
+
+    if (o.deliveryDate != null) {
+      final delivDt = o.deliveryDate!.toLocal();
+      final isInDeliveryDate =
+          (delivDt.isAtSameMomentAs(start) || delivDt.isAfter(start)) &&
+              delivDt.isBefore(end);
+      return isInOrderDate || isInDeliveryDate;
+    }
+
+    return isInOrderDate;
+  }
+
+  /// Filtered raw orders according to the selected [dashboardDateFilter].
+  List<order.Order> get filteredDashboardOrders {
+    final range = _getDateRange(_dashboardDateFilter);
+    return _rawOrders
+        .where((o) => _isOrderInDateRange(o, range.start, range.end))
+        .toList();
+  }
+
+  /// Date-filtered [DairyOrder] list for dashboard.
+  List<DairyOrder> get dashboardOrders {
+    final range = _getDateRange(_dashboardDateFilter);
+    return _rawOrders
+        .where((o) => _isOrderInDateRange(o, range.start, range.end))
+        .map(_dairyOrderFromOrder)
+        .toList();
+  }
+
+  int get totalOrdersCount => filteredDashboardOrders.length;
+  int get pendingOrdersCount => filteredDashboardOrders
+      .where((o) => _mapFromServiceStatus(o.status) == OrderStatus.pending)
       .length;
+  int get confirmedOrdersCount => filteredDashboardOrders
+      .where((o) => _mapFromServiceStatus(o.status) == OrderStatus.confirmed)
+      .length;
+  int get preparingOrdersCount => filteredDashboardOrders
+      .where((o) => _mapFromServiceStatus(o.status) == OrderStatus.preparing)
+      .length;
+  int get outForDeliveryOrdersCount => filteredDashboardOrders
+      .where((o) => _mapFromServiceStatus(o.status) == OrderStatus.outForDelivery)
+      .length;
+  int get deliveredOrdersCount => filteredDashboardOrders
+      .where((o) => _mapFromServiceStatus(o.status) == OrderStatus.delivered)
+      .length;
+  int get cancelledOrdersCount => filteredDashboardOrders
+      .where((o) => _mapFromServiceStatus(o.status) == OrderStatus.cancelled)
+      .length;
+  int get activeOrdersCount => filteredDashboardOrders.where((o) {
+        final s = _mapFromServiceStatus(o.status);
+        return s == OrderStatus.confirmed ||
+            s == OrderStatus.preparing ||
+            s == OrderStatus.outForDelivery;
+      }).length;
 
-  double get totalRevenue => _orders
-      .where((o) => o.status == OrderStatus.delivered)
-      .fold(0.0, (total, o) => total + o.amount);
+  double get totalRevenue => filteredDashboardOrders
+      .where((o) => _mapFromServiceStatus(o.status) == OrderStatus.delivered)
+      .fold(0.0, (total, o) => total + o.totalAmount);
 
-  double get totalOrderValue => _orders
-      .where((o) => o.status != OrderStatus.cancelled)
-      .fold(0.0, (total, o) => total + o.amount);
+  double get totalOrderValue => filteredDashboardOrders
+      .where((o) => _mapFromServiceStatus(o.status) != OrderStatus.cancelled)
+      .fold(0.0, (total, o) => total + o.totalAmount);
 
-  List<DairyProduct> get topSellingProducts =>
-      _products.where((p) => p.isBestSeller).toList();
+  List<DairyProduct> get topSellingProducts {
+    final productSales = <String, int>{};
+    final productRevenues = <String, double>{};
+    final productMap = <String, Product>{};
+
+    for (final o in filteredDashboardOrders) {
+      if (_mapFromServiceStatus(o.status) == OrderStatus.cancelled) continue;
+      for (final item in o.items) {
+        final pid = item.product.id.trim();
+        if (pid.isEmpty) continue;
+        productSales[pid] = (productSales[pid] ?? 0) + item.quantity;
+        productRevenues[pid] =
+            (productRevenues[pid] ?? 0.0) + (item.product.price * item.quantity);
+        productMap[pid] = item.product;
+      }
+    }
+
+    if (productSales.isEmpty) {
+      return const [];
+    }
+
+    final sortedProductIds = productSales.keys.toList()
+      ..sort((a, b) => productSales[b]!.compareTo(productSales[a]!));
+
+    return sortedProductIds.map((pid) {
+      final p = productMap[pid]!;
+      final existing = _products.cast<DairyProduct?>().firstWhere(
+            (dp) => dp?.id == pid,
+            orElse: () => null,
+          );
+      if (existing != null) {
+        return existing.copyWith(
+          ordersCount: productSales[pid] ?? 0,
+          totalRevenue: productRevenues[pid] ?? 0.0,
+        );
+      }
+      return DairyProduct(
+        id: p.id,
+        name: p.title,
+        subtitle: p.description.isNotEmpty ? p.description : p.categoryName,
+        category: p.categoryName,
+        unit: p.unit,
+        price: p.price,
+        ordersCount: productSales[pid] ?? 0,
+        totalRevenue: productRevenues[pid] ?? 0.0,
+        imageUrl: p.imageUrl,
+        inStock: p.inStock,
+        isBestSeller: p.isBestSeller,
+      );
+    }).take(5).toList();
+  }
+
+  @visibleForTesting
+  void setRawOrdersForTesting(List<order.Order> orders) {
+    _rawOrders = orders;
+    _orders = orders.map(_dairyOrderFromOrder).toList();
+    _ordersLoading = false;
+    _ordersError = null;
+    notifyListeners();
+  }
+
+  @visibleForTesting
+  void setProductsForTesting(List<DairyProduct> products) {
+    _products = products;
+    _isLoading = false;
+    _error = null;
+    notifyListeners();
+  }
 
   AdminProvider({
     FirestoreProductRepository? repo,
@@ -803,7 +962,12 @@ class AdminProvider extends ChangeNotifier {
   }
 
   void setOrderStatusTimeFilter(String filter) {
-    _orderStatusTimeFilter = filter;
+    _dashboardDateFilter = DashboardDateFilter.fromString(filter);
+    notifyListeners();
+  }
+
+  void setDashboardDateFilter(DashboardDateFilter filter) {
+    _dashboardDateFilter = filter;
     notifyListeners();
   }
 
@@ -818,14 +982,15 @@ class AdminProvider extends ChangeNotifier {
     final currencyFormatter =
         NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
     final formattedRevenue = currencyFormatter.format(totalRevenue);
+    final filterName = _dashboardDateFilter.displayName;
 
     return [
       KpiMetric(
         title: "Total Revenue",
         value: formattedRevenue,
         growthText: deliveredOrdersCount > 0
-            ? '$deliveredOrdersCount orders delivered'
-            : 'From delivered orders',
+            ? '$deliveredOrdersCount delivered ($filterName)'
+            : 'From delivered orders ($filterName)',
         isPositive: totalRevenue > 0,
         icon: Icons.currency_rupee_rounded,
         themeColor: AppColors.revenueGreen,
@@ -837,8 +1002,8 @@ class AdminProvider extends ChangeNotifier {
         growthText: pendingOrdersCount > 0
             ? '$pendingOrdersCount pending, $activeOrdersCount active'
             : (totalOrdersCount > 0
-                ? '$activeOrdersCount active orders'
-                : 'No orders yet'),
+                ? '$activeOrdersCount active orders ($filterName)'
+                : 'No orders for $filterName'),
         isPositive: totalOrdersCount > 0,
         icon: Icons.shopping_bag_outlined,
         themeColor: AppColors.ordersBlue,
@@ -874,7 +1039,7 @@ class AdminProvider extends ChangeNotifier {
         KpiMetric(
           title: 'Active / On Route',
           value: '$activeOrdersCount',
-          growthText: '$outForDeliveryOrdersCount out for delivery',
+          growthText: '$outForDeliveryOrdersCount out for delivery (${_dashboardDateFilter.displayName})',
           isPositive: activeOrdersCount > 0,
           icon: Icons.local_shipping_outlined,
           themeColor: AppColors.statusOutForDelivery,

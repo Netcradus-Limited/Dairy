@@ -1301,6 +1301,80 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
     Color textSecondary,
     bool isDesktop,
   ) {
+    if (!isDesktop) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFCFCFC),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: cardBorder),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ProductImage(
+              imageUrl: item.productImage,
+              title: item.productName,
+              productId: item.productId,
+              size: 44,
+              radius: 8,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.productName,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: textPrimary,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${DateFormat('dd MMM yyyy').format(item.date)} • ${item.formattedTimeSlot}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      color: textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${item.quantity} ${item.unit}${item.orderCode != null ? ' • #${item.orderCode}' : ' • Sub'}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      color: textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  currencyFormatter.format(item.totalAmount),
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                StatusBadge.fromString(item.deliveryStatus),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -1475,14 +1549,19 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                sub.product.title,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  color: textPrimary,
+                              Expanded(
+                                child: Text(
+                                  sub.product.title,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: textPrimary,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                              const SizedBox(width: 8),
                               StatusBadge.fromString(sub.status.label),
                             ],
                           ),
@@ -1512,57 +1591,102 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                 const Divider(height: 24),
 
                 // Pricing and Controls
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Daily: ${currencyFormatter.format(sub.priceAfterDiscountPerDelivery)} • Est. Monthly: ${currencyFormatter.format(sub.monthlyCost)}',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: textPrimary,
-                          ),
+                if (isDesktop)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Daily: ${currencyFormatter.format(sub.priceAfterDiscountPerDelivery)} • Est. Monthly: ${currencyFormatter.format(sub.monthlyCost)}',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: textPrimary,
                         ),
-                      ],
-                    ),
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        if (sub.isActive)
-                          OutlinedButton.icon(
-                            onPressed: () => _handlePauseSubscription(sub),
-                            icon: const Icon(Icons.pause_circle_outline, size: 16),
-                            label: const Text('Pause'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFFF59E0B),
+                      ),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          if (sub.isActive)
+                            OutlinedButton.icon(
+                              onPressed: () => _handlePauseSubscription(sub),
+                              icon: const Icon(Icons.pause_circle_outline, size: 16),
+                              label: const Text('Pause'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFFF59E0B),
+                              ),
                             ),
-                          ),
-                        if (sub.isPaused)
+                          if (sub.isPaused)
+                            ElevatedButton.icon(
+                              onPressed: () => _handleResumeSubscription(sub),
+                              icon: const Icon(Icons.play_circle_outline, size: 16),
+                              label: const Text('Resume'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
                           ElevatedButton.icon(
-                            onPressed: () => _handleResumeSubscription(sub),
-                            icon: const Icon(Icons.play_circle_outline, size: 16),
-                            label: const Text('Resume'),
+                            onPressed: () => _handleSkipDateDialog(sub),
+                            icon: const Icon(Icons.event_busy_rounded, size: 16),
+                            label: const Text('Skip Date'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
+                              backgroundColor: const Color(0xFF1E293B),
                               foregroundColor: Colors.white,
                             ),
                           ),
-                        ElevatedButton.icon(
-                          onPressed: () => _handleSkipDateDialog(sub),
-                          icon: const Icon(Icons.event_busy_rounded, size: 16),
-                          label: const Text('Skip Date'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1E293B),
-                            foregroundColor: Colors.white,
-                          ),
+                        ],
+                      ),
+                    ],
+                  )
+                else
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Daily: ${currencyFormatter.format(sub.priceAfterDiscountPerDelivery)} • Est. Monthly: ${currencyFormatter.format(sub.monthlyCost)}',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: textPrimary,
                         ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (sub.isActive)
+                            OutlinedButton.icon(
+                              onPressed: () => _handlePauseSubscription(sub),
+                              icon: const Icon(Icons.pause_circle_outline, size: 16),
+                              label: const Text('Pause'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFFF59E0B),
+                              ),
+                            ),
+                          if (sub.isPaused)
+                            ElevatedButton.icon(
+                              onPressed: () => _handleResumeSubscription(sub),
+                              icon: const Icon(Icons.play_circle_outline, size: 16),
+                              label: const Text('Resume'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ElevatedButton.icon(
+                            onPressed: () => _handleSkipDateDialog(sub),
+                            icon: const Icon(Icons.event_busy_rounded, size: 16),
+                            label: const Text('Skip Date'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1E293B),
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -1711,15 +1835,35 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: cardBorder),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildLedgerMetric('Total Purchases', currencyFormatter.format(ledger.totalPurchases), textPrimary),
-                _buildLedgerMetric('Total Paid', currencyFormatter.format(ledger.totalPaid), AppColors.revenueGreen),
-                _buildLedgerMetric('Pending Amount', currencyFormatter.format(ledger.pendingAmount), const Color(0xFFEF4444)),
-                _buildLedgerMetric('Wallet Balance', currencyFormatter.format(ledger.walletBalance), AppColors.primary),
-              ],
-            ),
+            child: isDesktop
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Expanded(child: _buildLedgerMetric('Total Purchases', currencyFormatter.format(ledger.totalPurchases), textPrimary)),
+                      Expanded(child: _buildLedgerMetric('Total Paid', currencyFormatter.format(ledger.totalPaid), AppColors.revenueGreen)),
+                      Expanded(child: _buildLedgerMetric('Pending Amount', currencyFormatter.format(ledger.pendingAmount), const Color(0xFFEF4444))),
+                      Expanded(child: _buildLedgerMetric('Wallet Balance', currencyFormatter.format(ledger.walletBalance), AppColors.primary)),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(child: _buildLedgerMetric('Total Purchases', currencyFormatter.format(ledger.totalPurchases), textPrimary)),
+                          const SizedBox(width: 8),
+                          Expanded(child: _buildLedgerMetric('Total Paid', currencyFormatter.format(ledger.totalPaid), AppColors.revenueGreen)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(child: _buildLedgerMetric('Pending Amount', currencyFormatter.format(ledger.pendingAmount), const Color(0xFFEF4444))),
+                          const SizedBox(width: 8),
+                          Expanded(child: _buildLedgerMetric('Wallet Balance', currencyFormatter.format(ledger.walletBalance), AppColors.primary)),
+                        ],
+                      ),
+                    ],
+                  ),
           ),
           const SizedBox(height: 20),
 
@@ -1830,6 +1974,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
 
   Widget _buildLedgerMetric(String label, String value, Color valueColor) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           label,
@@ -1838,14 +1984,21 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
             fontWeight: FontWeight.w600,
             color: const Color(0xFF64748B),
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
         ),
         const SizedBox(height: 2),
-        Text(
-          value,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-            color: valueColor,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: valueColor,
+            ),
+            textAlign: TextAlign.center,
           ),
         ),
       ],

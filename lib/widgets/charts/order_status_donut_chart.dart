@@ -118,7 +118,7 @@ class _OrderStatusDonutChartState extends State<OrderStatusDonutChart> {
                       DropdownMenuItem(
                           value: 'Yesterday', child: Text('Yesterday')),
                       DropdownMenuItem(
-                          value: 'This Week', child: Text('This Week')),
+                          value: 'Tomorrow', child: Text('Tomorrow')),
                     ],
                     onChanged: (val) {
                       if (val != null) provider.setOrderStatusTimeFilter(val);

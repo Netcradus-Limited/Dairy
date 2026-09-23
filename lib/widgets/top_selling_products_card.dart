@@ -46,7 +46,7 @@ class TopSellingProductsCard extends StatelessWidget {
                 ),
               ),
               InkWell(
-                onTap: () => provider.setNavIndex(2),
+                onTap: () => provider.setNavIndex(3),
                 borderRadius: BorderRadius.circular(4),
                 child: Padding(
                   padding:
@@ -70,9 +70,9 @@ class TopSellingProductsCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 16.0),
               child: Center(
                 child: Text(
-                  provider.isLoading
+                  provider.ordersLoading
                       ? 'Loading products...'
-                      : 'No best sellers yet. Mark products as best sellers to see them here.',
+                      : 'No sales recorded for ${provider.orderStatusTimeFilter.toLowerCase()}.',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     color: AppColors.textMuted,

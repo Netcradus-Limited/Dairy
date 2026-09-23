@@ -7,7 +7,6 @@ import '../../models/kpi_data.dart';
 import '../../providers/admin_provider.dart';
 import '../../widgets/charts/order_status_donut_chart.dart';
 import '../../widgets/kpi_card.dart';
-import '../../widgets/top_selling_products_card.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -54,6 +53,39 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBgOf(context),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.cardBorderOf(context)),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: provider.orderStatusTimeFilter,
+                    dropdownColor: AppColors.cardBgOf(context),
+                    icon: Icon(Icons.keyboard_arrow_down_rounded,
+                        size: 18, color: textSecondary),
+                    isDense: true,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'Today', child: Text('Today')),
+                      DropdownMenuItem(
+                          value: 'Yesterday', child: Text('Yesterday')),
+                      DropdownMenuItem(
+                          value: 'Tomorrow', child: Text('Tomorrow')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) provider.setOrderStatusTimeFilter(val);
+                    },
+                  ),
                 ),
               ),
               if (provider.ordersLoading || provider.usersLoading) ...[
@@ -142,32 +174,9 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildMiddleSection(BuildContext context, bool isDesktop) {
-    if (isDesktop) {
-      return const IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              flex: 3,
-              child: OrderStatusDonutChart(),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              flex: 3,
-              child: TopSellingProductsCard(),
-            ),
-          ],
-        ),
-      );
-    } else {
-      // Stack for tablet and mobile
-      return const Column(
-        children: [
-          SizedBox(height: 320, child: OrderStatusDonutChart()),
-          SizedBox(height: 16),
-          TopSellingProductsCard(),
-        ],
-      );
-    }
+    return const SizedBox(
+      height: 340,
+      child: OrderStatusDonutChart(),
+    );
   }
 }
