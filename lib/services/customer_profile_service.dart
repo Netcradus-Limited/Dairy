@@ -96,7 +96,8 @@ class CustomerProfileService {
   }
 
   /// Stream of dedicated delivery records from `/users/{customerId}/delivery_records`
-  Stream<List<CustomerDeliveryRecord>> streamDeliveryRecords(String customerId) {
+  Stream<List<CustomerDeliveryRecord>> streamDeliveryRecords(
+      String customerId) {
     if (customerId.trim().isEmpty) return Stream.value([]);
     try {
       return _firestore
@@ -129,15 +130,18 @@ class CustomerProfileService {
     final List<CustomerDeliveryRecord> results = [];
     final Set<String> addedRecordKeys = {};
 
-    final normalizedStart = DateTime(startDate.year, startDate.month, startDate.day);
-    final normalizedEnd = DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59);
+    final normalizedStart =
+        DateTime(startDate.year, startDate.month, startDate.day);
+    final normalizedEnd =
+        DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59);
 
     // 1. Add Dedicated Firestore Delivery Records
     for (final rec in customRecords) {
       if (rec.customerId == customerId &&
           !rec.date.isBefore(normalizedStart) &&
           !rec.date.isAfter(normalizedEnd)) {
-        final key = '${DateFormat('yyyyMMdd').format(rec.date)}_${rec.productId}_${rec.orderId ?? rec.subscriptionId ?? 'rec'}';
+        final key =
+            '${DateFormat('yyyyMMdd').format(rec.date)}_${rec.productId}_${rec.orderId ?? rec.subscriptionId ?? 'rec'}';
         if (!addedRecordKeys.contains(key)) {
           addedRecordKeys.add(key);
           results.add(rec);
@@ -149,10 +153,12 @@ class CustomerProfileService {
     for (final order in orders) {
       if (order.userId != customerId) continue;
       final orderDate = order.deliveryDate ?? order.orderDate;
-      if (!orderDate.isBefore(normalizedStart) && !orderDate.isAfter(normalizedEnd)) {
+      if (!orderDate.isBefore(normalizedStart) &&
+          !orderDate.isAfter(normalizedEnd)) {
         final orderRecords = CustomerDeliveryRecord.fromOrder(order);
         for (final rec in orderRecords) {
-          final key = '${DateFormat('yyyyMMdd').format(rec.date)}_${rec.productId}_${order.id}';
+          final key =
+              '${DateFormat('yyyyMMdd').format(rec.date)}_${rec.productId}_${order.id}';
           if (!addedRecordKeys.contains(key)) {
             addedRecordKeys.add(key);
             results.add(rec);
@@ -174,7 +180,8 @@ class CustomerProfileService {
         );
 
         if (subRec != null) {
-          final key = '${DateFormat('yyyyMMdd').format(currentDay)}_${subRec.productId}_sub_${subscription.id}';
+          final key =
+              '${DateFormat('yyyyMMdd').format(currentDay)}_${subRec.productId}_sub_${subscription.id}';
           if (!addedRecordKeys.contains(key)) {
             addedRecordKeys.add(key);
             results.add(subRec);
@@ -223,7 +230,8 @@ class CustomerProfileService {
     DateTime? referenceDate,
   }) {
     final now = referenceDate ?? DateTime.now();
-    final tomorrow = DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
+    final tomorrow =
+        DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
     return getConsolidatedDeliveries(
       customerId: customerId,
       startDate: tomorrow,
@@ -310,7 +318,8 @@ class CustomerProfileService {
         .where((o) => o.status != OrderStatus.cancelled)
         .fold(0.0, (acc, o) => acc + o.totalAmount);
 
-    final double totalPurchases = ordersTotal > 0 ? ordersTotal : monthlyDeliveredAmount;
+    final double totalPurchases =
+        ordersTotal > 0 ? ordersTotal : monthlyDeliveredAmount;
 
     // Total Paid = all successful payment records
     final double totalPaid = payments
@@ -343,7 +352,8 @@ class CustomerProfileService {
   // ─── Subscription Management Actions ───────────────────────────────────
 
   /// Pauses customer subscription
-  Future<void> pauseSubscription(String customerId, Subscription currentSub) async {
+  Future<void> pauseSubscription(
+      String customerId, Subscription currentSub) async {
     final updated = currentSub.copyWith(
       status: SubscriptionStatus.paused,
       updatedAt: DateTime.now(),
@@ -352,7 +362,8 @@ class CustomerProfileService {
   }
 
   /// Resumes customer subscription
-  Future<void> resumeSubscription(String customerId, Subscription currentSub) async {
+  Future<void> resumeSubscription(
+      String customerId, Subscription currentSub) async {
     final updated = currentSub.copyWith(
       status: SubscriptionStatus.active,
       updatedAt: DateTime.now(),

@@ -98,10 +98,12 @@ void main() {
         expect(firstTap, isFalse, reason: 'First tap must be processed');
 
         final immediateDuplicate = service.isDuplicateTap('msg-abc', data);
-        expect(immediateDuplicate, isTrue, reason: 'Duplicate tap must be blocked');
+        expect(immediateDuplicate, isTrue,
+            reason: 'Duplicate tap must be blocked');
       });
 
-      test('Rejects rapid duplicate data signature when messageId is missing', () {
+      test('Rejects rapid duplicate data signature when messageId is missing',
+          () {
         final service = container.read(notificationServiceProvider);
 
         final data = {'orderId': 'ORD-404', 'route': '/orders/ORD-404'};
@@ -112,14 +114,16 @@ void main() {
         expect(duplicateSig, isTrue);
       });
 
-      test('Allows processing of different notifications in rapid succession', () {
+      test('Allows processing of different notifications in rapid succession',
+          () {
         final service = container.read(notificationServiceProvider);
 
         final first = service.isDuplicateTap('msg-1', {'orderId': 'ORD-1'});
         expect(first, isFalse);
 
         final second = service.isDuplicateTap('msg-2', {'orderId': 'ORD-2'});
-        expect(second, isFalse, reason: 'Different message ID must not be blocked');
+        expect(second, isFalse,
+            reason: 'Different message ID must not be blocked');
       });
     });
 
@@ -154,16 +158,25 @@ void main() {
       });
 
       test('Customer with allowed customer routes resolves correctly', () {
-        for (final validRoute in ['/cart', '/shop', '/checkout', '/settings', '/support']) {
+        for (final validRoute in [
+          '/cart',
+          '/shop',
+          '/checkout',
+          '/settings',
+          '/support'
+        ]) {
           final route = NotificationService.resolveNotificationRoute(
             user: customerUser,
             explicitRoute: validRoute,
           );
-          expect(route, validRoute, reason: 'Route $validRoute must be allowed for customer');
+          expect(route, validRoute,
+              reason: 'Route $validRoute must be allowed for customer');
         }
       });
 
-      test('Customer is blocked from /admin routes and falls back to /notifications', () {
+      test(
+          'Customer is blocked from /admin routes and falls back to /notifications',
+          () {
         final route = NotificationService.resolveNotificationRoute(
           user: customerUser,
           explicitRoute: '/admin/orders',
@@ -171,7 +184,9 @@ void main() {
         expect(route, '/notifications');
       });
 
-      test('Customer is blocked from /delivery routes and falls back to /notifications', () {
+      test(
+          'Customer is blocked from /delivery routes and falls back to /notifications',
+          () {
         final route = NotificationService.resolveNotificationRoute(
           user: customerUser,
           explicitRoute: '/delivery',
@@ -179,7 +194,8 @@ void main() {
         expect(route, '/notifications');
       });
 
-      test('Customer with unknown/malformed route falls back to /notifications', () {
+      test('Customer with unknown/malformed route falls back to /notifications',
+          () {
         final route = NotificationService.resolveNotificationRoute(
           user: customerUser,
           explicitRoute: '/some/malicious/or/invalid/path',
@@ -187,7 +203,8 @@ void main() {
         expect(route, '/notifications');
       });
 
-      test('Delivery agent with orderId resolves to /delivery (DeliveryPanel)', () {
+      test('Delivery agent with orderId resolves to /delivery (DeliveryPanel)',
+          () {
         final route = NotificationService.resolveNotificationRoute(
           user: deliveryUser,
           orderId: 'ORD-600',
@@ -229,7 +246,9 @@ void main() {
     });
 
     group('4. Unauthenticated Buffering & State Updates', () {
-      test('Tapping notification when user is unauthenticated buffers into pendingNotificationDestinationProvider', () {
+      test(
+          'Tapping notification when user is unauthenticated buffers into pendingNotificationDestinationProvider',
+          () {
         final service = container.read(notificationServiceProvider);
 
         final dest = NotificationDestination.fromPayload(
@@ -258,7 +277,9 @@ void main() {
     });
 
     group('5. Notification Read / Mark-Read Behavior', () {
-      test('Tapping notification with notificationId calls markAsRead for authenticated user', () {
+      test(
+          'Tapping notification with notificationId calls markAsRead for authenticated user',
+          () {
         final mockRepo = _TestNotificationRepo();
         const testUser = User(
           id: 'cust-marked-1',

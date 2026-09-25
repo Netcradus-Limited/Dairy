@@ -15,17 +15,30 @@ import '../../services/subscription_service.dart';
 /// Admin Modal Dialog / BottomSheet for inspecting and managing a single subscription
 class AdminSubscriptionDetailsDialog extends StatefulWidget {
   final Subscription subscription;
+  final SubscriptionService? subscriptionService;
 
   const AdminSubscriptionDetailsDialog({
     super.key,
     required this.subscription,
+    this.subscriptionService,
   });
 
-  static Future<void> show(BuildContext context, Subscription subscription) {
+  static Future<void> show(
+    BuildContext context,
+    Subscription subscription, {
+    SubscriptionService? subscriptionService,
+  }) {
+    final adminProvider = context.read<AdminProvider>();
     return showDialog(
       context: context,
       barrierDismissible: true,
-      builder: (ctx) => AdminSubscriptionDetailsDialog(subscription: subscription),
+      builder: (ctx) => ChangeNotifierProvider.value(
+        value: adminProvider,
+        child: AdminSubscriptionDetailsDialog(
+          subscription: subscription,
+          subscriptionService: subscriptionService,
+        ),
+      ),
     );
   }
 
@@ -38,12 +51,13 @@ class _AdminSubscriptionDetailsDialogState
     extends State<AdminSubscriptionDetailsDialog> {
   late Subscription _sub;
   bool _isProcessing = false;
-  final SubscriptionService _subService = SubscriptionService();
+  late final SubscriptionService _subService;
 
   @override
   void initState() {
     super.initState();
     _sub = widget.subscription;
+    _subService = widget.subscriptionService ?? SubscriptionService();
   }
 
   Color _getStatusColor(SubscriptionStatus status) {
@@ -108,7 +122,8 @@ class _AdminSubscriptionDetailsDialogState
         final now = DateTime.now();
         DateTime nextDate = _sub.nextDeliveryDate ?? now;
         if (nextDate.isBefore(now)) {
-          nextDate = _subService.calculateNextDeliveryDate(_sub.frequency, fromDate: now);
+          nextDate = _subService.calculateNextDeliveryDate(_sub.frequency,
+              fromDate: now);
         }
         setState(() {
           _sub = _sub.copyWith(
@@ -286,8 +301,8 @@ class _AdminSubscriptionDetailsDialogState
                   decoration: InputDecoration(
                     hintText: 'Enter quantity',
                     isDense: true,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8)),
                   ),
@@ -311,8 +326,8 @@ class _AdminSubscriptionDetailsDialogState
                   initialValue: editFrequency,
                   decoration: InputDecoration(
                     isDense: true,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8)),
                   ),
@@ -320,7 +335,8 @@ class _AdminSubscriptionDetailsDialogState
                       .map((f) => DropdownMenuItem(
                             value: f,
                             child: Text(f.label,
-                                style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+                                style:
+                                    GoogleFonts.plusJakartaSans(fontSize: 13)),
                           ))
                       .toList(),
                   onChanged: (f) {
@@ -345,8 +361,8 @@ class _AdminSubscriptionDetailsDialogState
                   decoration: InputDecoration(
                     hintText: 'e.g. Morning (6:00 AM - 9:00 AM)',
                     isDense: true,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8)),
                   ),
@@ -368,7 +384,8 @@ class _AdminSubscriptionDetailsDialogState
                     final picked = await showDatePicker(
                       context: dialogCtx,
                       initialDate: editNextDelivery,
-                      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                      firstDate:
+                          DateTime.now().subtract(const Duration(days: 1)),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
                     if (picked != null) {
@@ -404,7 +421,8 @@ class _AdminSubscriptionDetailsDialogState
             ),
             ElevatedButton(
               onPressed: () {
-                final q = int.tryParse(qtyController.text.trim()) ?? editQuantity;
+                final q =
+                    int.tryParse(qtyController.text.trim()) ?? editQuantity;
                 if (q < 1) return;
                 editQuantity = q;
                 editSlot = slotController.text.trim().isNotEmpty
@@ -556,7 +574,8 @@ class _AdminSubscriptionDetailsDialogState
                                 Clipboard.setData(ClipboardData(text: _sub.id));
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Subscription ID copied to clipboard'),
+                                    content: Text(
+                                        'Subscription ID copied to clipboard'),
                                     duration: Duration(seconds: 1),
                                   ),
                                 );
@@ -741,7 +760,8 @@ class _AdminSubscriptionDetailsDialogState
                                 Row(
                                   children: [
                                     const Icon(Icons.payments_outlined,
-                                        size: 16, color: AppColors.revenueGreen),
+                                        size: 16,
+                                        color: AppColors.revenueGreen),
                                     const SizedBox(width: 6),
                                     Text(
                                       'Schedule & Pricing',
@@ -772,7 +792,8 @@ class _AdminSubscriptionDetailsDialogState
                                 const SizedBox(height: 6),
                                 _infoRow(
                                   'Start Date',
-                                  DateFormat('dd MMM yyyy').format(_sub.startDate),
+                                  DateFormat('dd MMM yyyy')
+                                      .format(_sub.startDate),
                                   textPrimary,
                                   textMuted,
                                 ),
@@ -813,7 +834,8 @@ class _AdminSubscriptionDetailsDialogState
                           return const Padding(
                             padding: EdgeInsets.all(20.0),
                             child: Center(
-                                child: CircularProgressIndicator(strokeWidth: 2)),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2)),
                           );
                         }
                         final orders = snapshot.data ?? [];
@@ -879,8 +901,10 @@ class _AdminSubscriptionDetailsDialogState
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 8, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: o.status == app_order.OrderStatus.delivered
-                                        ? AppColors.revenueGreen.withValues(alpha: 0.1)
+                                    color: o.status ==
+                                            app_order.OrderStatus.delivered
+                                        ? AppColors.revenueGreen
+                                            .withValues(alpha: 0.1)
                                         : Colors.amber.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
@@ -889,7 +913,8 @@ class _AdminSubscriptionDetailsDialogState
                                     style: GoogleFonts.plusJakartaSans(
                                       fontSize: 10,
                                       fontWeight: FontWeight.w700,
-                                      color: o.status == app_order.OrderStatus.delivered
+                                      color: o.status ==
+                                              app_order.OrderStatus.delivered
                                           ? AppColors.revenueGreen
                                           : Colors.amber[800],
                                     ),
@@ -912,12 +937,16 @@ class _AdminSubscriptionDetailsDialogState
               decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: cardBorder)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   // Left side edit button
                   OutlinedButton.icon(
-                    onPressed: _isProcessing ? null : () => _handleEdit(provider),
+                    onPressed:
+                        _isProcessing ? null : () => _handleEdit(provider),
                     icon: const Icon(Icons.edit_outlined, size: 16),
                     label: const Text('Edit Subscription'),
                     style: OutlinedButton.styleFrom(
@@ -931,10 +960,13 @@ class _AdminSubscriptionDetailsDialogState
                   // Right side lifecycle action buttons
                   Wrap(
                     spacing: 8,
+                    runSpacing: 8,
                     children: [
                       if (_sub.status == SubscriptionStatus.active)
                         ElevatedButton.icon(
-                          onPressed: _isProcessing ? null : () => _handlePause(provider),
+                          onPressed: _isProcessing
+                              ? null
+                              : () => _handlePause(provider),
                           icon: const Icon(Icons.pause_circle_outline_rounded,
                               size: 16),
                           label: const Text('Pause'),
@@ -947,8 +979,9 @@ class _AdminSubscriptionDetailsDialogState
                         ),
                       if (_sub.status == SubscriptionStatus.paused)
                         ElevatedButton.icon(
-                          onPressed:
-                              _isProcessing ? null : () => _handleResume(provider),
+                          onPressed: _isProcessing
+                              ? null
+                              : () => _handleResume(provider),
                           icon: const Icon(Icons.play_circle_outline_rounded,
                               size: 16),
                           label: const Text('Resume'),
@@ -961,8 +994,9 @@ class _AdminSubscriptionDetailsDialogState
                         ),
                       if (_sub.status != SubscriptionStatus.cancelled)
                         ElevatedButton.icon(
-                          onPressed:
-                              _isProcessing ? null : () => _handleCancel(provider),
+                          onPressed: _isProcessing
+                              ? null
+                              : () => _handleCancel(provider),
                           icon: const Icon(Icons.cancel_outlined, size: 16),
                           label: const Text('Cancel Subscription'),
                           style: ElevatedButton.styleFrom(

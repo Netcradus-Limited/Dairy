@@ -55,7 +55,8 @@ void main() {
       totalAmount: 90.0,
       status: OrderStatus.placed,
       orderDate: DateTime(2026, 3, 1, 8, 0),
-      deliveryAddress: createAddress(latitude: customerLat, longitude: customerLng),
+      deliveryAddress:
+          createAddress(latitude: customerLat, longitude: customerLng),
       pickupLatitude: pickupLat,
       pickupLongitude: pickupLng,
       estimatedDeliveryTime: estimatedDeliveryTime ?? 'Today by 7:30 AM',
@@ -63,7 +64,9 @@ void main() {
   }
 
   group('Task 3 — Dynamic Distance & ETA Service & Calculation Tests', () {
-    test('1. Valid pickup and customer coordinates calculate dynamic distance and ETA', () {
+    test(
+        '1. Valid pickup and customer coordinates calculate dynamic distance and ETA',
+        () {
       // Pickup at Vijay Nagar Hub (22.7533, 75.8937)
       // Customer at Palasia (22.7244, 75.8839)
       final distKm = DeliveryTrackingService.calculateDistanceKm(
@@ -111,7 +114,8 @@ void main() {
       expect(dist1, isNot(equals(dist2)));
     });
 
-    test('3. Changing customer coordinates changes the calculated distance', () {
+    test('3. Changing customer coordinates changes the calculated distance',
+        () {
       const pickupLat = 22.7255;
       const pickupLng = 75.8800;
 
@@ -142,8 +146,10 @@ void main() {
       final etaLong = DeliveryTrackingService.calculateEstimatedTime(10.0);
 
       // Extract numeric minutes
-      final int minShort = int.parse(etaShort.replaceAll(RegExp(r'[^0-9]'), ''));
-      final int minMedium = int.parse(etaMedium.replaceAll(RegExp(r'[^0-9]'), ''));
+      final int minShort =
+          int.parse(etaShort.replaceAll(RegExp(r'[^0-9]'), ''));
+      final int minMedium =
+          int.parse(etaMedium.replaceAll(RegExp(r'[^0-9]'), ''));
       final int minLong = int.parse(etaLong.replaceAll(RegExp(r'[^0-9]'), ''));
 
       expect(minShort, lessThan(minMedium));
@@ -153,18 +159,31 @@ void main() {
 
     test('5. Invalid coordinates are handled safely without crashing', () {
       // (0,0) placeholder
-      expect(DeliveryTrackingService.calculateDistanceKm(0.0, 0.0, 22.7, 75.8), isNull);
+      expect(DeliveryTrackingService.calculateDistanceKm(0.0, 0.0, 22.7, 75.8),
+          isNull);
       // NaN
-      expect(DeliveryTrackingService.calculateDistanceKm(double.nan, 75.8, 22.7, 75.8), isNull);
+      expect(
+          DeliveryTrackingService.calculateDistanceKm(
+              double.nan, 75.8, 22.7, 75.8),
+          isNull);
       // Infinity
-      expect(DeliveryTrackingService.calculateDistanceKm(22.7, double.infinity, 22.7, 75.8), isNull);
+      expect(
+          DeliveryTrackingService.calculateDistanceKm(
+              22.7, double.infinity, 22.7, 75.8),
+          isNull);
       // Out of bounds
-      expect(DeliveryTrackingService.calculateDistanceKm(95.0, 75.8, 22.7, 75.8), isNull);
+      expect(
+          DeliveryTrackingService.calculateDistanceKm(95.0, 75.8, 22.7, 75.8),
+          isNull);
       // Null
-      expect(DeliveryTrackingService.calculateDistanceKm(null, 75.8, 22.7, 75.8), isNull);
+      expect(
+          DeliveryTrackingService.calculateDistanceKm(null, 75.8, 22.7, 75.8),
+          isNull);
     });
 
-    test('6. Missing/null coordinates fall back gracefully to delivery slot or dash', () {
+    test(
+        '6. Missing/null coordinates fall back gracefully to delivery slot or dash',
+        () {
       final formattedDist = DeliveryTrackingService.formatDistance(null);
       expect(formattedDist, '—');
 
@@ -174,13 +193,18 @@ void main() {
       );
       expect(fallbackEta, 'Today by 7:30 AM');
 
-      final defaultDashEta = DeliveryTrackingService.calculateEstimatedTime(null);
+      final defaultDashEta =
+          DeliveryTrackingService.calculateEstimatedTime(null);
       expect(defaultDashEta, '—');
     });
   });
 
-  group('Task 3 — Delivery Panel deliveryOrderFromOrder Dynamic Distance & ETA Tests', () {
-    test('7. Order with coordinates yields dynamic distance, ETA, and distanceKm', () {
+  group(
+      'Task 3 — Delivery Panel deliveryOrderFromOrder Dynamic Distance & ETA Tests',
+      () {
+    test(
+        '7. Order with coordinates yields dynamic distance, ETA, and distanceKm',
+        () {
       final order = createOrder(
         id: 'ord_1',
         pickupLat: 22.7255,
@@ -219,12 +243,17 @@ void main() {
       final deliveryOrderNear = deliveryOrderFromOrder(orderNear);
       final deliveryOrderFar = deliveryOrderFromOrder(orderFar);
 
-      expect(deliveryOrderNear.distance, isNot(equals(deliveryOrderFar.distance)));
-      expect(deliveryOrderNear.estimatedTime, isNot(equals(deliveryOrderFar.estimatedTime)));
-      expect(deliveryOrderNear.distanceKm!, lessThan(deliveryOrderFar.distanceKm!));
+      expect(
+          deliveryOrderNear.distance, isNot(equals(deliveryOrderFar.distance)));
+      expect(deliveryOrderNear.estimatedTime,
+          isNot(equals(deliveryOrderFar.estimatedTime)));
+      expect(deliveryOrderNear.distanceKm!,
+          lessThan(deliveryOrderFar.distanceKm!));
     });
 
-    test('9. Missing customer coordinates falls back gracefully without crashing', () {
+    test(
+        '9. Missing customer coordinates falls back gracefully without crashing',
+        () {
       final orderNoCustomerCoords = createOrder(
         id: 'ord_no_customer_coords',
         pickupLat: 22.7255,
@@ -241,7 +270,9 @@ void main() {
       expect(deliveryOrder.estimatedTime, 'Today by 7:30 AM');
     });
 
-    test('10. DeliveryOrder copyWith preserves and updates distanceKm correctly', () {
+    test(
+        '10. DeliveryOrder copyWith preserves and updates distanceKm correctly',
+        () {
       final order = createOrder(
         id: 'ord_copy',
         pickupLat: 22.7255,
@@ -251,7 +282,8 @@ void main() {
       );
 
       final deliveryOrder = deliveryOrderFromOrder(order);
-      final copied = deliveryOrder.copyWith(distanceKm: 5.5, distance: '5.5 km');
+      final copied =
+          deliveryOrder.copyWith(distanceKm: 5.5, distance: '5.5 km');
 
       expect(copied.distanceKm, 5.5);
       expect(copied.distance, '5.5 km');

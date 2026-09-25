@@ -78,13 +78,11 @@ class _EditSubscriptionScreenState
   }
 
   List<Product> _resolveAvailableProducts(List<Product> streamedProducts) {
-    final baseList = streamedProducts.isNotEmpty
-        ? streamedProducts
-        : _getFallbackProducts();
+    final baseList =
+        streamedProducts.isNotEmpty ? streamedProducts : _getFallbackProducts();
 
-    final filtered = baseList
-        .where((p) => p.subscriptionEnabled && p.inStock)
-        .toList();
+    final filtered =
+        baseList.where((p) => p.subscriptionEnabled && p.inStock).toList();
 
     return _dedupe(filtered.isNotEmpty ? filtered : _getFallbackProducts());
   }
@@ -124,7 +122,8 @@ class _EditSubscriptionScreenState
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please log in with OTP before creating a subscription.'),
+          content:
+              Text('Please log in with OTP before creating a subscription.'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -140,9 +139,11 @@ class _EditSubscriptionScreenState
     // Check duplicate active subscription for exact same product when creating new
     if (_isNew) {
       final existingSubs = ref.read(subscriptionProvider).subscriptions;
-      final duplicate = existingSubs.where(
-        (s) => s.product.id == product.id && s.isActiveAndValid,
-      ).toList();
+      final duplicate = existingSubs
+          .where(
+            (s) => s.product.id == product.id && s.isActiveAndValid,
+          )
+          .toList();
 
       if (duplicate.isNotEmpty) {
         final shouldEdit = await showDialog<bool>(
@@ -167,7 +168,8 @@ class _EditSubscriptionScreenState
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (_) => EditSubscriptionScreen(subscription: duplicate.first),
+              builder: (_) =>
+                  EditSubscriptionScreen(subscription: duplicate.first),
             ),
           );
         }

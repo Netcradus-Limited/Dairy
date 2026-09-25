@@ -5,7 +5,9 @@ import 'package:dairy_app/providers/user_provider.dart';
 
 void main() {
   group('Admin Role & Phone Normalization Tests', () {
-    test('1. PhoneAuthUtils.normalize extracts 10-digit Indian numbers correctly', () {
+    test(
+        '1. PhoneAuthUtils.normalize extracts 10-digit Indian numbers correctly',
+        () {
       expect(PhoneAuthUtils.normalize('+919999999999'), '9999999999');
       expect(PhoneAuthUtils.normalize('9999999999'), '9999999999');
       expect(PhoneAuthUtils.normalize('+91 99999 99999'), '9999999999');
@@ -16,7 +18,9 @@ void main() {
       expect(PhoneAuthUtils.normalize(''), '');
     });
 
-    test('2. PhoneAuthUtils.generateVariants creates all Firestore queryable formats', () {
+    test(
+        '2. PhoneAuthUtils.generateVariants creates all Firestore queryable formats',
+        () {
       final variants = PhoneAuthUtils.generateVariants('+919999999999');
       expect(variants, contains('+919999999999'));
       expect(variants, contains('9999999999'));
@@ -25,7 +29,9 @@ void main() {
       expect(variants, contains('+91 9999999999'));
     });
 
-    test('3. UserRole.fromPhone detects admin and delivery roles correctly from normalized numbers', () {
+    test(
+        '3. UserRole.fromPhone detects admin and delivery roles correctly from normalized numbers',
+        () {
       expect(UserRole.fromPhone('+919999999999'), UserRole.admin);
       expect(UserRole.fromPhone('9999999999'), UserRole.admin);
       expect(UserRole.fromPhone('+91 99999 99999'), UserRole.admin);
@@ -41,20 +47,37 @@ void main() {
       expect(UserRole.fromPhone(null), UserRole.customer);
     });
 
-    test('4. UserRole.fromPhoneAndRole prioritizes explicit role strings and falls back to phone', () {
-      expect(UserRole.fromPhoneAndRole(phone: '+919876543210', role: 'admin'), UserRole.admin);
-      expect(UserRole.fromPhoneAndRole(phone: '+919876543210', role: 'owner'), UserRole.admin);
-      expect(UserRole.fromPhoneAndRole(phone: '+919876543210', role: 'superadmin'), UserRole.admin);
-      expect(UserRole.fromPhoneAndRole(phone: '+919876543210', role: 'delivery'), UserRole.delivery);
+    test(
+        '4. UserRole.fromPhoneAndRole prioritizes explicit role strings and falls back to phone',
+        () {
+      expect(UserRole.fromPhoneAndRole(phone: '+919876543210', role: 'admin'),
+          UserRole.admin);
+      expect(UserRole.fromPhoneAndRole(phone: '+919876543210', role: 'owner'),
+          UserRole.admin);
+      expect(
+          UserRole.fromPhoneAndRole(phone: '+919876543210', role: 'superadmin'),
+          UserRole.admin);
+      expect(
+          UserRole.fromPhoneAndRole(phone: '+919876543210', role: 'delivery'),
+          UserRole.delivery);
 
       // Phone takes effect when role is default/customer/null
-      expect(UserRole.fromPhoneAndRole(phone: '+919999999999', role: 'customer'), UserRole.admin);
-      expect(UserRole.fromPhoneAndRole(phone: '9999999999', role: null), UserRole.admin);
-      expect(UserRole.fromPhoneAndRole(phone: '+917777777777', role: 'customer'), UserRole.delivery);
-      expect(UserRole.fromPhoneAndRole(phone: '+919876543210', role: 'customer'), UserRole.customer);
+      expect(
+          UserRole.fromPhoneAndRole(phone: '+919999999999', role: 'customer'),
+          UserRole.admin);
+      expect(UserRole.fromPhoneAndRole(phone: '9999999999', role: null),
+          UserRole.admin);
+      expect(
+          UserRole.fromPhoneAndRole(phone: '+917777777777', role: 'customer'),
+          UserRole.delivery);
+      expect(
+          UserRole.fromPhoneAndRole(phone: '+919876543210', role: 'customer'),
+          UserRole.customer);
     });
 
-    test('5. UserRole.fromString maps admin, owner, superadmin to UserRole.admin', () {
+    test(
+        '5. UserRole.fromString maps admin, owner, superadmin to UserRole.admin',
+        () {
       expect(UserRole.fromString('admin'), UserRole.admin);
       expect(UserRole.fromString('ADMIN'), UserRole.admin);
       expect(UserRole.fromString('owner'), UserRole.admin);
@@ -67,7 +90,9 @@ void main() {
       expect(UserRole.fromString('superadmin').homeRoute, '/admin');
     });
 
-    test('6. UserRole.fromString maps delivery roles and defaults customer securely', () {
+    test(
+        '6. UserRole.fromString maps delivery roles and defaults customer securely',
+        () {
       expect(UserRole.fromString('delivery'), UserRole.delivery);
       expect(UserRole.fromString('delivery_agent'), UserRole.delivery);
       expect(UserRole.fromString('driver'), UserRole.delivery);
@@ -80,7 +105,9 @@ void main() {
       expect(UserRole.fromString('customer').homeRoute, '/home');
     });
 
-    test('7. User model isAdmin and isDelivery reflect role and route destinations', () {
+    test(
+        '7. User model isAdmin and isDelivery reflect role and route destinations',
+        () {
       final adminUser = User(
         id: 'test_admin_uid',
         name: 'Test Admin',
@@ -125,7 +152,9 @@ void main() {
       expect(customerUser.userRole.homeRoute, '/home');
     });
 
-    test('8. UserRole.fromString maps dispatcher, manager, staff to UserRole.staff and /admin', () {
+    test(
+        '8. UserRole.fromString maps dispatcher, manager, staff to UserRole.staff and /admin',
+        () {
       expect(UserRole.fromString('dispatcher'), UserRole.staff);
       expect(UserRole.fromString('DISPATCHER'), UserRole.staff);
       expect(UserRole.fromString('route_dispatcher'), UserRole.staff);
@@ -141,7 +170,9 @@ void main() {
       expect(UserRole.fromString('dispatcher').isAdmin, isFalse);
     });
 
-    test('9. User model preserves dispatcher roleTitle, permissions and checks access', () {
+    test(
+        '9. User model preserves dispatcher roleTitle, permissions and checks access',
+        () {
       final dispatcherUser = User.fromMap({
         'id': 'sam_auth_uid_123',
         'name': 'sam',

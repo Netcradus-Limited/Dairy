@@ -20,8 +20,7 @@ class MockDeliveryAdminProvider extends ChangeNotifier
 
   List<DeliveryRider> _riders = [];
 
-  TodaysDeliveryProgress _todaysDeliveryProgress =
-      TodaysDeliveryProgress.empty;
+  TodaysDeliveryProgress _todaysDeliveryProgress = TodaysDeliveryProgress.empty;
   bool _todaysDeliveryProgressLoading = false;
   String? _todaysDeliveryProgressError;
 
@@ -55,8 +54,7 @@ class MockDeliveryAdminProvider extends ChangeNotifier
   List<DeliveryRider> get riders => _riders;
 
   @override
-  TodaysDeliveryProgress get todaysDeliveryProgress =>
-      _todaysDeliveryProgress;
+  TodaysDeliveryProgress get todaysDeliveryProgress => _todaysDeliveryProgress;
 
   @override
   bool get todaysDeliveryProgressLoading => _todaysDeliveryProgressLoading;
@@ -265,10 +263,10 @@ void main() {
     Widget buildTestScreen(MockDeliveryAdminProvider provider) {
       return MaterialApp(
         home: ChangeNotifierProvider<AdminProvider>.value(
-            value: provider,
-            child: const Scaffold(
-              body: DeliveryManagementScreen(),
-            ),
+          value: provider,
+          child: const Scaffold(
+            body: DeliveryManagementScreen(),
+          ),
         ),
       );
     }
@@ -285,14 +283,15 @@ void main() {
 
       expect(find.text('Delivery Routes & Dispatch'), findsOneWidget);
       expect(find.text('Active Delivery Corridors'), findsOneWidget);
-      expect(find.byKey(const Key('add_delivery_route_button')), findsOneWidget);
       expect(
-          find.text('No active delivery corridors registered yet.'),
+          find.byKey(const Key('add_delivery_route_button')), findsOneWidget);
+      expect(find.text('No active delivery corridors registered yet.'),
+          findsOneWidget);
+      expect(find.text("Today's Batch Deliveries Progress"), findsOneWidget);
+      expect(find.byKey(const Key('create_delivery_batch_button')),
           findsOneWidget);
       expect(
-          find.text("Today's Batch Deliveries Progress"), findsOneWidget);
-      expect(find.byKey(const Key('create_delivery_batch_button')), findsOneWidget);
-      expect(find.text('No delivery batches dispatched today.'), findsOneWidget);
+          find.text('No delivery batches dispatched today.'), findsOneWidget);
     });
 
     testWidgets('6. Renders loading state correctly', (tester) async {
@@ -319,16 +318,13 @@ void main() {
       await tester.pumpWidget(buildTestScreen(provider));
       await tester.pump();
 
-      expect(
-          find.text('Failed to load delivery routes: permission denied'),
+      expect(find.text('Failed to load delivery routes: permission denied'),
           findsOneWidget);
-      expect(
-          find.text('Failed to load delivery batches: timeout'),
+      expect(find.text('Failed to load delivery batches: timeout'),
           findsOneWidget);
     });
 
-    testWidgets(
-        '8. Renders real Firestore corridors and batches dynamically',
+    testWidgets('8. Renders real Firestore corridors and batches dynamically',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(1200, 900));
 
@@ -407,7 +403,8 @@ void main() {
       expect(find.text('100%'), findsOneWidget);
     });
 
-    testWidgets('9. Admin route creation flow calls addDeliveryRoute and updates stream',
+    testWidgets(
+        '9. Admin route creation flow calls addDeliveryRoute and updates stream',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(1200, 900));
 
@@ -442,7 +439,8 @@ void main() {
       expect(find.text('Add Delivery Corridor'), findsOneWidget);
 
       // Fill in Route Name
-      final nameField = find.widgetWithText(TextField, 'Route / Corridor Name *');
+      final nameField =
+          find.widgetWithText(TextField, 'Route / Corridor Name *');
       expect(nameField, findsOneWidget);
       await tester.enterText(nameField, 'Corridor Alpha');
 
@@ -465,7 +463,8 @@ void main() {
       expect(find.text('Vijay Nagar'), findsOneWidget);
     });
 
-    testWidgets('10. Route creation validates required fields and surfaces errors',
+    testWidgets(
+        '10. Route creation validates required fields and surfaces errors',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(1200, 900));
 
@@ -488,7 +487,8 @@ void main() {
       expect(provider.addedRoutes, isEmpty);
     });
 
-    testWidgets('11. Admin batch creation flow calls addDeliveryBatch and updates stream',
+    testWidgets(
+        '11. Admin batch creation flow calls addDeliveryBatch and updates stream',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(1200, 900));
 
@@ -514,7 +514,8 @@ void main() {
       await tester.pump();
 
       // Click "+ Create Batch"
-      final createBatchBtn = find.byKey(const Key('create_delivery_batch_button'));
+      final createBatchBtn =
+          find.byKey(const Key('create_delivery_batch_button'));
       expect(createBatchBtn, findsOneWidget);
       await tester.tap(createBatchBtn);
       await tester.pumpAndSettle();
@@ -575,11 +576,14 @@ void main() {
       await tester.tap(find.byKey(const Key('add_delivery_route_button')));
       await tester.pumpAndSettle();
       await tester.enterText(
-          find.widgetWithText(TextField, 'Route / Corridor Name *'), 'Route Error Test');
+          find.widgetWithText(TextField, 'Route / Corridor Name *'),
+          'Route Error Test');
       await tester.tap(find.byKey(const Key('submit_route_dialog_button')));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Failed to save corridor: Exception: Firestore write failed for route'),
+      expect(
+          find.textContaining(
+              'Failed to save corridor: Exception: Firestore write failed for route'),
           findsOneWidget);
     });
   });

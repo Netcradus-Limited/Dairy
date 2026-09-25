@@ -69,7 +69,8 @@ void main() {
       expect(readItem.route, '/orders/ORD-101');
     });
 
-    test('NotificationType parsing and icon coverage for all operational types', () {
+    test('NotificationType parsing and icon coverage for all operational types',
+        () {
       expect(NotificationTypeExtension.fromString('order'),
           NotificationType.order);
       expect(NotificationTypeExtension.fromString('delivery'),
@@ -176,7 +177,8 @@ void main() {
       expect(resolveNav(NotificationType.system), 9);
     });
 
-    test('Dual orderId / order_id parsing in NotificationItem.fromFirestore', () {
+    test('Dual orderId / order_id parsing in NotificationItem.fromFirestore',
+        () {
       final now = DateTime.now();
 
       // Case 1: camelCase orderId
@@ -215,7 +217,8 @@ void main() {
       expect(itemNone.orderId, isNull);
     });
 
-    test('Tolerant schema parsing for various Firestore document structures', () {
+    test('Tolerant schema parsing for various Firestore document structures',
+        () {
       final now = DateTime.now();
 
       // Test with createdAt and boolean string
@@ -445,8 +448,8 @@ void main() {
         expect(result, isTrue);
       });
 
-      test(
-          'Delivery agent CANNOT save another delivery agent\'s FCM token', () {
+      test('Delivery agent CANNOT save another delivery agent\'s FCM token',
+          () {
         final result = evaluateFCMTokenRule(
           authUid: testDeliveryUid,
           authRole: 'delivery',
@@ -517,8 +520,7 @@ void main() {
         expect(allowed, isTrue);
       });
 
-      test(
-          'Authenticated user CANNOT read or write ANOTHER user notifications',
+      test('Authenticated user CANNOT read or write ANOTHER user notifications',
           () {
         final allowed = evaluateNotificationRule(
           authUid: 'user_123',
@@ -569,18 +571,23 @@ void main() {
       test('web/firebase-messaging-sw.js exists and is not empty', () {
         final swFile = File('web/firebase-messaging-sw.js');
         expect(swFile.existsSync(), isTrue,
-            reason: 'web/firebase-messaging-sw.js must exist in the Flutter web public root');
+            reason:
+                'web/firebase-messaging-sw.js must exist in the Flutter web public root');
         final content = swFile.readAsStringSync();
         expect(content.trim().isNotEmpty, isTrue);
       });
 
-      test('web/firebase-messaging-sw.js contains exact Firebase web credentials', () {
+      test(
+          'web/firebase-messaging-sw.js contains exact Firebase web credentials',
+          () {
         final swFile = File('web/firebase-messaging-sw.js');
         final content = swFile.readAsStringSync();
 
-        expect(content.contains('AIzaSyCHV_tWBg53-HsR5DDFL7WQfJrL56qvBaI'), isTrue,
+        expect(
+            content.contains('AIzaSyCHV_tWBg53-HsR5DDFL7WQfJrL56qvBaI'), isTrue,
             reason: 'Service worker must contain the exact web apiKey');
-        expect(content.contains('1:325042169664:web:78b972a71a1775611d7ca5'), isTrue,
+        expect(content.contains('1:325042169664:web:78b972a71a1775611d7ca5'),
+            isTrue,
             reason: 'Service worker must contain the exact web appId');
         expect(content.contains('325042169664'), isTrue,
             reason: 'Service worker must contain the exact messagingSenderId');
@@ -590,7 +597,9 @@ void main() {
             reason: 'Service worker must contain the exact authDomain');
       });
 
-      test('web/firebase-messaging-sw.js imports compat libraries and registers listeners', () {
+      test(
+          'web/firebase-messaging-sw.js imports compat libraries and registers listeners',
+          () {
         final swFile = File('web/firebase-messaging-sw.js');
         final content = swFile.readAsStringSync();
 
@@ -603,7 +612,9 @@ void main() {
     });
 
     group('Mark As Read Click Flow & State Tests', () {
-      test('1 & 3: Unread non-actionable notification (isActionable=false) calls markAsRead', () async {
+      test(
+          '1 & 3: Unread non-actionable notification (isActionable=false) calls markAsRead',
+          () async {
         final calls = <String>[];
         Future<void> mockMarkAsRead(String uid, String notifId) async {
           calls.add('markAsRead($uid, $notifId)');
@@ -633,7 +644,8 @@ void main() {
             reason: 'isActionable=false must not prevent mark-as-read');
       });
 
-      test('2: Correct UID and notification ID are passed to markAsRead', () async {
+      test('2: Correct UID and notification ID are passed to markAsRead',
+          () async {
         String? capturedUid;
         String? capturedId;
 
@@ -663,7 +675,8 @@ void main() {
         expect(capturedId, 'doc_notif_456');
       });
 
-      test('4: Already-read notification does not cause an unnecessary write', () async {
+      test('4: Already-read notification does not cause an unnecessary write',
+          () async {
         int writeCount = 0;
         Future<void> mockMarkAsRead(String uid, String notifId) async {
           writeCount++;
@@ -691,7 +704,9 @@ void main() {
             reason: 'Already-read notifications must skip mark-as-read write');
       });
 
-      test('5: Dropdown and full Notifications screen use the same mark-as-read behavior', () async {
+      test(
+          '5: Dropdown and full Notifications screen use the same mark-as-read behavior',
+          () async {
         final handledByDropdown = <String>[];
         final handledByScreen = <String>[];
 
@@ -722,7 +737,9 @@ void main() {
     });
 
     group('Customer -> Admin Notification Integration & Event Flow Tests', () {
-      test('1, 4, 5 & 6: Successful complaint creates Admin notification with support type, isRead=false & metadata', () async {
+      test(
+          '1, 4, 5 & 6: Successful complaint creates Admin notification with support type, isRead=false & metadata',
+          () async {
         final notificationsCreated = <Map<String, dynamic>>[];
 
         Future<void> mockSendNotificationToAdmins({
@@ -786,7 +803,9 @@ void main() {
         expect(notif['metadata']['customerId'], 'cust_rahul_1');
       });
 
-      test('3 & 7: Dynamic Admin UID discovery creates exactly one notification per intended Admin', () async {
+      test(
+          '3 & 7: Dynamic Admin UID discovery creates exactly one notification per intended Admin',
+          () async {
         final adminDirectory = [
           {'id': 'admin_1', 'role': 'admin'},
           {'id': 'admin_2', 'role': 'superadmin'},
@@ -801,7 +820,8 @@ void main() {
             .map((u) => u['id']!)
             .toList();
 
-        expect(discoveredAdminUids, containsAll(['admin_1', 'admin_2', 'owner_1']));
+        expect(discoveredAdminUids,
+            containsAll(['admin_1', 'admin_2', 'owner_1']));
         expect(discoveredAdminUids, isNot(contains('customer_1')));
         expect(discoveredAdminUids, isNot(contains('delivery_1')));
         expect(discoveredAdminUids.length, 3);
@@ -816,7 +836,9 @@ void main() {
         expect(writesPerAdmin['owner_1'], 1);
       });
 
-      test('8: Notification dispatch error does not cause complaint failure or duplicate submission', () async {
+      test(
+          '8: Notification dispatch error does not cause complaint failure or duplicate submission',
+          () async {
         bool complaintSaved = false;
         bool notificationAttempted = false;
 
@@ -832,11 +854,14 @@ void main() {
         }
 
         expect(complaintSaved, isTrue,
-            reason: 'Complaint must remain safely saved even if notification fails');
+            reason:
+                'Complaint must remain safely saved even if notification fails');
         expect(notificationAttempted, isTrue);
       });
 
-      test('End-to-End: Complaint saved -> Cloud Function trigger -> deterministic notification written to users/{adminUid}/notifications/complaint_{complaintId} with support & isRead=false', () async {
+      test(
+          'End-to-End: Complaint saved -> Cloud Function trigger -> deterministic notification written to users/{adminUid}/notifications/complaint_{complaintId} with support & isRead=false',
+          () async {
         final firestoreWrites = <String, Map<String, dynamic>>{};
 
         Future<void> simulatedBackendComplaintTrigger({
@@ -891,7 +916,8 @@ void main() {
           ticketId: 'CMP-654321',
         );
 
-        const expectedPath = 'users/admin_main_user/notifications/complaint_CMP_DOC_456';
+        const expectedPath =
+            'users/admin_main_user/notifications/complaint_CMP_DOC_456';
         expect(firestoreWrites.containsKey(expectedPath), isTrue);
         final writtenDoc = firestoreWrites[expectedPath]!;
         expect(writtenDoc['type'], 'support');
@@ -924,598 +950,599 @@ void main() {
   });
 
   group('Task 11 — Delivery Agent → Admin Notification Flow Tests', () {
-      const String customerId = 'cust_rahul_1';
-      const String customerName = 'Rahul Sharma';
+    const String customerId = 'cust_rahul_1';
+    const String customerName = 'Rahul Sharma';
 
-      test('1: Accept order → Admin notification created', () async {
-        final notificationsCreated = <Map<String, dynamic>>[];
-        Future<void> mockSendNotificationToAdmins({
-          required String title,
-          required String body,
-          required NotificationType type,
-          String? orderId,
-          String? assignedAgentId,
-          String? route,
-          bool isActionable = false,
-          Map<String, dynamic>? metadata,
-          String? senderUid,
-        }) async {
-          notificationsCreated.add({
-            'title': title,
-            'body': body,
-            'type': type,
-            'isRead': false,
-            'isActionable': isActionable,
-            'orderId': orderId,
-            'assignedAgentId': assignedAgentId,
-            'route': route,
-            'metadata': metadata,
-            'senderUid': senderUid,
-          });
-        }
-
-        // Simulate order acceptance: order status changes from "placed" to "accepted"
-        // with assignedAgentId set
-        const orderId = 'ORD-ACCEPT-101';
-
-        await mockSendNotificationToAdmins(
-          title: 'Order Accepted 📦',
-          body: '$customerName: Agent accepted order #$orderId',
-          type: NotificationType.delivery,
-          orderId: orderId,
-          assignedAgentId: 'agent_99',
-          route: '/delivery',
-          isActionable: true,
-          metadata: {
-            'source': 'delivery',
-            'orderId': orderId,
-            'eventType': 'orderAccepted',
-            'agentId': 'agent_99',
-          },
-          senderUid: customerId,
-        );
-
-        expect(notificationsCreated.length, 1);
-        final notif = notificationsCreated.first;
-        expect(notif['title'], 'Order Accepted 📦');
-        expect(notif['body'], '$customerName: Agent accepted order #$orderId');
-        expect(notif['type'], NotificationType.delivery);
-        expect(notif['isRead'], false);
-        expect(notif['isActionable'], isTrue);
-        expect(notif['route'], '/delivery');
-        expect(notif['orderId'], orderId);
-        expect(notif['assignedAgentId'], 'agent_99');
-        expect(notif['metadata']['source'], 'delivery');
-        expect(notif['metadata']['eventType'], 'orderAccepted');
-        expect(notif['metadata']['agentId'], 'agent_99');
-      });
-
-      test('2: Decline order → Admin notification created', () async {
-        final notificationsCreated = <Map<String, dynamic>>[];
-        Future<void> mockSendNotificationToAdmins({
-          required String title,
-          required String body,
-          required NotificationType type,
-          String? orderId,
-          String? assignedAgentId,
-          String? route,
-          bool isActionable = false,
-          Map<String, dynamic>? metadata,
-          String? senderUid,
-        }) async {
-          notificationsCreated.add({
-            'title': title,
-            'body': body,
-            'type': type,
-            'isRead': false,
-            'isActionable': isActionable,
-            'orderId': orderId,
-            'assignedAgentId': assignedAgentId,
-            'route': route,
-            'metadata': metadata,
-            'senderUid': senderUid,
-          });
-        }
-
-        // Simulate order decline: order status changes from "accepted" to "pending"
-        // (agent declined)
-        const orderId = 'ORD-DECLINE-101';
-
-        await mockSendNotificationToAdmins(
-          title: 'Order Declined ❌',
-          body: '$customerName: Agent declined order #$orderId',
-          type: NotificationType.delivery,
-          orderId: orderId,
-          assignedAgentId: 'agent_99',
-          route: '/delivery',
-          isActionable: true,
-          metadata: {
-            'source': 'delivery',
-            'orderId': orderId,
-            'eventType': 'orderDeclined',
-            'agentId': 'agent_99',
-          },
-          senderUid: customerId,
-        );
-
-        expect(notificationsCreated.length, 1);
-        final notif = notificationsCreated.first;
-        expect(notif['title'], 'Order Declined ❌');
-        expect(notif['assignedAgentId'], 'agent_99');
-        expect(notif['metadata']['eventType'], 'orderDeclined');
-      });
-
-      test('3: Pickup started → Admin notification created', () async {
-        final notificationsCreated = <Map<String, dynamic>>[];
-        Future<void> mockSendNotificationToAdmins({
-          required String title,
-          required String body,
-          required NotificationType type,
-          String? orderId,
-          String? assignedAgentId,
-          String? route,
-          bool isActionable = false,
-          Map<String, dynamic>? metadata,
-          String? senderUid,
-        }) async {
-          notificationsCreated.add({
-            'title': title,
-            'body': body,
-            'type': type,
-            'isRead': false,
-            'isActionable': isActionable,
-            'orderId': orderId,
-            'route': route,
-            'metadata': metadata,
-            'senderUid': senderUid,
-          });
-        }
-
-        const orderId = 'ORD-PICKUP-101';
-        await mockSendNotificationToAdmins(
-          title: 'Pickup Started 🚐',
-          body: '$customerName: Agent started pickup for order #$orderId',
-          type: NotificationType.delivery,
-          orderId: orderId,
-          assignedAgentId: 'agent_99',
-          route: '/delivery',
-          isActionable: true,
-          metadata: {
-            'source': 'delivery',
-            'orderId': orderId,
-            'eventType': 'pickupStarted',
-            'agentId': 'agent_99',
-          },
-          senderUid: customerId,
-        );
-
-        expect(notificationsCreated.length, 1);
-        final notif = notificationsCreated.first;
-        expect(notif['title'], 'Pickup Started 🚐');
-        expect(notif['metadata']['eventType'], 'pickupStarted');
-      });
-
-      test('4: Delivery started → Admin notification created', () async {
-        final notificationsCreated = <Map<String, dynamic>>[];
-        Future<void> mockSendNotificationToAdmins({
-          required String title,
-          required String body,
-          required NotificationType type,
-          String? orderId,
-          String? assignedAgentId,
-          String? route,
-          bool isActionable = false,
-          Map<String, dynamic>? metadata,
-          String? senderUid,
-        }) async {
-          notificationsCreated.add({
-            'title': title,
-            'body': body,
-            'type': type,
-            'isRead': false,
-            'isActionable': isActionable,
-            'orderId': orderId,
-            'route': route,
-            'metadata': metadata,
-            'senderUid': senderUid,
-          });
-        }
-
-        const orderId = 'ORD-DELIVERY-101';
-        await mockSendNotificationToAdmins(
-          title: 'Delivery Started 🚚',
-          body: '$customerName: Agent started delivery for order #$orderId',
-          type: NotificationType.delivery,
-          orderId: orderId,
-          assignedAgentId: 'agent_99',
-          route: '/delivery',
-          isActionable: true,
-          metadata: {
-            'source': 'delivery',
-            'orderId': orderId,
-            'eventType': 'deliveryStarted',
-            'agentId': 'agent_99',
-          },
-          senderUid: customerId,
-        );
-
-        expect(notificationsCreated.length, 1);
-        final notif = notificationsCreated.first;
-        expect(notif['title'], 'Delivery Started 🚚');
-        expect(notif['metadata']['eventType'], 'deliveryStarted');
-      });
-
-      test('5: Delivered → Admin notification created', () async {
-        final notificationsCreated = <Map<String, dynamic>>[];
-        Future<void> mockSendNotificationToAdmins({
-          required String title,
-          required String body,
-          required NotificationType type,
-          String? orderId,
-          String? assignedAgentId,
-          String? route,
-          bool isActionable = false,
-          Map<String, dynamic>? metadata,
-          String? senderUid,
-        }) async {
-          notificationsCreated.add({
-            'title': title,
-            'body': body,
-            'type': type,
-            'isRead': false,
-            'isActionable': isActionable,
-            'orderId': orderId,
-            'route': route,
-            'metadata': metadata,
-            'senderUid': senderUid,
-          });
-        }
-
-        const orderId = 'ORD-DELIVERED-101';
-        await mockSendNotificationToAdmins(
-          title: 'Delivery Confirmed ✅',
-          body: '$customerName: Order #$orderId delivered successfully',
-          type: NotificationType.delivery,
-          orderId: orderId,
-          assignedAgentId: 'agent_99',
-          route: '/admin/orders',
-          isActionable: true,
-          metadata: {
-            'source': 'delivery',
-            'orderId': orderId,
-            'eventType': 'deliveryConfirmed',
-            'agentId': 'agent_99',
-          },
-          senderUid: customerId,
-        );
-
-        expect(notificationsCreated.length, 1);
-        final notif = notificationsCreated.first;
-        expect(notif['title'], 'Delivery Confirmed ✅');
-        expect(notif['route'], '/admin/orders');
-        expect(notif['metadata']['eventType'], 'deliveryConfirmed');
-      });
-
-      test('6: Failed/cancelled delivery → Admin notification created', () async {
-        final notificationsCreated = <Map<String, dynamic>>[];
-        Future<void> mockSendNotificationToAdmins({
-          required String title,
-          required String body,
-          required NotificationType type,
-          String? orderId,
-          String? assignedAgentId,
-          String? route,
-          bool isActionable = false,
-          Map<String, dynamic>? metadata,
-          String? senderUid,
-        }) async {
-          notificationsCreated.add({
-            'title': title,
-            'body': body,
-            'type': type,
-            'isRead': false,
-            'isActionable': isActionable,
-            'orderId': orderId,
-            'route': route,
-            'metadata': metadata,
-            'senderUid': senderUid,
-          });
-        }
-
-        const orderId = 'ORD-FAILED-101';
-        await mockSendNotificationToAdmins(
-          title: 'Delivery Failed ❌',
-          body: '$customerName: Order #$orderId delivery failed/cancelled',
-          type: NotificationType.delivery,
-          orderId: orderId,
-          assignedAgentId: 'agent_99',
-          route: '/admin/orders',
-          isActionable: true,
-          metadata: {
-            'source': 'delivery',
-            'orderId': orderId,
-            'eventType': 'deliveryFailed',
-            'agentId': 'agent_99',
-          },
-          senderUid: customerId,
-        );
-
-        expect(notificationsCreated.length, 1);
-        final notif = notificationsCreated.first;
-        expect(notif['title'], 'Delivery Failed ❌');
-        expect(notif['route'], '/admin/orders');
-        expect(notif['metadata']['eventType'], 'deliveryFailed');
-      });
-
-      test('7: Notification contains orderId', () async {
-        final notificationsCreated = <Map<String, dynamic>>[];
-        Future<void> mockSendNotificationToAdmins({
-          required String title,
-          required String body,
-          required NotificationType type,
-          String? orderId,
-          String? assignedAgentId,
-          String? route,
-          bool isActionable = false,
-          Map<String, dynamic>? metadata,
-          String? senderUid,
-        }) async {
-          notificationsCreated.add({
-            'title': title,
-            'body': body,
-            'type': type,
-            'isRead': false,
-            'isActionable': isActionable,
-            'orderId': orderId,
-            'route': route,
-            'metadata': metadata,
-            'senderUid': senderUid,
-          });
-        }
-
-        const orderId = 'ORD-VALID-101';
-        await mockSendNotificationToAdmins(
-          title: 'Test Notification',
-          body: 'Test body',
-          type: NotificationType.delivery,
-          orderId: orderId,
-          assignedAgentId: 'agent_99',
-          route: '/delivery',
-          isActionable: true,
-          senderUid: customerId,
-        );
-
-        expect(notificationsCreated.length, 1);
-        final notif = notificationsCreated.first;
-        expect(notif['orderId'], orderId);
-      });
-
-      test('8: Notification contains agentId', () async {
-        final notificationsCreated = <Map<String, dynamic>>[];
-        Future<void> mockSendNotificationToAdmins({
-          required String title,
-          required String body,
-          required NotificationType type,
-          String? orderId,
-          String? assignedAgentId,
-          String? route,
-          bool isActionable = false,
-          Map<String, dynamic>? metadata,
-          String? senderUid,
-        }) async {
-          notificationsCreated.add({
-            'title': title,
-            'body': body,
-            'type': type,
-            'isRead': false,
-            'isActionable': isActionable,
-            'orderId': orderId,
-            'assignedAgentId': assignedAgentId,
-            'route': route,
-            'metadata': metadata,
-            'senderUid': senderUid,
-          });
-        }
-
-        const orderId = 'ORD-AGENT-101';
-        await mockSendNotificationToAdmins(
-          title: 'Test Notification',
-          body: 'Test body',
-          type: NotificationType.delivery,
-          orderId: orderId,
-          assignedAgentId: 'agent_99',
-          route: '/delivery',
-          isActionable: true,
-          senderUid: customerId,
-        );
-
-        expect(notificationsCreated.length, 1);
-        final notif = notificationsCreated.first;
-        expect(notif['assignedAgentId'], 'agent_99');
-      });
-
-      test('9: Duplicate event does not create duplicate notification', () async {
-        final notificationsCreated = <Map<String, dynamic>>[];
-        int callCount = 0;
-        Future<void> mockSendNotificationToAdmins({
-          required String title,
-          required String body,
-          required NotificationType type,
-          String? orderId,
-          String? assignedAgentId,
-          String? route,
-          bool isActionable = false,
-          Map<String, dynamic>? metadata,
-          String? senderUid,
-        }) async {
-          callCount++;
-          // Only create on first call; subsequent calls with same orderId+eventType are ignored
-          if (callCount <= 1) {
-            notificationsCreated.add({
-              'title': title,
-              'body': body,
-              'type': type,
-              'isRead': false,
-              'isActionable': isActionable,
-              'orderId': orderId,
-              'route': route,
-              'metadata': metadata,
-              'senderUid': senderUid,
-            });
-          }
-        }
-
-        const orderId = 'ORD-DUPLICATE-101';
-        // First call should create notification
-        await mockSendNotificationToAdmins(
-          title: 'Order Accepted 📦',
-          body: '$customerName: Agent accepted order #$orderId',
-          type: NotificationType.delivery,
-          orderId: orderId,
-          assignedAgentId: 'agent_99',
-          route: '/delivery',
-          isActionable: true,
-          metadata: {
-            'source': 'delivery',
-            'orderId': orderId,
-            'eventType': 'orderAccepted',
-            'agentId': 'agent_99',
-          },
-          senderUid: customerId,
-        );
-        // Second call with same orderId+eventType should be ignored (idempotency)
-        await mockSendNotificationToAdmins(
-          title: 'Order Accepted 📦',
-          body: '$customerName: Agent accepted order #$orderId',
-          type: NotificationType.delivery,
-          orderId: orderId,
-          assignedAgentId: 'agent_99',
-          route: '/delivery',
-          isActionable: true,
-          metadata: {
-            'source': 'delivery',
-            'orderId': orderId,
-            'eventType': 'orderAccepted',
-            'agentId': 'agent_99',
-          },
-          senderUid: customerId,
-        );
-
-        // Only one notification should be created despite 2 function calls
-        expect(notificationsCreated.length, 1);
-        expect(callCount, 2);
-      });
-
-      test('10: Invalid agent cannot create notification', () async {
-        final notificationsCreated = <Map<String, dynamic>>[];
-        bool callHappened = false;
-        Future<void> mockSendNotificationToAdmins({
-          required String title,
-          required String body,
-          required NotificationType type,
-          String? orderId,
-          String? assignedAgentId,
-          String? route,
-          bool isActionable = false,
-          Map<String, dynamic>? metadata,
-          String? senderUid,
-        }) async {
-          if (senderUid == 'nonexistent_uid') {
-            return;
-          }
-          callHappened = true;
-          notificationsCreated.add({
-            'title': title,
-            'body': body,
-            'type': type,
-            'isRead': false,
-            'isActionable': isActionable,
-            'orderId': orderId,
-            'assignedAgentId': assignedAgentId,
-            'route': route,
-            'metadata': metadata,
-            'senderUid': senderUid,
-          });
-        }
-
-        // No admin UIDs discovered → should skip
-        await mockSendNotificationToAdmins(
-          title: 'Test',
-          body: 'Test body',
-          type: NotificationType.delivery,
-          orderId: 'ORD-TEST-101',
-          assignedAgentId: 'agent_99',
-          route: '/delivery',
-          senderUid: 'nonexistent_uid',
-        );
-
-        // When no admins are found, notification should not be created
-        // This is tested by checking the function returns early with no_admins_found
-        // In our test, since we're mocking, we verify the function handles gracefully
-        expect(callHappened, isFalse,
-            reason: 'No admin UIDs discovered should prevent notification creation');
-      });
-
-      test('11: Notification tap navigates Admin correctly - order accepted', () {
-        final mockRepo = _TestNotificationRepo();
-        const testUser = User(
-          id: 'admin-marked-1',
-          name: 'Test Admin',
-          phone: '9876543210',
-          role: 'admin',
-        );
-
-        final authContainer = ProviderContainer(
-          overrides: [
-            notificationRepositoryProvider.overrideWithValue(mockRepo),
-            userProvider.overrideWith((ref) => _TestUserNotifier(testUser)),
-          ],
-        );
-
-        final service = authContainer.read(notificationServiceProvider);
-        final dest = NotificationDestination.fromPayload({
-          'notificationId': 'delivery_ORD-ACCEPT-101_orderAccepted',
-          'orderId': 'ORD-ACCEPT-101',
-          'route': '/delivery',
-          'type': 'delivery',
-          'assignedAgentId': 'agent_99',
+    test('1: Accept order → Admin notification created', () async {
+      final notificationsCreated = <Map<String, dynamic>>[];
+      Future<void> mockSendNotificationToAdmins({
+        required String title,
+        required String body,
+        required NotificationType type,
+        String? orderId,
+        String? assignedAgentId,
+        String? route,
+        bool isActionable = false,
+        Map<String, dynamic>? metadata,
+        String? senderUid,
+      }) async {
+        notificationsCreated.add({
+          'title': title,
+          'body': body,
+          'type': type,
+          'isRead': false,
+          'isActionable': isActionable,
+          'orderId': orderId,
+          'assignedAgentId': assignedAgentId,
+          'route': route,
+          'metadata': metadata,
+          'senderUid': senderUid,
         });
+      }
 
-        service.handleNotificationTap(dest);
+      // Simulate order acceptance: order status changes from "placed" to "accepted"
+      // with assignedAgentId set
+      const orderId = 'ORD-ACCEPT-101';
 
-        // Admin should navigate to /delivery (DeliveryPanel) for delivery-related notifications
-        // The route should be resolved via resolveNotificationRoute
-        authContainer.dispose();
-      });
+      await mockSendNotificationToAdmins(
+        title: 'Order Accepted 📦',
+        body: '$customerName: Agent accepted order #$orderId',
+        type: NotificationType.delivery,
+        orderId: orderId,
+        assignedAgentId: 'agent_99',
+        route: '/delivery',
+        isActionable: true,
+        metadata: {
+          'source': 'delivery',
+          'orderId': orderId,
+          'eventType': 'orderAccepted',
+          'agentId': 'agent_99',
+        },
+        senderUid: customerId,
+      );
 
-      test('12: Notification becomes read when Admin taps it', () async {
-        int writeCount = 0;
-        Future<void> mockMarkAsRead(String uid, String notifId) async {
-          writeCount++;
-        }
-
-        const testUid = 'admin_super_999';
-        final notif = NotificationItem(
-          id: 'delivery_NOTIF-456',
-          type: NotificationType.delivery,
-          title: 'Delivery Confirmed',
-          body: 'Order delivered successfully',
-          timestamp: DateTime.now(),
-          orderId: 'ORD-999',
-          isRead: false,
-          isActionable: true,
-          userId: testUid,
-        );
-
-        if (!notif.isRead) {
-          await mockMarkAsRead(testUid, notif.id);
-        }
-
-        expect(writeCount, 1,
-            reason: 'Tapping unread notification should mark as read');
-      });
+      expect(notificationsCreated.length, 1);
+      final notif = notificationsCreated.first;
+      expect(notif['title'], 'Order Accepted 📦');
+      expect(notif['body'], '$customerName: Agent accepted order #$orderId');
+      expect(notif['type'], NotificationType.delivery);
+      expect(notif['isRead'], false);
+      expect(notif['isActionable'], isTrue);
+      expect(notif['route'], '/delivery');
+      expect(notif['orderId'], orderId);
+      expect(notif['assignedAgentId'], 'agent_99');
+      expect(notif['metadata']['source'], 'delivery');
+      expect(notif['metadata']['eventType'], 'orderAccepted');
+      expect(notif['metadata']['agentId'], 'agent_99');
     });
-  }
+
+    test('2: Decline order → Admin notification created', () async {
+      final notificationsCreated = <Map<String, dynamic>>[];
+      Future<void> mockSendNotificationToAdmins({
+        required String title,
+        required String body,
+        required NotificationType type,
+        String? orderId,
+        String? assignedAgentId,
+        String? route,
+        bool isActionable = false,
+        Map<String, dynamic>? metadata,
+        String? senderUid,
+      }) async {
+        notificationsCreated.add({
+          'title': title,
+          'body': body,
+          'type': type,
+          'isRead': false,
+          'isActionable': isActionable,
+          'orderId': orderId,
+          'assignedAgentId': assignedAgentId,
+          'route': route,
+          'metadata': metadata,
+          'senderUid': senderUid,
+        });
+      }
+
+      // Simulate order decline: order status changes from "accepted" to "pending"
+      // (agent declined)
+      const orderId = 'ORD-DECLINE-101';
+
+      await mockSendNotificationToAdmins(
+        title: 'Order Declined ❌',
+        body: '$customerName: Agent declined order #$orderId',
+        type: NotificationType.delivery,
+        orderId: orderId,
+        assignedAgentId: 'agent_99',
+        route: '/delivery',
+        isActionable: true,
+        metadata: {
+          'source': 'delivery',
+          'orderId': orderId,
+          'eventType': 'orderDeclined',
+          'agentId': 'agent_99',
+        },
+        senderUid: customerId,
+      );
+
+      expect(notificationsCreated.length, 1);
+      final notif = notificationsCreated.first;
+      expect(notif['title'], 'Order Declined ❌');
+      expect(notif['assignedAgentId'], 'agent_99');
+      expect(notif['metadata']['eventType'], 'orderDeclined');
+    });
+
+    test('3: Pickup started → Admin notification created', () async {
+      final notificationsCreated = <Map<String, dynamic>>[];
+      Future<void> mockSendNotificationToAdmins({
+        required String title,
+        required String body,
+        required NotificationType type,
+        String? orderId,
+        String? assignedAgentId,
+        String? route,
+        bool isActionable = false,
+        Map<String, dynamic>? metadata,
+        String? senderUid,
+      }) async {
+        notificationsCreated.add({
+          'title': title,
+          'body': body,
+          'type': type,
+          'isRead': false,
+          'isActionable': isActionable,
+          'orderId': orderId,
+          'route': route,
+          'metadata': metadata,
+          'senderUid': senderUid,
+        });
+      }
+
+      const orderId = 'ORD-PICKUP-101';
+      await mockSendNotificationToAdmins(
+        title: 'Pickup Started 🚐',
+        body: '$customerName: Agent started pickup for order #$orderId',
+        type: NotificationType.delivery,
+        orderId: orderId,
+        assignedAgentId: 'agent_99',
+        route: '/delivery',
+        isActionable: true,
+        metadata: {
+          'source': 'delivery',
+          'orderId': orderId,
+          'eventType': 'pickupStarted',
+          'agentId': 'agent_99',
+        },
+        senderUid: customerId,
+      );
+
+      expect(notificationsCreated.length, 1);
+      final notif = notificationsCreated.first;
+      expect(notif['title'], 'Pickup Started 🚐');
+      expect(notif['metadata']['eventType'], 'pickupStarted');
+    });
+
+    test('4: Delivery started → Admin notification created', () async {
+      final notificationsCreated = <Map<String, dynamic>>[];
+      Future<void> mockSendNotificationToAdmins({
+        required String title,
+        required String body,
+        required NotificationType type,
+        String? orderId,
+        String? assignedAgentId,
+        String? route,
+        bool isActionable = false,
+        Map<String, dynamic>? metadata,
+        String? senderUid,
+      }) async {
+        notificationsCreated.add({
+          'title': title,
+          'body': body,
+          'type': type,
+          'isRead': false,
+          'isActionable': isActionable,
+          'orderId': orderId,
+          'route': route,
+          'metadata': metadata,
+          'senderUid': senderUid,
+        });
+      }
+
+      const orderId = 'ORD-DELIVERY-101';
+      await mockSendNotificationToAdmins(
+        title: 'Delivery Started 🚚',
+        body: '$customerName: Agent started delivery for order #$orderId',
+        type: NotificationType.delivery,
+        orderId: orderId,
+        assignedAgentId: 'agent_99',
+        route: '/delivery',
+        isActionable: true,
+        metadata: {
+          'source': 'delivery',
+          'orderId': orderId,
+          'eventType': 'deliveryStarted',
+          'agentId': 'agent_99',
+        },
+        senderUid: customerId,
+      );
+
+      expect(notificationsCreated.length, 1);
+      final notif = notificationsCreated.first;
+      expect(notif['title'], 'Delivery Started 🚚');
+      expect(notif['metadata']['eventType'], 'deliveryStarted');
+    });
+
+    test('5: Delivered → Admin notification created', () async {
+      final notificationsCreated = <Map<String, dynamic>>[];
+      Future<void> mockSendNotificationToAdmins({
+        required String title,
+        required String body,
+        required NotificationType type,
+        String? orderId,
+        String? assignedAgentId,
+        String? route,
+        bool isActionable = false,
+        Map<String, dynamic>? metadata,
+        String? senderUid,
+      }) async {
+        notificationsCreated.add({
+          'title': title,
+          'body': body,
+          'type': type,
+          'isRead': false,
+          'isActionable': isActionable,
+          'orderId': orderId,
+          'route': route,
+          'metadata': metadata,
+          'senderUid': senderUid,
+        });
+      }
+
+      const orderId = 'ORD-DELIVERED-101';
+      await mockSendNotificationToAdmins(
+        title: 'Delivery Confirmed ✅',
+        body: '$customerName: Order #$orderId delivered successfully',
+        type: NotificationType.delivery,
+        orderId: orderId,
+        assignedAgentId: 'agent_99',
+        route: '/admin/orders',
+        isActionable: true,
+        metadata: {
+          'source': 'delivery',
+          'orderId': orderId,
+          'eventType': 'deliveryConfirmed',
+          'agentId': 'agent_99',
+        },
+        senderUid: customerId,
+      );
+
+      expect(notificationsCreated.length, 1);
+      final notif = notificationsCreated.first;
+      expect(notif['title'], 'Delivery Confirmed ✅');
+      expect(notif['route'], '/admin/orders');
+      expect(notif['metadata']['eventType'], 'deliveryConfirmed');
+    });
+
+    test('6: Failed/cancelled delivery → Admin notification created', () async {
+      final notificationsCreated = <Map<String, dynamic>>[];
+      Future<void> mockSendNotificationToAdmins({
+        required String title,
+        required String body,
+        required NotificationType type,
+        String? orderId,
+        String? assignedAgentId,
+        String? route,
+        bool isActionable = false,
+        Map<String, dynamic>? metadata,
+        String? senderUid,
+      }) async {
+        notificationsCreated.add({
+          'title': title,
+          'body': body,
+          'type': type,
+          'isRead': false,
+          'isActionable': isActionable,
+          'orderId': orderId,
+          'route': route,
+          'metadata': metadata,
+          'senderUid': senderUid,
+        });
+      }
+
+      const orderId = 'ORD-FAILED-101';
+      await mockSendNotificationToAdmins(
+        title: 'Delivery Failed ❌',
+        body: '$customerName: Order #$orderId delivery failed/cancelled',
+        type: NotificationType.delivery,
+        orderId: orderId,
+        assignedAgentId: 'agent_99',
+        route: '/admin/orders',
+        isActionable: true,
+        metadata: {
+          'source': 'delivery',
+          'orderId': orderId,
+          'eventType': 'deliveryFailed',
+          'agentId': 'agent_99',
+        },
+        senderUid: customerId,
+      );
+
+      expect(notificationsCreated.length, 1);
+      final notif = notificationsCreated.first;
+      expect(notif['title'], 'Delivery Failed ❌');
+      expect(notif['route'], '/admin/orders');
+      expect(notif['metadata']['eventType'], 'deliveryFailed');
+    });
+
+    test('7: Notification contains orderId', () async {
+      final notificationsCreated = <Map<String, dynamic>>[];
+      Future<void> mockSendNotificationToAdmins({
+        required String title,
+        required String body,
+        required NotificationType type,
+        String? orderId,
+        String? assignedAgentId,
+        String? route,
+        bool isActionable = false,
+        Map<String, dynamic>? metadata,
+        String? senderUid,
+      }) async {
+        notificationsCreated.add({
+          'title': title,
+          'body': body,
+          'type': type,
+          'isRead': false,
+          'isActionable': isActionable,
+          'orderId': orderId,
+          'route': route,
+          'metadata': metadata,
+          'senderUid': senderUid,
+        });
+      }
+
+      const orderId = 'ORD-VALID-101';
+      await mockSendNotificationToAdmins(
+        title: 'Test Notification',
+        body: 'Test body',
+        type: NotificationType.delivery,
+        orderId: orderId,
+        assignedAgentId: 'agent_99',
+        route: '/delivery',
+        isActionable: true,
+        senderUid: customerId,
+      );
+
+      expect(notificationsCreated.length, 1);
+      final notif = notificationsCreated.first;
+      expect(notif['orderId'], orderId);
+    });
+
+    test('8: Notification contains agentId', () async {
+      final notificationsCreated = <Map<String, dynamic>>[];
+      Future<void> mockSendNotificationToAdmins({
+        required String title,
+        required String body,
+        required NotificationType type,
+        String? orderId,
+        String? assignedAgentId,
+        String? route,
+        bool isActionable = false,
+        Map<String, dynamic>? metadata,
+        String? senderUid,
+      }) async {
+        notificationsCreated.add({
+          'title': title,
+          'body': body,
+          'type': type,
+          'isRead': false,
+          'isActionable': isActionable,
+          'orderId': orderId,
+          'assignedAgentId': assignedAgentId,
+          'route': route,
+          'metadata': metadata,
+          'senderUid': senderUid,
+        });
+      }
+
+      const orderId = 'ORD-AGENT-101';
+      await mockSendNotificationToAdmins(
+        title: 'Test Notification',
+        body: 'Test body',
+        type: NotificationType.delivery,
+        orderId: orderId,
+        assignedAgentId: 'agent_99',
+        route: '/delivery',
+        isActionable: true,
+        senderUid: customerId,
+      );
+
+      expect(notificationsCreated.length, 1);
+      final notif = notificationsCreated.first;
+      expect(notif['assignedAgentId'], 'agent_99');
+    });
+
+    test('9: Duplicate event does not create duplicate notification', () async {
+      final notificationsCreated = <Map<String, dynamic>>[];
+      int callCount = 0;
+      Future<void> mockSendNotificationToAdmins({
+        required String title,
+        required String body,
+        required NotificationType type,
+        String? orderId,
+        String? assignedAgentId,
+        String? route,
+        bool isActionable = false,
+        Map<String, dynamic>? metadata,
+        String? senderUid,
+      }) async {
+        callCount++;
+        // Only create on first call; subsequent calls with same orderId+eventType are ignored
+        if (callCount <= 1) {
+          notificationsCreated.add({
+            'title': title,
+            'body': body,
+            'type': type,
+            'isRead': false,
+            'isActionable': isActionable,
+            'orderId': orderId,
+            'route': route,
+            'metadata': metadata,
+            'senderUid': senderUid,
+          });
+        }
+      }
+
+      const orderId = 'ORD-DUPLICATE-101';
+      // First call should create notification
+      await mockSendNotificationToAdmins(
+        title: 'Order Accepted 📦',
+        body: '$customerName: Agent accepted order #$orderId',
+        type: NotificationType.delivery,
+        orderId: orderId,
+        assignedAgentId: 'agent_99',
+        route: '/delivery',
+        isActionable: true,
+        metadata: {
+          'source': 'delivery',
+          'orderId': orderId,
+          'eventType': 'orderAccepted',
+          'agentId': 'agent_99',
+        },
+        senderUid: customerId,
+      );
+      // Second call with same orderId+eventType should be ignored (idempotency)
+      await mockSendNotificationToAdmins(
+        title: 'Order Accepted 📦',
+        body: '$customerName: Agent accepted order #$orderId',
+        type: NotificationType.delivery,
+        orderId: orderId,
+        assignedAgentId: 'agent_99',
+        route: '/delivery',
+        isActionable: true,
+        metadata: {
+          'source': 'delivery',
+          'orderId': orderId,
+          'eventType': 'orderAccepted',
+          'agentId': 'agent_99',
+        },
+        senderUid: customerId,
+      );
+
+      // Only one notification should be created despite 2 function calls
+      expect(notificationsCreated.length, 1);
+      expect(callCount, 2);
+    });
+
+    test('10: Invalid agent cannot create notification', () async {
+      final notificationsCreated = <Map<String, dynamic>>[];
+      bool callHappened = false;
+      Future<void> mockSendNotificationToAdmins({
+        required String title,
+        required String body,
+        required NotificationType type,
+        String? orderId,
+        String? assignedAgentId,
+        String? route,
+        bool isActionable = false,
+        Map<String, dynamic>? metadata,
+        String? senderUid,
+      }) async {
+        if (senderUid == 'nonexistent_uid') {
+          return;
+        }
+        callHappened = true;
+        notificationsCreated.add({
+          'title': title,
+          'body': body,
+          'type': type,
+          'isRead': false,
+          'isActionable': isActionable,
+          'orderId': orderId,
+          'assignedAgentId': assignedAgentId,
+          'route': route,
+          'metadata': metadata,
+          'senderUid': senderUid,
+        });
+      }
+
+      // No admin UIDs discovered → should skip
+      await mockSendNotificationToAdmins(
+        title: 'Test',
+        body: 'Test body',
+        type: NotificationType.delivery,
+        orderId: 'ORD-TEST-101',
+        assignedAgentId: 'agent_99',
+        route: '/delivery',
+        senderUid: 'nonexistent_uid',
+      );
+
+      // When no admins are found, notification should not be created
+      // This is tested by checking the function returns early with no_admins_found
+      // In our test, since we're mocking, we verify the function handles gracefully
+      expect(callHappened, isFalse,
+          reason:
+              'No admin UIDs discovered should prevent notification creation');
+    });
+
+    test('11: Notification tap navigates Admin correctly - order accepted', () {
+      final mockRepo = _TestNotificationRepo();
+      const testUser = User(
+        id: 'admin-marked-1',
+        name: 'Test Admin',
+        phone: '9876543210',
+        role: 'admin',
+      );
+
+      final authContainer = ProviderContainer(
+        overrides: [
+          notificationRepositoryProvider.overrideWithValue(mockRepo),
+          userProvider.overrideWith((ref) => _TestUserNotifier(testUser)),
+        ],
+      );
+
+      final service = authContainer.read(notificationServiceProvider);
+      final dest = NotificationDestination.fromPayload({
+        'notificationId': 'delivery_ORD-ACCEPT-101_orderAccepted',
+        'orderId': 'ORD-ACCEPT-101',
+        'route': '/delivery',
+        'type': 'delivery',
+        'assignedAgentId': 'agent_99',
+      });
+
+      service.handleNotificationTap(dest);
+
+      // Admin should navigate to /delivery (DeliveryPanel) for delivery-related notifications
+      // The route should be resolved via resolveNotificationRoute
+      authContainer.dispose();
+    });
+
+    test('12: Notification becomes read when Admin taps it', () async {
+      int writeCount = 0;
+      Future<void> mockMarkAsRead(String uid, String notifId) async {
+        writeCount++;
+      }
+
+      const testUid = 'admin_super_999';
+      final notif = NotificationItem(
+        id: 'delivery_NOTIF-456',
+        type: NotificationType.delivery,
+        title: 'Delivery Confirmed',
+        body: 'Order delivered successfully',
+        timestamp: DateTime.now(),
+        orderId: 'ORD-999',
+        isRead: false,
+        isActionable: true,
+        userId: testUid,
+      );
+
+      if (!notif.isRead) {
+        await mockMarkAsRead(testUid, notif.id);
+      }
+
+      expect(writeCount, 1,
+          reason: 'Tapping unread notification should mark as read');
+    });
+  });
+}
 
 /// Evaluates whether a delivery agent / admin may save an FCM token.
 ///
@@ -1576,4 +1603,4 @@ class _TestUserNotifier extends UserNotifier {
   Future<void> loadSession() async {
     // No-op in tests
   }
-}
+}

@@ -26,7 +26,8 @@ void main() {
       expect(emptyAgent.vehicle.contains('Activa'), isFalse);
     });
 
-    test('DeliveryAgent isProfileComplete reflects real profile data presence', () {
+    test('DeliveryAgent isProfileComplete reflects real profile data presence',
+        () {
       var agent = DeliveryAgent.empty('agent_test_123');
       expect(agent.isProfileComplete, isFalse);
 
@@ -43,7 +44,9 @@ void main() {
       expect(agent.isProfileComplete, isFalse);
     });
 
-    test('DeliveryAgent copyWith correctly retains and updates real profile fields', () {
+    test(
+        'DeliveryAgent copyWith correctly retains and updates real profile fields',
+        () {
       const initial = DeliveryAgent(
         id: 'agent_999',
         name: 'Vikas Sharma',
@@ -57,7 +60,8 @@ void main() {
         completedDeliveriesToday: 4,
         earningsToday: 320.0,
         rating: 4.9,
-        profileImageUrl: 'https://firebasestorage.googleapis.com/v0/b/app/o/delivery_agents%2Fagent_999%2Fprofile_photo',
+        profileImageUrl:
+            'https://firebasestorage.googleapis.com/v0/b/app/o/delivery_agents%2Fagent_999%2Fprofile_photo',
         isLoaded: true,
       );
 
@@ -83,7 +87,10 @@ void main() {
         final dotIndex = path.lastIndexOf('.');
         if (dotIndex == -1) return false;
         final ext = path.substring(dotIndex).toLowerCase();
-        return ext == '.jpg' || ext == '.jpeg' || ext == '.png' || ext == '.webp';
+        return ext == '.jpg' ||
+            ext == '.jpeg' ||
+            ext == '.png' ||
+            ext == '.webp';
       }
 
       expect(isValidExtension('avatar.jpg'), isTrue);
@@ -136,7 +143,16 @@ void main() {
 
       // Valid PNG header
       final pngBytes = Uint8List.fromList([
-        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00,
+        0x89,
+        0x50,
+        0x4E,
+        0x47,
+        0x0D,
+        0x0A,
+        0x1A,
+        0x0A,
+        0x00,
+        0x00,
       ]);
       expect(isAllowedImageBytes(pngBytes), isTrue);
 
@@ -151,7 +167,9 @@ void main() {
   });
 
   group('Firestore & Storage Security Rules Logic Verification', () {
-    test('Delivery Agent CAN update allowed profile fields (name, phone, vehicle, profileImageUrl, assignedZone)', () {
+    test(
+        'Delivery Agent CAN update allowed profile fields (name, phone, vehicle, profileImageUrl, assignedZone)',
+        () {
       final existingDoc = {
         'uid': 'agent_100',
         'name': 'Rajesh',
@@ -167,7 +185,8 @@ void main() {
         'vehicle': 'Honda EV',
         'vehicleNumber': 'MP 09 ZZ 9999',
         'assignedZone': 'Zone 2 - Vijay Nagar',
-        'profileImageUrl': 'https://firebasestorage.googleapis.com/.../profile_photo',
+        'profileImageUrl':
+            'https://firebasestorage.googleapis.com/.../profile_photo',
         'updatedAt': 'TIMESTAMP',
       };
 
@@ -189,8 +208,10 @@ void main() {
 
       final changedKeys = proposedUpdate.keys.toList();
       final hasOnlyAllowed = changedKeys.every(allowedFields.contains);
-      final doesNotMutateUid = !proposedUpdate.containsKey('uid') || proposedUpdate['uid'] == existingDoc['uid'];
-      final doesNotMutateRole = !proposedUpdate.containsKey('role') || proposedUpdate['role'] == 'delivery';
+      final doesNotMutateUid = !proposedUpdate.containsKey('uid') ||
+          proposedUpdate['uid'] == existingDoc['uid'];
+      final doesNotMutateRole = !proposedUpdate.containsKey('role') ||
+          proposedUpdate['role'] == 'delivery';
 
       expect(hasOnlyAllowed && doesNotMutateUid && doesNotMutateRole, isTrue);
     });
@@ -219,10 +240,13 @@ void main() {
 
       final changedKeys = proposedUpdate.keys.toList();
       final hasOnlyAllowed = changedKeys.every(allowedFields.contains);
-      expect(hasOnlyAllowed, isFalse, reason: 'role is not in allowed fields for delivery agent update');
+      expect(hasOnlyAllowed, isFalse,
+          reason: 'role is not in allowed fields for delivery agent update');
     });
 
-    test('Delivery Agent CANNOT tamper with rating on delivery_agents profile doc', () {
+    test(
+        'Delivery Agent CANNOT tamper with rating on delivery_agents profile doc',
+        () {
       final proposedUpdate = {
         'rating': 5.0, // FORBIDDEN
       };
@@ -245,7 +269,8 @@ void main() {
 
       final changedKeys = proposedUpdate.keys.toList();
       final hasOnlyAllowed = changedKeys.every(allowedFields.contains);
-      expect(hasOnlyAllowed, isFalse, reason: 'rating must remain read-only/system managed');
+      expect(hasOnlyAllowed, isFalse,
+          reason: 'rating must remain read-only/system managed');
     });
 
     test('Unauthenticated user cannot update delivery profile', () {
@@ -268,7 +293,8 @@ void main() {
       const String authUid = 'agent_100';
 
       bool canUpload(String targetPath) {
-        if (!targetPath.startsWith('delivery_agents/') && !targetPath.startsWith('profiles/')) {
+        if (!targetPath.startsWith('delivery_agents/') &&
+            !targetPath.startsWith('profiles/')) {
           return false;
         }
         final pathSegments = targetPath.split('/');
@@ -337,7 +363,9 @@ void main() {
       expect(isLegacyMockZone('Palasia Sector 1'), isFalse);
     });
 
-    test('Resolves real user profile when Firestore contains legacy Rajesh Kumar mock', () {
+    test(
+        'Resolves real user profile when Firestore contains legacy Rajesh Kumar mock',
+        () {
       // Simulates poisoned Firestore doc from previous legacy run
       final poisonedFirestoreDoc = {
         'name': 'Rajesh Kumar',
@@ -358,7 +386,9 @@ void main() {
         if (docName.isNotEmpty && !isLegacyMockName(docName)) {
           return docName;
         }
-        if (userName.isNotEmpty && !isLegacyMockName(userName) && userName != 'Guest Customer') {
+        if (userName.isNotEmpty &&
+            !isLegacyMockName(userName) &&
+            userName != 'Guest Customer') {
           return userName;
         }
         return '';
@@ -374,14 +404,18 @@ void main() {
         return '';
       }
 
-      final resolvedName = resolveName(poisonedFirestoreDoc['name']!, realUser['name']!);
-      final resolvedPhone = resolvePhone(poisonedFirestoreDoc['phone']!, realUser['phone']!);
+      final resolvedName =
+          resolveName(poisonedFirestoreDoc['name']!, realUser['name']!);
+      final resolvedPhone =
+          resolvePhone(poisonedFirestoreDoc['phone']!, realUser['phone']!);
 
       expect(resolvedName, equals('Devendra Singh'));
       expect(resolvedPhone, equals('+91 98260 99887'));
     });
 
-    test('Leaves fields empty rather than falling back to Rajesh Kumar if no real profile exists', () {
+    test(
+        'Leaves fields empty rather than falling back to Rajesh Kumar if no real profile exists',
+        () {
       final poisonedFirestoreDoc = {
         'name': 'Rajesh Kumar',
         'phone': '+91 7777777777',
@@ -396,13 +430,16 @@ void main() {
         if (docName.isNotEmpty && !isLegacyMockName(docName)) {
           return docName;
         }
-        if (userName.isNotEmpty && !isLegacyMockName(userName) && userName != 'Guest Customer') {
+        if (userName.isNotEmpty &&
+            !isLegacyMockName(userName) &&
+            userName != 'Guest Customer') {
           return userName;
         }
         return '';
       }
 
-      final resolvedName = resolveName(poisonedFirestoreDoc['name']!, realUser['name']!);
+      final resolvedName =
+          resolveName(poisonedFirestoreDoc['name']!, realUser['name']!);
       expect(resolvedName, isEmpty);
     });
 
@@ -410,14 +447,17 @@ void main() {
       const authUid = 'firebase_user_abc123';
       const path = 'delivery_agents/$authUid/profile_photo';
 
-      expect(path, equals('delivery_agents/firebase_user_abc123/profile_photo'));
+      expect(
+          path, equals('delivery_agents/firebase_user_abc123/profile_photo'));
       expect(path.startsWith('delivery_agents/'), isTrue);
       expect(path.endsWith('/profile_photo'), isTrue);
     });
   });
 
   group('Profile Field Validation & Admin Staff Model Tests', () {
-    test('Full Name validation: requires alphabetic chars & spaces, rejects digits/symbols', () {
+    test(
+        'Full Name validation: requires alphabetic chars & spaces, rejects digits/symbols',
+        () {
       expect(AppValidators.validateFullName('Rajesh Yadav'), isNull);
       expect(AppValidators.validateFullName('Devendra Singh'), isNull);
       expect(AppValidators.validateFullName('Rajesh123'), isNotNull);
@@ -426,18 +466,24 @@ void main() {
       expect(AppValidators.validateFullName('A'), isNotNull); // < 2 chars
     });
 
-    test('Indian Phone validation: requires 10-digit number starting with 6-9, rejects letters & arbitrary text', () {
+    test(
+        'Indian Phone validation: requires 10-digit number starting with 6-9, rejects letters & arbitrary text',
+        () {
       expect(AppValidators.validateIndianPhone('9826012345'), isNull);
       expect(AppValidators.validateIndianPhone('+91 9826012345'), isNull);
       expect(AppValidators.validateIndianPhone('98260-12345'), isNull);
       expect(AppValidators.validateIndianPhone('9876abc'), isNotNull);
       expect(AppValidators.validateIndianPhone('Rajesh'), isNotNull);
-      expect(AppValidators.validateIndianPhone('12345'), isNotNull); // < 10 digits
-      expect(AppValidators.validateIndianPhone('2826012345'), isNotNull); // doesn't start with 6-9
+      expect(
+          AppValidators.validateIndianPhone('12345'), isNotNull); // < 10 digits
+      expect(AppValidators.validateIndianPhone('2826012345'),
+          isNotNull); // doesn't start with 6-9
       expect(AppValidators.validateIndianPhone(''), isNotNull);
     });
 
-    test('Vehicle Model validation: letters and spaces only, rejects arbitrary symbols', () {
+    test(
+        'Vehicle Model validation: letters and spaces only, rejects arbitrary symbols',
+        () {
       expect(AppValidators.validateVehicleModel('Pulsar'), isNull);
       expect(AppValidators.validateVehicleModel('Honda Activa'), isNull);
       expect(AppValidators.validateVehicleModel('Splendor'), isNull);
@@ -446,21 +492,28 @@ void main() {
       expect(AppValidators.validateVehicleModel(''), isNotNull);
     });
 
-    test('Vehicle Registration Plate validation: alphanumeric Indian plate, rejects symbols only', () {
+    test(
+        'Vehicle Registration Plate validation: alphanumeric Indian plate, rejects symbols only',
+        () {
       expect(AppValidators.validateVehicleNumber('MP 09 AB 1234'), isNull);
       expect(AppValidators.validateVehicleNumber('DL 1C AA 1111'), isNull);
       expect(AppValidators.validateVehicleNumber('MH-12-DE-1433'), isNull);
       expect(AppValidators.validateVehicleNumber('KA01AB1234'), isNull);
       expect(AppValidators.validateVehicleNumber('@@@###'), isNotNull);
-      expect(AppValidators.validateVehicleNumber('123456'), isNotNull); // numbers only
-      expect(AppValidators.validateVehicleNumber('ABCDEF'), isNotNull); // letters only
+      expect(AppValidators.validateVehicleNumber('123456'),
+          isNotNull); // numbers only
+      expect(AppValidators.validateVehicleNumber('ABCDEF'),
+          isNotNull); // letters only
       expect(AppValidators.validateVehicleNumber(''), isNotNull);
 
       // Normalization test
-      expect(AppValidators.normalizeVehicleNumber('mp  09  ab  1234'), equals('MP 09 AB 1234'));
+      expect(AppValidators.normalizeVehicleNumber('mp  09  ab  1234'),
+          equals('MP 09 AB 1234'));
     });
 
-    test('Delivery Zone validation: alphanumeric and hyphens, rejects special symbols', () {
+    test(
+        'Delivery Zone validation: alphanumeric and hyphens, rejects special symbols',
+        () {
       expect(AppValidators.validateDeliveryZone('Vijay Nagar'), isNull);
       expect(AppValidators.validateDeliveryZone('Palasia Sector 1'), isNull);
       expect(AppValidators.validateDeliveryZone('Zone-A'), isNull);
@@ -468,7 +521,9 @@ void main() {
       expect(AppValidators.validateDeliveryZone(''), isNotNull);
     });
 
-    test('DeliveryRider Admin model supports vehicleNumber, profileImageUrl, and nullable rating', () {
+    test(
+        'DeliveryRider Admin model supports vehicleNumber, profileImageUrl, and nullable rating',
+        () {
       const rider = DeliveryRider(
         id: 'rider_001',
         name: 'Suresh Raina',
@@ -479,13 +534,15 @@ void main() {
         totalDeliveriesToday: 3,
         pendingDeliveries: 1,
         rating: null, // Clean nullable rating without fake 4.8 / 5.0
-        profileImageUrl: 'https://firebasestorage.googleapis.com/.../profile_photo',
+        profileImageUrl:
+            'https://firebasestorage.googleapis.com/.../profile_photo',
         status: 'Active',
         isOnline: true,
       );
 
       expect(rider.vehicleNumber, equals('MP 09 AB 5678'));
-      expect(rider.profileImageUrl, equals('https://firebasestorage.googleapis.com/.../profile_photo'));
+      expect(rider.profileImageUrl,
+          equals('https://firebasestorage.googleapis.com/.../profile_photo'));
       expect(rider.rating, isNull);
 
       final updated = rider.copyWith(
@@ -499,7 +556,9 @@ void main() {
   });
 
   group('Profile Persistence Across Logout & Login Flow Tests', () {
-    test('Edit Profile writes all required fields to delivery_agents/{uid} and users/{uid}', () {
+    test(
+        'Edit Profile writes all required fields to delivery_agents/{uid} and users/{uid}',
+        () {
       const uid = 'agent_test_uid_456';
       final editInput = {
         'name': 'Devendra Singh',
@@ -507,7 +566,8 @@ void main() {
         'vehicle': 'Honda Activa 6G',
         'vehicleNumber': 'MP 09 AB 1234',
         'assignedZone': 'Vijay Nagar Sector 1',
-        'profileImageUrl': 'https://firebasestorage.googleapis.com/.../profile_photo',
+        'profileImageUrl':
+            'https://firebasestorage.googleapis.com/.../profile_photo',
       };
 
       // 1. Delivery Agents document payload
@@ -543,7 +603,8 @@ void main() {
       expect(agentUpdates['vehicleType'], equals('Honda Activa 6G'));
       expect(agentUpdates['vehicleNumber'], equals('MP 09 AB 1234'));
       expect(agentUpdates['assignedZone'], equals('Vijay Nagar Sector 1'));
-      expect(agentUpdates['profileImageUrl'], equals('https://firebasestorage.googleapis.com/.../profile_photo'));
+      expect(agentUpdates['profileImageUrl'],
+          equals('https://firebasestorage.googleapis.com/.../profile_photo'));
 
       // Verify users payload
       expect(userUpdates['uid'], equals(uid));
@@ -552,7 +613,9 @@ void main() {
       expect(userUpdates['assignedZone'], equals('Vijay Nagar Sector 1'));
     });
 
-    test('After Logout and Login, DeliveryAgent restores all persisted fields from Firestore without defaults', () {
+    test(
+        'After Logout and Login, DeliveryAgent restores all persisted fields from Firestore without defaults',
+        () {
       // Simulates Firestore document returned after re-login
       final persistedDoc = {
         'uid': 'agent_test_uid_456',
@@ -563,7 +626,8 @@ void main() {
         'vehicleType': 'Honda Activa 6G',
         'vehicleNumber': 'MP 09 AB 1234',
         'assignedZone': 'Vijay Nagar Sector 1',
-        'profileImageUrl': 'https://firebasestorage.googleapis.com/.../profile_photo',
+        'profileImageUrl':
+            'https://firebasestorage.googleapis.com/.../profile_photo',
         'rating': 4.8,
         'isOnline': true,
         'totalDeliveriesToday': 8,
@@ -584,7 +648,8 @@ void main() {
             ? DeliveryStatus.onDuty
             : DeliveryStatus.offDuty,
         totalDeliveriesToday: persistedDoc['totalDeliveriesToday'] as int,
-        completedDeliveriesToday: persistedDoc['completedDeliveriesToday'] as int,
+        completedDeliveriesToday:
+            persistedDoc['completedDeliveriesToday'] as int,
         earningsToday: persistedDoc['earningsToday'] as double,
         rating: persistedDoc['rating'] as double?,
         profileImageUrl: persistedDoc['profileImageUrl'] as String?,
@@ -598,13 +663,15 @@ void main() {
       expect(agent.vehicle, equals('Honda Activa 6G'));
       expect(agent.vehicleNumber, equals('MP 09 AB 1234'));
       expect(agent.assignedZone, equals('Vijay Nagar Sector 1'));
-      expect(agent.profileImageUrl, equals('https://firebasestorage.googleapis.com/.../profile_photo'));
+      expect(agent.profileImageUrl,
+          equals('https://firebasestorage.googleapis.com/.../profile_photo'));
       expect(agent.rating, equals(4.8));
 
       // UI state expectations:
       // 1. "Delivery Partner" should NOT be displayed as name
       expect(agent.name.isNotEmpty, isTrue);
-      final displayName = agent.name.isNotEmpty ? agent.name : 'Delivery Partner';
+      final displayName =
+          agent.name.isNotEmpty ? agent.name : 'Delivery Partner';
       expect(displayName, equals('Devendra Singh'));
 
       // 2. "Complete Your Profile" should NOT be displayed
@@ -615,8 +682,11 @@ void main() {
       expect(agent.name.contains('Sawariya Customer'), isFalse);
     });
 
-    test('Shows "Delivery Partner" and "Complete Your Profile" ONLY when profile is genuinely empty', () {
-      final freshAgent = DeliveryAgent.empty('fresh_uid_789').copyWith(isLoaded: true);
+    test(
+        'Shows "Delivery Partner" and "Complete Your Profile" ONLY when profile is genuinely empty',
+        () {
+      final freshAgent =
+          DeliveryAgent.empty('fresh_uid_789').copyWith(isLoaded: true);
 
       expect(freshAgent.name, isEmpty);
       expect(freshAgent.phone, isEmpty);
@@ -625,7 +695,8 @@ void main() {
       expect(freshAgent.assignedZone, isEmpty);
 
       // Display fallback name when empty
-      final displayName = freshAgent.name.isNotEmpty ? freshAgent.name : 'Delivery Partner';
+      final displayName =
+          freshAgent.name.isNotEmpty ? freshAgent.name : 'Delivery Partner';
       expect(displayName, equals('Delivery Partner'));
 
       // Setup banner must be shown
@@ -633,8 +704,11 @@ void main() {
     });
   });
 
-  group('Delivery Agent Profile — Phone Read-Only & Authentication Sync Tests', () {
-    test('Authenticated Firebase phone number takes precedence over empty or outdated Firestore phone', () {
+  group('Delivery Agent Profile — Phone Read-Only & Authentication Sync Tests',
+      () {
+    test(
+        'Authenticated Firebase phone number takes precedence over empty or outdated Firestore phone',
+        () {
       const authPhone = '+91 98765 43210';
       const outdatedDocPhone = '+91 91111 22222';
 
@@ -683,7 +757,9 @@ void main() {
       expect(resolvedFromDoc, equals(outdatedDocPhone));
     });
 
-    test('Profile save operation prevents arbitrary phone input from overwriting authenticated phone', () {
+    test(
+        'Profile save operation prevents arbitrary phone input from overwriting authenticated phone',
+        () {
       const authenticatedPhone = '+91 98765 43210';
       const arbitraryUserInputPhone = '+91 99999 88888';
 
@@ -715,7 +791,9 @@ void main() {
       expect(phoneToSave, isNot(equals(arbitraryUserInputPhone)));
     });
 
-    test('Profile save preserves existing phone when auth phone is absent and input is empty', () {
+    test(
+        'Profile save preserves existing phone when auth phone is absent and input is empty',
+        () {
       const existingPhone = '+91 98765 43210';
 
       String resolveSavePhone({
@@ -743,8 +821,11 @@ void main() {
       expect(phoneToSave, equals(existingPhone));
     });
 
-    test('Missing phone number in both Auth and Firestore is handled gracefully without crash', () {
-      final agent = DeliveryAgent.empty('test_uid_new').copyWith(isLoaded: true);
+    test(
+        'Missing phone number in both Auth and Firestore is handled gracefully without crash',
+        () {
+      final agent =
+          DeliveryAgent.empty('test_uid_new').copyWith(isLoaded: true);
 
       expect(agent.phone, isEmpty);
       expect(agent.isProfileComplete, isFalse);
@@ -760,10 +841,13 @@ void main() {
       expect(updated.name, equals('Rohan Sharma'));
       expect(updated.phone, isEmpty);
       expect(updated.vehicle, equals('Honda Shine'));
-      expect(updated.isProfileComplete, isFalse); // Still incomplete without phone
+      expect(
+          updated.isProfileComplete, isFalse); // Still incomplete without phone
     });
 
-    test('Editable profile fields (Name, Vehicle, Plate, Zone) validate and save correctly alongside read-only phone', () {
+    test(
+        'Editable profile fields (Name, Vehicle, Plate, Zone) validate and save correctly alongside read-only phone',
+        () {
       // 1. Name validation
       expect(AppValidators.validateFullName('Rohan Verma'), isNull);
       expect(AppValidators.validateFullName(''), isNotNull);
@@ -781,8 +865,10 @@ void main() {
       expect(AppValidators.validateDeliveryZone(''), isNotNull);
 
       // Normalization helpers
-      expect(AppValidators.normalizeName('  Rohan  Verma  '), equals('Rohan Verma'));
-      expect(AppValidators.normalizeVehicleNumber('mp  09  ab  1234'), equals('MP 09 AB 1234'));
+      expect(AppValidators.normalizeName('  Rohan  Verma  '),
+          equals('Rohan Verma'));
+      expect(AppValidators.normalizeVehicleNumber('mp  09  ab  1234'),
+          equals('MP 09 AB 1234'));
     });
   });
 }

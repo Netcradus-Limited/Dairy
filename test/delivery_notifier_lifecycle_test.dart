@@ -104,7 +104,8 @@ void main() {
       expect(
         notifierBefore.mounted,
         isTrue,
-        reason: 'DeliveryNotifier must remain mounted after user profile update.',
+        reason:
+            'DeliveryNotifier must remain mounted after user profile update.',
       );
     });
 

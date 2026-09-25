@@ -45,7 +45,9 @@ void main() {
       orderService = OrderService(firestore: fakeFirestore);
     });
 
-    test('Order.toFirestore writes customerName and customerPhone at root while preserving deliveryAddress', () {
+    test(
+        'Order.toFirestore writes customerName and customerPhone at root while preserving deliveryAddress',
+        () {
       final order = Order(
         id: 'ord_test_001',
         orderCode: 'SWD101',
@@ -70,7 +72,8 @@ void main() {
       expect(firestoreMap['orderCode'], 'SWD101');
 
       // Nested deliveryAddress preservation
-      final nestedAddr = firestoreMap['deliveryAddress'] as Map<String, dynamic>;
+      final nestedAddr =
+          firestoreMap['deliveryAddress'] as Map<String, dynamic>;
       expect(nestedAddr['fullName'], 'Aarav Patel');
       expect(nestedAddr['mobileNumber'], '+91 9876543210');
       expect(nestedAddr['houseFlat'], 'Flat 402, Tower B');
@@ -82,7 +85,9 @@ void main() {
       expect(nestedAddr['longitude'], 77.3649);
     });
 
-    test('placeOrder writes root-level customerName and customerPhone into Firestore order document', () async {
+    test(
+        'placeOrder writes root-level customerName and customerPhone into Firestore order document',
+        () async {
       final placedOrder = await orderService.placeOrder(
         userId: 'user_aarav_1',
         items: [const CartItem(product: testProduct, quantity: 3)],
@@ -93,7 +98,8 @@ void main() {
       expect(placedOrder.id, isNotEmpty);
 
       // Verify Firestore persisted document
-      final orderDoc = await fakeFirestore.collection('orders').doc(placedOrder.id).get();
+      final orderDoc =
+          await fakeFirestore.collection('orders').doc(placedOrder.id).get();
       expect(orderDoc.exists, isTrue);
 
       final data = orderDoc.data()!;
@@ -114,7 +120,10 @@ void main() {
       expect(addrMap['longitude'], 77.3649);
 
       // Verify payment record in payments collection has matching customer info
-      final paymentDoc = await fakeFirestore.collection('payments').doc('PAY_${placedOrder.id}').get();
+      final paymentDoc = await fakeFirestore
+          .collection('payments')
+          .doc('PAY_${placedOrder.id}')
+          .get();
       expect(paymentDoc.exists, isTrue);
       final paymentData = paymentDoc.data()!;
       expect(paymentData['customerName'], 'Aarav Patel');
@@ -122,7 +131,9 @@ void main() {
       expect(paymentData['userId'], 'user_aarav_1');
     });
 
-    test('Order deserializes smoothly even when root customerName/customerPhone are absent (legacy fallback)', () {
+    test(
+        'Order deserializes smoothly even when root customerName/customerPhone are absent (legacy fallback)',
+        () {
       final legacyData = <String, dynamic>{
         'orderCode': 'LEG123',
         'userId': 'user_legacy',

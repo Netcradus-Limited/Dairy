@@ -30,8 +30,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          deliveryAgentProvider.overrideWith(
-              (ref) => MockDeliveryNotifier(incompleteAgent)),
+          deliveryAgentProvider
+              .overrideWith((ref) => MockDeliveryNotifier(incompleteAgent)),
         ],
         child: MaterialApp(
           theme: AppTheme.lightTheme,

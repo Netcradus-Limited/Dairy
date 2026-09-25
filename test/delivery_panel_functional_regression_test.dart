@@ -223,7 +223,8 @@ void main() {
         assignedAgentId: agent1Id,
       );
 
-      await orderService.updateOrderStatus('ORD_06', OrderStatus.outForDelivery);
+      await orderService.updateOrderStatus(
+          'ORD_06', OrderStatus.outForDelivery);
 
       final doc = await fakeFirestore.collection('orders').doc('ORD_06').get();
       expect(doc.data()?['status'], equals('outForDelivery'));
@@ -277,7 +278,8 @@ void main() {
       expect(paymentDoc.data()?['paymentStatus'], equals('Cancelled'));
     });
 
-    test('failDelivery clears active tracking order in DeliveryTrackingService', () async {
+    test('failDelivery clears active tracking order in DeliveryTrackingService',
+        () async {
       await trackingService.updateAgentLocation(agent1Id, 22.7255, 75.8800,
           orderId: 'ORD_09');
 
@@ -328,7 +330,8 @@ void main() {
       expect(agent1Earnings.first.amountEarned, equals(50.0));
     });
 
-    test('getTotalEarnings calculates sum of amountEarned + tipAmount', () async {
+    test('getTotalEarnings calculates sum of amountEarned + tipAmount',
+        () async {
       await fakeFirestore.collection('earnings').doc('earn_calc_1').set({
         'id': 'earn_calc_1',
         'orderId': 'ORD_C1',
@@ -348,7 +351,9 @@ void main() {
   // ─── Group 5: Delivery Order Mapping & Fallbacks ──────────────────────────
 
   group('DeliveryOrder Mapping & Null Safety', () {
-    test('deliveryOrderFromOrder populates default fallbacks for missing address strings', () {
+    test(
+        'deliveryOrderFromOrder populates default fallbacks for missing address strings',
+        () {
       const emptyAddress = Address(
         id: '',
         fullName: '   ',
@@ -388,12 +393,14 @@ void main() {
       await liveNotifier.startTracking();
 
       expect(liveNotifier.state, isTrue);
-      expect(container.read(gpsTrackingStatusProvider), equals(GpsTrackingStatus.active));
+      expect(container.read(gpsTrackingStatusProvider),
+          equals(GpsTrackingStatus.active));
 
       liveNotifier.stopTracking();
 
       expect(liveNotifier.state, isFalse);
-      expect(container.read(gpsTrackingStatusProvider), equals(GpsTrackingStatus.idle));
+      expect(container.read(gpsTrackingStatusProvider),
+          equals(GpsTrackingStatus.idle));
     });
   });
 

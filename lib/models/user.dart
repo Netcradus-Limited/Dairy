@@ -7,7 +7,8 @@ class User {
   final String phone;
   final String? email;
   final String? profileImageUrl;
-  final String role; // 'admin', 'manager', 'dispatcher', 'staff', 'delivery', 'customer'
+  final String
+      role; // 'admin', 'manager', 'dispatcher', 'staff', 'delivery', 'customer'
   final String? roleTitle; // 'Super Admin', 'Route Dispatcher', etc.
   final List<String> permissions;
   final String status; // 'Active', 'Inactive'
@@ -117,4 +118,3 @@ class User {
     );
   }
 }
-

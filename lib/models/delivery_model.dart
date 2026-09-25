@@ -62,9 +62,10 @@ class DeliveryBatch {
         (data['title'] as String?)?.trim() ??
         '';
 
-    final deliveryId = (data['deliveryId'] as String?)?.trim().isNotEmpty == true
-        ? (data['deliveryId'] as String).trim()
-        : (name.isNotEmpty ? name : id);
+    final deliveryId =
+        (data['deliveryId'] as String?)?.trim().isNotEmpty == true
+            ? (data['deliveryId'] as String).trim()
+            : (name.isNotEmpty ? name : id);
 
     final agentName = (data['agentName'] as String?)?.trim() ??
         (data['staffName'] as String?)?.trim() ??

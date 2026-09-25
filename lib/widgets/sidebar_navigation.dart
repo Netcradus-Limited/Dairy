@@ -32,12 +32,36 @@ class SidebarNavigation extends ConsumerWidget {
   const SidebarNavigation({super.key, this.isDrawer = false});
 
   static const List<NavItemData> allNavItems = [
-    NavItemData(index: 0, title: 'Dashboard', icon: Icons.dashboard_rounded, permission: StaffPermission.viewDashboard),
-    NavItemData(index: 1, title: 'Customers', icon: Icons.people_alt_outlined, permission: StaffPermission.viewCustomers),
-    NavItemData(index: 2, title: 'Subscriptions', icon: Icons.calendar_month_rounded, permission: StaffPermission.viewSubscriptions),
-    NavItemData(index: 3, title: 'Products', icon: Icons.inventory_2_outlined, permission: StaffPermission.viewProducts),
-    NavItemData(index: 4, title: 'Categories', icon: Icons.grid_view_rounded, permission: StaffPermission.viewCategories),
-    NavItemData(index: 5, title: 'Orders', icon: Icons.receipt_long_rounded, permission: StaffPermission.viewOrders),
+    NavItemData(
+        index: 0,
+        title: 'Dashboard',
+        icon: Icons.dashboard_rounded,
+        permission: StaffPermission.viewDashboard),
+    NavItemData(
+        index: 1,
+        title: 'Customers',
+        icon: Icons.people_alt_outlined,
+        permission: StaffPermission.viewCustomers),
+    NavItemData(
+        index: 2,
+        title: 'Subscriptions',
+        icon: Icons.calendar_month_rounded,
+        permission: StaffPermission.viewSubscriptions),
+    NavItemData(
+        index: 3,
+        title: 'Products',
+        icon: Icons.inventory_2_outlined,
+        permission: StaffPermission.viewProducts),
+    NavItemData(
+        index: 4,
+        title: 'Categories',
+        icon: Icons.grid_view_rounded,
+        permission: StaffPermission.viewCategories),
+    NavItemData(
+        index: 5,
+        title: 'Orders',
+        icon: Icons.receipt_long_rounded,
+        permission: StaffPermission.viewOrders),
     NavItemData(
         index: 6,
         title: 'Delivery Management',
@@ -333,7 +357,9 @@ class SidebarNavigation extends ConsumerWidget {
                             user.name.trim().isNotEmpty &&
                                     user.name.trim() != 'Guest Customer'
                                 ? user.name.trim()
-                                : (user.isAdmin ? 'Sawariya Admin' : 'Sawariya Staff'),
+                                : (user.isAdmin
+                                    ? 'Sawariya Admin'
+                                    : 'Sawariya Staff'),
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -343,7 +369,8 @@ class SidebarNavigation extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            user.roleTitle ?? (user.isAdmin ? 'Super Admin' : 'Staff Member'),
+                            user.roleTitle ??
+                                (user.isAdmin ? 'Super Admin' : 'Staff Member'),
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 10,
                               fontWeight: FontWeight.w500,
@@ -388,7 +415,9 @@ class SidebarNavigation extends ConsumerWidget {
                           ),
                         );
                         if (confirm == true) {
-                          container.read(cartProvider.notifier).clearLocalCart();
+                          container
+                              .read(cartProvider.notifier)
+                              .clearLocalCart();
                           container.read(userProvider.notifier).clearSession();
                         }
                       },

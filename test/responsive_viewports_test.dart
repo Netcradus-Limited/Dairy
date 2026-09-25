@@ -122,7 +122,8 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              cartProvider.overrideWith((ref) => CartNotifier()..addItem(testProduct, 2)),
+              cartProvider.overrideWith(
+                  (ref) => CartNotifier()..addItem(testProduct, 2)),
             ],
             child: const MaterialApp(
               home: CartScreen(),
@@ -192,7 +193,8 @@ void main() {
         await tester.pumpAndSettle();
         final err = tester.takeException();
         if (err is FlutterError) {
-          debugPrint('DEBUG SubscriptionsScreen diagnostics:\n${err.diagnostics.map((d) => d.toStringDeep()).join('\n')}');
+          debugPrint(
+              'DEBUG SubscriptionsScreen diagnostics:\n${err.diagnostics.map((d) => d.toStringDeep()).join('\n')}');
         }
         expect(find.text('My Subscriptions'), findsOneWidget);
         expect(find.text('Pure A2 Gir Cow Fresh Farm Milk'), findsOneWidget);
@@ -249,7 +251,8 @@ void main() {
         final err = tester.takeException();
         if (err != null) {
           try {
-            debugPrint('DEBUG ProductDetailsScreen error deep: ${(err as dynamic).toStringDeep()}');
+            debugPrint(
+                'DEBUG ProductDetailsScreen error deep: ${(err as dynamic).toStringDeep()}');
           } catch (_) {
             debugPrint('DEBUG ProductDetailsScreen error: $err');
           }
@@ -271,7 +274,8 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              cartProvider.overrideWith((ref) => CartNotifier()..addItem(testProduct, 1)),
+              cartProvider.overrideWith(
+                  (ref) => CartNotifier()..addItem(testProduct, 1)),
               selectedAddressProvider.overrideWith((ref) => null),
             ],
             child: const MaterialApp(

@@ -78,8 +78,6 @@ class SubscriptionService {
     }
   }
 
-
-
   Future<Subscription?> _loadFromLocal(String uid) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -767,25 +765,33 @@ class SubscriptionService {
   Stream<List<Order>> streamOrdersForSubscription(String subscriptionId) {
     final cleanId = subscriptionId.trim();
     if (cleanId.isEmpty) return Stream.value(<Order>[]);
-    return _firestore
-        .collection('orders')
-        .where('subscriptionId', isEqualTo: cleanId)
-        .snapshots()
-        .map((snapshot) {
-      final list = snapshot.docs
-          .map((doc) => Order.fromFirestore(doc.data(), doc.id))
-          .toList();
-      list.sort((a, b) => b.orderDate.compareTo(a.orderDate));
-      return list;
-    }).handleError((error) {
-      developer.log(
-          '[SubscriptionService] streamOrdersForSubscription error: $error');
-      return <Order>[];
-    });
+    try {
+      if (_customFirestore == null && Firebase.apps.isEmpty) {
+        return Stream.value(<Order>[]);
+      }
+      return _firestore
+          .collection('orders')
+          .where('subscriptionId', isEqualTo: cleanId)
+          .snapshots()
+          .map((snapshot) {
+        final list = snapshot.docs
+            .map((doc) => Order.fromFirestore(doc.data(), doc.id))
+            .toList();
+        list.sort((a, b) => b.orderDate.compareTo(a.orderDate));
+        return list;
+      }).handleError((error) {
+        developer.log(
+            '[SubscriptionService] streamOrdersForSubscription error: $error');
+        return <Order>[];
+      });
+    } catch (_) {
+      return Stream.value(<Order>[]);
+    }
   }
 
   /// Admin method: Update any subscription document directly in `subscriptions/{subscription.id}`
-  Future<Subscription> adminUpdateSubscription(Subscription subscription) async {
+  Future<Subscription> adminUpdateSubscription(
+      Subscription subscription) async {
     final now = DateTime.now();
     final updatedSubscription = subscription.copyWith(
       updatedAt: now,
@@ -820,8 +826,7 @@ class SubscriptionService {
   /// Admin method: Pause a subscription directly by ID
   Future<Subscription> adminPauseSubscription(String subscriptionId) async {
     final cleanId = subscriptionId.trim();
-    final doc =
-        await _firestore.collection('subscriptions').doc(cleanId).get();
+    final doc = await _firestore.collection('subscriptions').doc(cleanId).get();
     if (!doc.exists || doc.data() == null) {
       throw Exception('Subscription $cleanId not found');
     }
@@ -836,8 +841,7 @@ class SubscriptionService {
   /// Admin method: Resume a subscription directly by ID
   Future<Subscription> adminResumeSubscription(String subscriptionId) async {
     final cleanId = subscriptionId.trim();
-    final doc =
-        await _firestore.collection('subscriptions').doc(cleanId).get();
+    final doc = await _firestore.collection('subscriptions').doc(cleanId).get();
     if (!doc.exists || doc.data() == null) {
       throw Exception('Subscription $cleanId not found');
     }
@@ -858,8 +862,7 @@ class SubscriptionService {
   /// Admin method: Cancel a subscription directly by ID (sets status to "cancelled")
   Future<Subscription> adminCancelSubscription(String subscriptionId) async {
     final cleanId = subscriptionId.trim();
-    final doc =
-        await _firestore.collection('subscriptions').doc(cleanId).get();
+    final doc = await _firestore.collection('subscriptions').doc(cleanId).get();
     if (!doc.exists || doc.data() == null) {
       throw Exception('Subscription $cleanId not found');
     }

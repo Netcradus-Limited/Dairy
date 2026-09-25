@@ -38,17 +38,19 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
   } else if (order.pickupLocation!.trim().isEmpty) {
     // Explicitly empty pickup data: do not display misleading information
     resolvedPickupLocation = 'Not specified';
-    resolvedPickupPhone = (order.pickupPhone != null && order.pickupPhone!.trim().isNotEmpty)
-        ? order.pickupPhone!.trim()
-        : '—';
+    resolvedPickupPhone =
+        (order.pickupPhone != null && order.pickupPhone!.trim().isNotEmpty)
+            ? order.pickupPhone!.trim()
+            : '—';
     resolvedPickupLat = null;
     resolvedPickupLng = null;
   } else {
     // Valid pickup data from order
     resolvedPickupLocation = order.pickupLocation!.trim();
-    resolvedPickupPhone = (order.pickupPhone != null && order.pickupPhone!.trim().isNotEmpty)
-        ? order.pickupPhone!.trim()
-        : defaultHubPhone;
+    resolvedPickupPhone =
+        (order.pickupPhone != null && order.pickupPhone!.trim().isNotEmpty)
+            ? order.pickupPhone!.trim()
+            : defaultHubPhone;
 
     // Use order's pickup coordinates if available; do not invent coordinates if missing
     if (order.pickupLatitude != null &&
@@ -66,10 +68,12 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
   DeliveryOrderStatus status = DeliveryOrderStatus.pendingAcceptance;
   switch (order.status) {
     case OrderStatus.placed:
-      // A freshly placed order is a delivery request awaiting driver acceptance.
+      // A freshly placed order awaiting driver acceptance
       status = DeliveryOrderStatus.pendingAcceptance;
     case OrderStatus.confirmed:
-      status = DeliveryOrderStatus.accepted;
+      status = DeliveryOrderStatus.pendingAcceptance;
+    case OrderStatus.assigned:
+      status = DeliveryOrderStatus.pendingAcceptance;
     case OrderStatus.preparing:
       status = DeliveryOrderStatus.pickup;
     case OrderStatus.outForDelivery:
@@ -82,14 +86,12 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
 
   final double? customerLat = (order.deliveryAddress.hasCoordinates &&
           DeliveryTrackingService.isValidCoordinates(
-              order.deliveryAddress.latitude,
-              order.deliveryAddress.longitude))
+              order.deliveryAddress.latitude, order.deliveryAddress.longitude))
       ? order.deliveryAddress.latitude
       : null;
   final double? customerLng = (order.deliveryAddress.hasCoordinates &&
           DeliveryTrackingService.isValidCoordinates(
-              order.deliveryAddress.latitude,
-              order.deliveryAddress.longitude))
+              order.deliveryAddress.latitude, order.deliveryAddress.longitude))
       ? order.deliveryAddress.longitude
       : null;
 
@@ -176,7 +178,6 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
     orderItemDetails: orderItemDetails,
   );
 }
-
 
 String _resolveAgentId(Ref ref) {
   final sessionUserId = ref.watch(userProvider.select((u) => u.id));
@@ -315,8 +316,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
     // Listen to Firebase Auth state changes so when user logs in / out,
     // the listener is automatically attached or reset.
     try {
-      _authSubscription =
-          _auth?.authStateChanges().listen((fbUser) {
+      _authSubscription = _auth?.authStateChanges().listen((fbUser) {
         if (fbUser != null && fbUser.uid.isNotEmpty) {
           _listenToAgentDoc(fbUser.uid);
         } else {
@@ -360,8 +360,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
   static bool _isLegacyMockName(String? val) {
     if (val == null) return false;
     final s = val.trim().toLowerCase();
-    return s == 'rajesh kumar' ||
-        s == 'delivery agent mock';
+    return s == 'rajesh kumar' || s == 'delivery agent mock';
   }
 
   static bool _isLegacyMockPhone(String? val) {
@@ -391,8 +390,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
   static bool _isLegacyMockZone(String? val) {
     if (val == null) return false;
     final s = val.trim().toLowerCase();
-    return s == 'delivery zone' ||
-        s == 'noida express zone';
+    return s == 'delivery zone' || s == 'noida express zone';
   }
 
   void _listenToAgentDoc([String? targetUid]) {
@@ -422,12 +420,15 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
         .listen((snapshot) async {
       final authUser = _auth?.currentUser;
 
-      debugPrint('DeliveryNotifier: Agent document path = delivery_agents/$uid');
-      debugPrint('DeliveryNotifier: Agent document exists = ${snapshot.exists}');
+      debugPrint(
+          'DeliveryNotifier: Agent document path = delivery_agents/$uid');
+      debugPrint(
+          'DeliveryNotifier: Agent document exists = ${snapshot.exists}');
 
       if (snapshot.exists) {
         final data = snapshot.data() ?? {};
-        debugPrint('DeliveryNotifier: Agent document fields = ${data.keys.toList()}');
+        debugPrint(
+            'DeliveryNotifier: Agent document fields = ${data.keys.toList()}');
         final isOnline = data['isOnline'] == true || data['isOnDuty'] == true;
 
         // 1. Name: Check agent doc -> user provider -> authUser displayName
@@ -464,7 +465,8 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
               }, SetOptions(merge: true));
             } catch (_) {}
           }
-        } else if (agentDocPhone.isNotEmpty && !_isLegacyMockPhone(agentDocPhone)) {
+        } else if (agentDocPhone.isNotEmpty &&
+            !_isLegacyMockPhone(agentDocPhone)) {
           realPhone = agentDocPhone;
         } else if (_currentUser.phone.trim().isNotEmpty &&
             !_isLegacyMockPhone(_currentUser.phone)) {
@@ -552,10 +554,10 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
                 }
               }
               if (realVehicle.isEmpty) {
-                final uVeh = ((uData['vehicle'] ?? uData['vehicleType'])
-                        as String?)
-                    ?.trim() ??
-                    '';
+                final uVeh =
+                    ((uData['vehicle'] ?? uData['vehicleType']) as String?)
+                            ?.trim() ??
+                        '';
                 if (uVeh.isNotEmpty && !_isLegacyMockVehicle(uVeh)) {
                   realVehicle = uVeh;
                 }
@@ -563,8 +565,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
               if (realVehicleNumber.isEmpty) {
                 final uPlate =
                     (uData['vehicleNumber'] as String?)?.trim() ?? '';
-                if (uPlate.isNotEmpty &&
-                    !_isLegacyMockVehicleNumber(uPlate)) {
+                if (uPlate.isNotEmpty && !_isLegacyMockVehicleNumber(uPlate)) {
                   realVehicleNumber = uPlate;
                 }
               }
@@ -595,10 +596,13 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
         debugPrint('DeliveryNotifier: Loaded name = $realName');
         debugPrint('DeliveryNotifier: Loaded phone = ${_maskPhone(realPhone)}');
         debugPrint('DeliveryNotifier: Loaded vehicle = $realVehicle');
-        debugPrint('DeliveryNotifier: Loaded vehicleType = ${(data['vehicleType'] as String?)?.trim() ?? realVehicle}');
-        debugPrint('DeliveryNotifier: Loaded vehicleNumber = $realVehicleNumber');
+        debugPrint(
+            'DeliveryNotifier: Loaded vehicleType = ${(data['vehicleType'] as String?)?.trim() ?? realVehicle}');
+        debugPrint(
+            'DeliveryNotifier: Loaded vehicleNumber = $realVehicleNumber');
         debugPrint('DeliveryNotifier: Loaded assignedZone = $realZone');
-        debugPrint('DeliveryNotifier: Loaded profileImageUrl = $realProfileImage');
+        debugPrint(
+            'DeliveryNotifier: Loaded profileImageUrl = $realProfileImage');
 
         if (!mounted) return;
         state = DeliveryAgent(
@@ -692,13 +696,18 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
           final userDoc = await firestore.collection('users').doc(uid).get();
           if (userDoc.exists) {
             final uData = userDoc.data() ?? {};
-            debugPrint('DeliveryNotifier: users doc found, fields = ${uData.keys.toList()}');
-            final uName = (uData['name'] as String? ?? _currentUser.name).trim();
-            final uPhone = (uData['phone'] as String? ?? _currentUser.phone).trim();
+            debugPrint(
+                'DeliveryNotifier: users doc found, fields = ${uData.keys.toList()}');
+            final uName =
+                (uData['name'] as String? ?? _currentUser.name).trim();
+            final uPhone =
+                (uData['phone'] as String? ?? _currentUser.phone).trim();
             final uVehicle = (uData['vehicle'] as String? ?? '').trim();
             final uVehicleNumber =
                 (uData['vehicleNumber'] as String? ?? '').trim();
-            final uZone = ((uData['assignedZone'] ?? uData['zone']) as String? ?? '').trim();
+            final uZone =
+                ((uData['assignedZone'] ?? uData['zone']) as String? ?? '')
+                    .trim();
             final double? uRating = (uData['rating'] as num?)?.toDouble();
             final uProfileImage = ((uData['profileImageUrl'] ??
                     uData['photoUrl'] ??
@@ -715,17 +724,21 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
                 ? authPhone
                 : (_isLegacyMockPhone(uPhone) ? '' : uPhone);
             final cleanVehicle = _isLegacyMockVehicle(uVehicle) ? '' : uVehicle;
-            final cleanVehicleNum =
-                _isLegacyMockVehicleNumber(uVehicleNumber) ? '' : uVehicleNumber;
+            final cleanVehicleNum = _isLegacyMockVehicleNumber(uVehicleNumber)
+                ? ''
+                : uVehicleNumber;
             final cleanZone = _isLegacyMockZone(uZone) ? '' : uZone;
 
             debugPrint('DeliveryNotifier: Loaded name = $cleanName');
-            debugPrint('DeliveryNotifier: Loaded phone = ${_maskPhone(cleanPhone)}');
+            debugPrint(
+                'DeliveryNotifier: Loaded phone = ${_maskPhone(cleanPhone)}');
             debugPrint('DeliveryNotifier: Loaded vehicle = $cleanVehicle');
             debugPrint('DeliveryNotifier: Loaded vehicleType = $cleanVehicle');
-            debugPrint('DeliveryNotifier: Loaded vehicleNumber = $cleanVehicleNum');
+            debugPrint(
+                'DeliveryNotifier: Loaded vehicleNumber = $cleanVehicleNum');
             debugPrint('DeliveryNotifier: Loaded assignedZone = $cleanZone');
-            debugPrint('DeliveryNotifier: Loaded profileImageUrl = $uProfileImage');
+            debugPrint(
+                'DeliveryNotifier: Loaded profileImageUrl = $uProfileImage');
 
             // Establish delivery_agents document so subsequent listeners work
             try {
@@ -785,12 +798,14 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
                 : _currentUser.phone.trim());
 
         debugPrint('DeliveryNotifier: Loaded name = $fallbackName');
-        debugPrint('DeliveryNotifier: Loaded phone = ${_maskPhone(fallbackPhone)}');
+        debugPrint(
+            'DeliveryNotifier: Loaded phone = ${_maskPhone(fallbackPhone)}');
         debugPrint('DeliveryNotifier: Loaded vehicle = ');
         debugPrint('DeliveryNotifier: Loaded vehicleType = ');
         debugPrint('DeliveryNotifier: Loaded vehicleNumber = ');
         debugPrint('DeliveryNotifier: Loaded assignedZone = ');
-        debugPrint('DeliveryNotifier: Loaded profileImageUrl = ${_currentUser.profileImageUrl ?? authUser?.photoURL}');
+        debugPrint(
+            'DeliveryNotifier: Loaded profileImageUrl = ${_currentUser.profileImageUrl ?? authUser?.photoURL}');
 
         if (!mounted) return;
         state = DeliveryAgent.empty(uid).copyWith(
@@ -874,7 +889,8 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
     String? profileImageUrl,
   }) async {
     final authUser = _auth?.currentUser;
-    final uid = authUser?.uid ?? (_effectiveUid.isNotEmpty ? _effectiveUid : '');
+    final uid =
+        authUser?.uid ?? (_effectiveUid.isNotEmpty ? _effectiveUid : '');
     if (uid.isEmpty) {
       throw StateError('Cannot update profile: user is not authenticated.');
     }
@@ -979,11 +995,12 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
     final authUser = FirebaseAuth.instance.currentUser;
     final uid = authUser?.uid ?? _effectiveUid;
     if (uid.isEmpty || authUser == null) {
-      throw StateError('Authentication required: please log in to upload a profile photo.');
+      throw StateError(
+          'Authentication required: please log in to upload a profile photo.');
     }
 
-    final downloadUrl = await FirebaseStorageService.instance
-        .uploadDeliveryAgentProfileImage(
+    final downloadUrl =
+        await FirebaseStorageService.instance.uploadDeliveryAgentProfileImage(
       uid: uid,
       bytes: bytes,
       contentType: contentType,

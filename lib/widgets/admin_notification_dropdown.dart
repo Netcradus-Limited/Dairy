@@ -206,10 +206,8 @@ class AdminNotificationDropdown extends ConsumerWidget {
                 TextButton(
                   onPressed: () async {
                     final list = notificationsAsync.value ?? [];
-                    final unreadIds = list
-                        .where((n) => !n.isRead)
-                        .map((n) => n.id)
-                        .toList();
+                    final unreadIds =
+                        list.where((n) => !n.isRead).map((n) => n.id).toList();
                     if (unreadIds.isNotEmpty && effectiveUid.isNotEmpty) {
                       try {
                         await ref
@@ -294,8 +292,8 @@ class AdminNotificationDropdown extends ConsumerWidget {
                             ),
                             const SizedBox(height: 10),
                             TextButton.icon(
-                              onPressed: () => ref.invalidate(
-                                  userNotificationsStreamProvider),
+                              onPressed: () => ref
+                                  .invalidate(userNotificationsStreamProvider),
                               icon: const Icon(Icons.refresh_rounded, size: 16),
                               label: const Text('Retry'),
                               style: TextButton.styleFrom(
@@ -308,206 +306,220 @@ class AdminNotificationDropdown extends ConsumerWidget {
                     ),
                     data: (notifications) {
                       if (notifications.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 36),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.08),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.notifications_none_rounded,
-                              size: 28,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No notifications yet',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'You\'re all caught up with your dairy alerts.',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              color: textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                return ListView.separated(
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  itemCount: notifications.length,
-                  separatorBuilder: (_, __) =>
-                      Divider(height: 1, thickness: 0.5, color: cardBorder),
-                  itemBuilder: (context, index) {
-                    final notif = notifications[index];
-                    final typeColor = _getTypeColor(notif.type);
-                    final isUnread = !notif.isRead;
-
-                    return Material(
-                      color: isUnread
-                          ? AppColors.primary.withValues(alpha: 0.05)
-                          : Colors.transparent,
-                      child: InkWell(
-                        onTap: () async {
-                          if (isUnread && effectiveUid.isNotEmpty) {
-                            try {
-                              await ref
-                                  .read(notificationRepositoryProvider)
-                                  .markAsRead(effectiveUid, notif.id);
-                            } catch (e) {
-                              debugPrint(
-                                  '[NOTIFICATION READ ERROR] Dropdown markAsRead failed: $e');
-                            }
-                          }
-
-                          if (notif.isActionable) {
-                            final targetIndex =
-                                _resolveNavIndexForNotification(notif);
-                            if (onNavigate != null) {
-                              onNavigate!(targetIndex);
-                            } else if (onClose != null) {
-                              onClose!();
-                            }
-                          }
-                        },
-                        child: Padding(
+                        return Padding(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Type Icon
-                              Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: typeColor.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(10),
+                              horizontal: 24, vertical: 36),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary
+                                        .withValues(alpha: 0.08),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.notifications_none_rounded,
+                                    size: 28,
+                                    color: AppColors.primary,
+                                  ),
                                 ),
-                                child: Icon(
-                                  notif.type.icon,
-                                  size: 18,
-                                  color: typeColor,
+                                const SizedBox(height: 12),
+                                Text(
+                                  'No notifications yet',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: textPrimary,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              // Content
-                              Expanded(
-                                child: Column(
+                                const SizedBox(height: 4),
+                                Text(
+                                  'You\'re all caught up with your dairy alerts.',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    color: textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+
+                      return ListView.separated(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        itemCount: notifications.length,
+                        separatorBuilder: (_, __) => Divider(
+                            height: 1, thickness: 0.5, color: cardBorder),
+                        itemBuilder: (context, index) {
+                          final notif = notifications[index];
+                          final typeColor = _getTypeColor(notif.type);
+                          final isUnread = !notif.isRead;
+
+                          return Material(
+                            color: isUnread
+                                ? AppColors.primary.withValues(alpha: 0.05)
+                                : Colors.transparent,
+                            child: InkWell(
+                              onTap: () async {
+                                if (isUnread && effectiveUid.isNotEmpty) {
+                                  try {
+                                    await ref
+                                        .read(notificationRepositoryProvider)
+                                        .markAsRead(effectiveUid, notif.id);
+                                  } catch (e) {
+                                    debugPrint(
+                                        '[NOTIFICATION READ ERROR] Dropdown markAsRead failed: $e');
+                                  }
+                                }
+
+                                if (notif.isActionable) {
+                                  final targetIndex =
+                                      _resolveNavIndexForNotification(notif);
+                                  if (onNavigate != null) {
+                                    onNavigate!(targetIndex);
+                                  } else if (onClose != null) {
+                                    onClose!();
+                                  }
+                                }
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 12),
+                                child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            notif.title,
+                                    // Type Icon
+                                    Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color:
+                                            typeColor.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(
+                                        notif.type.icon,
+                                        size: 18,
+                                        color: typeColor,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    // Content
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  notif.title,
+                                                  style: GoogleFonts
+                                                      .plusJakartaSans(
+                                                    fontSize: 13,
+                                                    fontWeight: isUnread
+                                                        ? FontWeight.w700
+                                                        : FontWeight.w600,
+                                                    color: textPrimary,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              if (isUnread) ...[
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  width: 7,
+                                                  height: 7,
+                                                  decoration:
+                                                      const BoxDecoration(
+                                                    shape: BoxShape.circle,
+                                                    color: AppColors.primary,
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            notif.body,
                                             style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 13,
-                                              fontWeight: isUnread
-                                                  ? FontWeight.w700
-                                                  : FontWeight.w600,
-                                              color: textPrimary,
+                                              fontSize: 12,
+                                              color: textSecondary,
+                                              height: 1.35,
                                             ),
-                                            maxLines: 1,
+                                            maxLines: 2,
                                             overflow: TextOverflow.ellipsis,
                                           ),
-                                        ),
-                                        if (isUnread) ...[
-                                          const SizedBox(width: 6),
-                                          Container(
-                                            width: 7,
-                                            height: 7,
-                                            decoration: const BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              color: AppColors.primary,
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      notif.body,
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 12,
-                                        color: textSecondary,
-                                        height: 1.35,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 5),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.access_time_rounded,
-                                          size: 11,
-                                          color: textSecondary,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          _formatTimestamp(notif.timestamp),
-                                          style: GoogleFonts.plusJakartaSans(
-                                            fontSize: 11,
-                                            color: textSecondary,
-                                          ),
-                                        ),
-                                        if (notif.orderId != null &&
-                                            notif.orderId!.isNotEmpty) ...[
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 6, vertical: 1),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.primary
-                                                  .withValues(alpha: 0.08),
-                                              borderRadius:
-                                                  BorderRadius.circular(6),
-                                            ),
-                                            child: Text(
-                                              '#${notif.orderId}',
-                                              style:
-                                                  GoogleFonts.plusJakartaSans(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w600,
-                                                color: AppColors.primary,
+                                          const SizedBox(height: 5),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.access_time_rounded,
+                                                size: 11,
+                                                color: textSecondary,
                                               ),
-                                            ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                _formatTimestamp(
+                                                    notif.timestamp),
+                                                style:
+                                                    GoogleFonts.plusJakartaSans(
+                                                  fontSize: 11,
+                                                  color: textSecondary,
+                                                ),
+                                              ),
+                                              if (notif.orderId != null &&
+                                                  notif
+                                                      .orderId!.isNotEmpty) ...[
+                                                const SizedBox(width: 8),
+                                                Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 1),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.primary
+                                                        .withValues(
+                                                            alpha: 0.08),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            6),
+                                                  ),
+                                                  child: Text(
+                                                    '#${notif.orderId}',
+                                                    style: GoogleFonts
+                                                        .plusJakartaSans(
+                                                      fontSize: 10,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: AppColors.primary,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
                                           ),
                                         ],
-                                      ],
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
           ),
 
           // ── Footer: View All Notifications ──

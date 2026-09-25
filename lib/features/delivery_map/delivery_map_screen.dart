@@ -274,7 +274,8 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen> {
                 _focusOn(_MapConstants.pickupHub, zoom: 15);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Agent GPS location is currently unavailable.'),
+                    content:
+                        Text('Agent GPS location is currently unavailable.'),
                     duration: Duration(seconds: 2),
                   ),
                 );
@@ -333,8 +334,7 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen> {
                         Polyline(
                           points: _routeResult!.points,
                           strokeWidth: 4,
-                          color: AppColors.primaryBlue
-                              .withValues(alpha: 0.7),
+                          color: AppColors.primaryBlue.withValues(alpha: 0.7),
                         ),
                       ],
                     ),
@@ -372,19 +372,18 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen> {
                 right: 12,
                 bottom: 12,
                 child: FloatingActionButton.small(
-                  tooltip: _followAgent
-                      ? 'Stop following agent'
-                      : 'Follow agent',
-                  backgroundColor: _followAgent
-                      ? AppColors.primaryBlue
-                      : AppColors.surface,
+                  tooltip:
+                      _followAgent ? 'Stop following agent' : 'Follow agent',
+                  backgroundColor:
+                      _followAgent ? AppColors.primaryBlue : AppColors.surface,
                   foregroundColor:
                       _followAgent ? Colors.white : AppColors.primaryBlue,
                   onPressed: () {
                     if (agentPos == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Cannot follow: Agent location is currently unavailable.'),
+                          content: Text(
+                              'Cannot follow: Agent location is currently unavailable.'),
                           duration: Duration(seconds: 2),
                         ),
                       );
@@ -399,8 +398,7 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen> {
                 initialChildSize: 0.32,
                 minChildSize: 0.18,
                 maxChildSize: 0.7,
-                builder: (context, scrollController) =>
-                    _DeliveryListSheet(
+                builder: (context, scrollController) => _DeliveryListSheet(
                   scrollController: scrollController,
                   orders: activeOrders,
                   selectedOrder: _selectedOrder,
@@ -505,11 +503,15 @@ class _AgentStatusCard extends StatelessWidget {
                       Icon(
                         (hasRealLocation && isLive)
                             ? Icons.location_on_rounded
-                            : (hasError ? Icons.error_outline_rounded : Icons.location_off_rounded),
+                            : (hasError
+                                ? Icons.error_outline_rounded
+                                : Icons.location_off_rounded),
                         size: 12,
                         color: (hasRealLocation && isLive)
                             ? AppColors.freshGreen
-                            : (hasError ? AppColors.error : AppColors.textMuted),
+                            : (hasError
+                                ? AppColors.error
+                                : AppColors.textMuted),
                       ),
                     const SizedBox(width: 4),
                     Text(
@@ -523,7 +525,9 @@ class _AgentStatusCard extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                         color: (hasRealLocation && isLive)
                             ? AppColors.freshGreen
-                            : (hasError ? AppColors.error : AppColors.textMuted),
+                            : (hasError
+                                ? AppColors.error
+                                : AppColors.textMuted),
                       ),
                     ),
                   ],
@@ -552,7 +556,8 @@ class _AgentStatusCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.location_off_rounded, size: 14, color: Colors.amber.shade900),
+                Icon(Icons.location_off_rounded,
+                    size: 14, color: Colors.amber.shade900),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -832,7 +837,8 @@ class _MapPin extends StatelessWidget {
                 Flexible(
                   flex: 2,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                     decoration: BoxDecoration(
                       color: color,
                       borderRadius: BorderRadius.circular(6),
@@ -891,7 +897,8 @@ class _RouteLegendBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.primaryBlue.withValues(alpha: 0.35)),
+        border:
+            Border.all(color: AppColors.primaryBlue.withValues(alpha: 0.35)),
         boxShadow: AppColors.cardShadowSm,
       ),
       child: Row(

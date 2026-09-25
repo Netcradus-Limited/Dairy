@@ -96,7 +96,12 @@ final notificationsProvider =
 /// Convenience providers using real Firestore stream (replaced legacy mock list).
 /// The customer NotificationsScreen now uses [userNotificationsStreamProvider].
 final unreadNotificationsProvider = Provider<List<NotificationItem>>((ref) {
-  return ref.watch(userNotificationsStreamProvider).value?.where((n) => !n.isRead).toList() ?? [];
+  return ref
+          .watch(userNotificationsStreamProvider)
+          .value
+          ?.where((n) => !n.isRead)
+          .toList() ??
+      [];
 });
 
 final unreadNotificationsCountProvider = Provider<int>((ref) {

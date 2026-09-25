@@ -209,7 +209,8 @@ class _DeliveryOrderDetailViewState
       if (mounted) {
         messenger.showSnackBar(
           SnackBar(
-            content: Text('Order #${order.displayCode} successfully delivered!'),
+            content:
+                Text('Order #${order.displayCode} successfully delivered!'),
             backgroundColor: DeliveryTheme.primary,
           ),
         );
@@ -444,9 +445,10 @@ class _DeliveryOrderDetailViewState
     final customerAddress = order.customerAddress.trim().isNotEmpty
         ? order.customerAddress.trim()
         : 'Address not specified';
-    final noteText = (order.deliverySlot != null && order.deliverySlot!.trim().isNotEmpty)
-        ? 'Slot: ${order.deliverySlot!.trim()}'
-        : 'Please keep the order at the gate. Call if not available.';
+    final noteText =
+        (order.deliverySlot != null && order.deliverySlot!.trim().isNotEmpty)
+            ? 'Slot: ${order.deliverySlot!.trim()}'
+            : 'Please keep the order at the gate. Call if not available.';
 
     return Scaffold(
       backgroundColor: DeliveryTheme.background,

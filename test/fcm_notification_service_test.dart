@@ -10,7 +10,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('FCM & Notification Service Unit Tests', () {
-    test('AndroidNotificationChannel is properly configured for high priority', () {
+    test('AndroidNotificationChannel is properly configured for high priority',
+        () {
       const channel = NotificationService.channel;
       expect(channel.id, 'order_alerts');
       expect(channel.name, 'Order Alerts');
@@ -34,7 +35,8 @@ void main() {
       expect(alert.data['agentName'], 'Vikram');
     });
 
-    test('orderAlertProvider initializes as null and updates state correctly', () {
+    test('orderAlertProvider initializes as null and updates state correctly',
+        () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -52,7 +54,9 @@ void main() {
       expect(state?.title, 'Order Confirmed');
     });
 
-    test('Safe payload extraction handles snake_case order_id and camelCase orderId', () {
+    test(
+        'Safe payload extraction handles snake_case order_id and camelCase orderId',
+        () {
       // camelCase
       final camelData = {
         'orderId': 'ORD-CAMEL-1',
@@ -72,7 +76,9 @@ void main() {
       expect(snakeOrderId, 'ORD-SNAKE-2');
     });
 
-    test('Safe payload extraction handles missing, null, or empty order IDs without error', () {
+    test(
+        'Safe payload extraction handles missing, null, or empty order IDs without error',
+        () {
       final emptyData = <String, dynamic>{};
       final orderId = emptyData['orderId'] ?? emptyData['order_id'];
       expect(orderId, isNull);
@@ -100,7 +106,8 @@ void main() {
       expect(decoded['isActionable'], 'true');
     });
 
-    test('Malformed payload string decoding does not throw unhandled exception', () {
+    test('Malformed payload string decoding does not throw unhandled exception',
+        () {
       const invalidJson = '{malformed: true, missing quotes}';
       Map<String, dynamic>? decoded;
 
@@ -116,7 +123,8 @@ void main() {
       expect(decoded, isNull);
     });
 
-    test('NotificationItem data structure aligns with FCM message payloads', () {
+    test('NotificationItem data structure aligns with FCM message payloads',
+        () {
       final notif = NotificationItem(
         id: 'notif_101',
         type: NotificationType.order,
@@ -137,7 +145,9 @@ void main() {
       expect(map['isActionable'], true);
     });
 
-    test('Web firebase-messaging-sw.js exists and contains Firebase compat SDK and config', () {
+    test(
+        'Web firebase-messaging-sw.js exists and contains Firebase compat SDK and config',
+        () {
       final swFile = File('web/firebase-messaging-sw.js');
       expect(swFile.existsSync(), isTrue,
           reason: 'web/firebase-messaging-sw.js must exist for Web FCM');

@@ -285,8 +285,7 @@ class _DeliveryMapTabState extends ConsumerState<DeliveryMapTab> {
               actions: [
                 if (activeOrder != null)
                   IconButton(
-                    onPressed: () =>
-                        _makePhoneCall(activeOrder!.customerPhone),
+                    onPressed: () => _makePhoneCall(activeOrder!.customerPhone),
                     icon: const Icon(Icons.phone_outlined,
                         color: Colors.white, size: 22),
                   ),
@@ -488,8 +487,7 @@ class _DeliveryMapTabState extends ConsumerState<DeliveryMapTab> {
                               Row(
                                 children: [
                                   const Icon(Icons.location_on_outlined,
-                                      size: 14,
-                                      color: DeliveryTheme.textMuted),
+                                      size: 14, color: DeliveryTheme.textMuted),
                                   const SizedBox(width: 4),
                                   Expanded(
                                     child: Text(

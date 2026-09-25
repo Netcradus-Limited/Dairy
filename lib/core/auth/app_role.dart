@@ -124,7 +124,8 @@ enum UserRole {
   bool get isSuperAdmin => this == UserRole.admin;
   bool get isAdmin => this == UserRole.admin;
   bool get isStaff => this == UserRole.staff;
-  bool get canAccessAdminPortal => this == UserRole.admin || this == UserRole.staff;
+  bool get canAccessAdminPortal =>
+      this == UserRole.admin || this == UserRole.staff;
   bool get isDelivery => this == UserRole.delivery;
   bool get isCustomer => this == UserRole.customer;
 

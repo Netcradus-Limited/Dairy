@@ -21,12 +21,9 @@ class BatteryOptimizationWarningBanner extends ConsumerWidget {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const warningColor = Color(0xFFD97706);
-    final bgColor = isDark
-        ? const Color(0xFF291B07)
-        : const Color(0xFFFFFBEB);
-    final borderColor = isDark
-        ? const Color(0xFF5E3A06)
-        : const Color(0xFFFDE68A);
+    final bgColor = isDark ? const Color(0xFF291B07) : const Color(0xFFFFFBEB);
+    final borderColor =
+        isDark ? const Color(0xFF5E3A06) : const Color(0xFFFDE68A);
 
     return Container(
       width: double.infinity,
@@ -63,7 +60,9 @@ class BatteryOptimizationWarningBanner extends ConsumerWidget {
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
-                  color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                  color: isDark
+                      ? const Color(0xFFFDE68A)
+                      : const Color(0xFF92400E),
                 ),
               ),
               const SizedBox(height: 2),
@@ -73,7 +72,8 @@ class BatteryOptimizationWarningBanner extends ConsumerWidget {
                   fontSize: 11.5,
                   height: 1.35,
                   fontWeight: FontWeight.w500,
-                  color: isDark ? const Color(0xFFF3F4F6) : AppColors.textPrimary,
+                  color:
+                      isDark ? const Color(0xFFF3F4F6) : AppColors.textPrimary,
                 ),
               ),
             ],
@@ -90,7 +90,8 @@ class BatteryOptimizationWarningBanner extends ConsumerWidget {
                   backgroundColor: warningColor,
                   foregroundColor: Colors.white,
                   visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(6),
                   ),
@@ -134,9 +135,12 @@ class BatteryOptimizationWarningBanner extends ConsumerWidget {
                       tooltip: 'Dismiss',
                       color: isDark ? Colors.white70 : AppColors.textSecondary,
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                      constraints:
+                          const BoxConstraints(minWidth: 28, minHeight: 28),
                       onPressed: () {
-                        ref.read(batteryOptimizationProvider.notifier).dismiss();
+                        ref
+                            .read(batteryOptimizationProvider.notifier)
+                            .dismiss();
                       },
                     ),
                   ],
@@ -146,13 +150,16 @@ class BatteryOptimizationWarningBanner extends ConsumerWidget {
                   padding: const EdgeInsets.only(left: 36),
                   child: FilledButton.icon(
                     onPressed: () {
-                      ref.read(batteryOptimizationProvider.notifier).fixSettings();
+                      ref
+                          .read(batteryOptimizationProvider.notifier)
+                          .fixSettings();
                     },
                     style: FilledButton.styleFrom(
                       backgroundColor: warningColor,
                       foregroundColor: Colors.white,
                       visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(6),
                       ),

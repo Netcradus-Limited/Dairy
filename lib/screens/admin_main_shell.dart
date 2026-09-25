@@ -232,7 +232,8 @@ class _PermissionDeniedCard extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.lock_person_rounded, size: 56, color: Colors.orangeAccent),
+            const Icon(Icons.lock_person_rounded,
+                size: 56, color: Colors.orangeAccent),
             const SizedBox(height: 16),
             Text(
               'Access Restricted: $moduleName',
@@ -257,4 +258,3 @@ class _PermissionDeniedCard extends StatelessWidget {
     );
   }
 }
-

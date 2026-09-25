@@ -82,7 +82,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           orderId: pendingDest.orderId,
           type: pendingDest.type,
         );
-        debugPrint('[SPLASH] Routing authenticated cold-start to: $targetRoute');
+        debugPrint(
+            '[SPLASH] Routing authenticated cold-start to: $targetRoute');
         context.go(targetRoute);
         return;
       }

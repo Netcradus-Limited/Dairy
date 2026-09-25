@@ -95,8 +95,8 @@ class FCMService {
 
       // Create Android Notification Channels for high priority alerts
       if (!kIsWeb) {
-        final androidImplementation = _localNotifications
-            .resolvePlatformSpecificImplementation<
+        final androidImplementation =
+            _localNotifications.resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin>();
         if (androidImplementation != null) {
           await androidImplementation.createNotificationChannel(
@@ -140,7 +140,8 @@ class FCMService {
   Future<void> _requestPlatformPermission() async {
     try {
       // iOS and Android 13+ ask via requestPermission; Web uses getPermission.
-      final NotificationSettings settings = await _messaging.requestPermission();
+      final NotificationSettings settings =
+          await _messaging.requestPermission();
 
       if (settings.authorizationStatus != AuthorizationStatus.authorized) {
         debugPrint('[FCM] Notification permission denied or not granted.');
@@ -159,7 +160,8 @@ class FCMService {
   void _listenTokenRefresh() {
     onTokenRefresh.listen((String? newToken) async {
       if (newToken == null) {
-        debugPrint('[FCM] Token refresh emitted null — skipping Firestore write.');
+        debugPrint(
+            '[FCM] Token refresh emitted null — skipping Firestore write.');
         return;
       }
       await _saveTokenIfAuthorized();
@@ -250,10 +252,11 @@ class FCMService {
     final authUid = _auth.currentUser?.uid;
     if (authUid != null && authUid.isNotEmpty) {
       final list = await _notifRepo.streamUserNotifications(authUid).first;
-      final alreadyExists = list.any(
-          (n) => n.orderId != null && n.orderId == orderId && !n.isRead);
+      final alreadyExists = list
+          .any((n) => n.orderId != null && n.orderId == orderId && !n.isRead);
       if (alreadyExists) {
-        debugPrint('[FCM] Duplicate order alert detected — skipping local notification for orderId: $orderId');
+        debugPrint(
+            '[FCM] Duplicate order alert detected — skipping local notification for orderId: $orderId');
         return;
       }
     }
@@ -306,9 +309,11 @@ class FCMService {
       // navigation intent in a persistent location (last tapped notification)
       // that the DeliveryPanelScreen reads on build.
       _ref.read(lastTappedOrderIdProvider.notifier).state = orderId;
-      debugPrint('[FCM] Notification tapped — set lastTappedOrderId to: $orderId');
+      debugPrint(
+          '[FCM] Notification tapped — set lastTappedOrderId to: $orderId');
     } else {
-      debugPrint('[FCM] Background-tap notification without orderId: data=${message.data}');
+      debugPrint(
+          '[FCM] Background-tap notification without orderId: data=${message.data}');
     }
     _showLocalNotification(message);
   }

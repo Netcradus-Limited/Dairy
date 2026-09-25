@@ -152,7 +152,8 @@ void main() {
   }
 
   group('Task 4 — Admin Delivery Assignment Tests', () {
-    test('1. DairyOrder model handles assignedAgentId and isAssigned getter', () {
+    test('1. DairyOrder model handles assignedAgentId and isAssigned getter',
+        () {
       expect(unassignedOrder.isAssigned, isFalse);
       expect(unassignedOrder.assignedAgentId, isNull);
 
@@ -169,7 +170,8 @@ void main() {
       expect(updated.assignedAgentName, equals('Rajesh Sharma'));
     });
 
-    testWidgets('2. Unassigned order displays "Assign Agent" button', (tester) async {
+    testWidgets('2. Unassigned order displays "Assign Agent" button',
+        (tester) async {
       final mockProvider = MockAdminProvider()
         ..setMockOrders([unassignedOrder])
         ..setMockRiders([testRider1, testRider2]);
@@ -183,7 +185,8 @@ void main() {
       expect(find.text('Tap to reassign'), findsNothing);
     });
 
-    testWidgets('3. Assigned order displays current agent name and reassign affordance',
+    testWidgets(
+        '3. Assigned order displays current agent name and reassign affordance',
         (tester) async {
       final mockProvider = MockAdminProvider()
         ..setMockOrders([assignedOrder])
@@ -198,7 +201,8 @@ void main() {
       expect(find.text('Tap to reassign'), findsOneWidget);
     });
 
-    testWidgets('4. Tapping "Assign Agent" opens assignment dialog with available riders',
+    testWidgets(
+        '4. Tapping "Assign Agent" opens assignment dialog with available riders',
         (tester) async {
       final mockProvider = MockAdminProvider()
         ..setMockOrders([unassignedOrder])
@@ -221,7 +225,8 @@ void main() {
       expect(find.text('Offline'), findsOneWidget);
     });
 
-    testWidgets('5. Admin selects a rider and confirms assignment', (tester) async {
+    testWidgets('5. Admin selects a rider and confirms assignment',
+        (tester) async {
       final mockProvider = MockAdminProvider()
         ..setMockOrders([unassignedOrder])
         ..setMockRiders([testRider1, testRider2]);
@@ -250,7 +255,8 @@ void main() {
       expect(mockProvider.orders.first.isAssigned, isTrue);
     });
 
-    testWidgets('6. Admin can reassign an already assigned order to another rider',
+    testWidgets(
+        '6. Admin can reassign an already assigned order to another rider',
         (tester) async {
       final mockProvider = MockAdminProvider()
         ..setMockOrders([assignedOrder])
@@ -320,15 +326,15 @@ void main() {
       expect(find.text('Rajesh Sharma'), findsOneWidget);
 
       // Enter search text
-      await tester.enterText(
-          find.byType(TextField), 'Rajesh');
+      await tester.enterText(find.byType(TextField), 'Rajesh');
       await tester.pumpAndSettle();
 
       expect(find.text('Rajesh Sharma'), findsOneWidget);
       expect(find.text('Amit Kumar'), findsNothing);
     });
 
-    testWidgets('9. Desktop viewport renders Orders table without RenderFlex overflow',
+    testWidgets(
+        '9. Desktop viewport renders Orders table without RenderFlex overflow',
         (tester) async {
       tester.view.physicalSize = const Size(1280, 800);
       tester.view.devicePixelRatio = 1.0;
@@ -347,7 +353,8 @@ void main() {
       expect(find.text('Order #SWD102'), findsOneWidget);
     });
 
-    testWidgets('10. Mobile viewport renders Orders list without RenderFlex overflow',
+    testWidgets(
+        '10. Mobile viewport renders Orders list without RenderFlex overflow',
         (tester) async {
       tester.view.physicalSize = const Size(375, 667);
       tester.view.devicePixelRatio = 1.0;

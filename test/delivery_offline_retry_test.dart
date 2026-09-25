@@ -81,7 +81,8 @@ void main() {
       expect(attempts, 1);
     });
 
-    test('retryOperation retries transient errors and succeeds eventually', () async {
+    test('retryOperation retries transient errors and succeeds eventually',
+        () async {
       int attempts = 0;
       final result = await retryOperation(
         () async {
@@ -98,7 +99,9 @@ void main() {
       expect(attempts, 3);
     });
 
-    test('retryOperation does NOT retry non-transient errors (StateError, ArgumentError)', () async {
+    test(
+        'retryOperation does NOT retry non-transient errors (StateError, ArgumentError)',
+        () async {
       int attempts = 0;
       await expectLater(
         retryOperation(
@@ -130,10 +133,15 @@ void main() {
       expect(attempts, 3);
     });
 
-    test('isTransientError correctly identifies network and firestore timeout errors', () {
+    test(
+        'isTransientError correctly identifies network and firestore timeout errors',
+        () {
       expect(isTransientError(const SocketException('failed')), isTrue);
       expect(isTransientError(TimeoutException('timed out')), isTrue);
-      expect(isTransientError(Exception('FirebaseException: unavailable, network lost')), isTrue);
+      expect(
+          isTransientError(
+              Exception('FirebaseException: unavailable, network lost')),
+          isTrue);
       expect(isTransientError(Exception('deadline-exceeded')), isTrue);
 
       expect(isTransientError(StateError('state mismatch')), isFalse);
@@ -141,7 +149,9 @@ void main() {
       expect(isTransientError(Exception('permission-denied')), isFalse);
     });
 
-    test('NetworkConnectivityService probes custom callback and detects connectivity', () async {
+    test(
+        'NetworkConnectivityService probes custom callback and detects connectivity',
+        () async {
       bool isOnline = true;
       final service = NetworkConnectivityService(
         checker: () async => isOnline,
@@ -158,7 +168,9 @@ void main() {
   });
 
   group('Task 9 — Location Offline Resiliency Tests', () {
-    test('Location tracking buffers unsynced position on network error and flushes on reconnect', () async {
+    test(
+        'Location tracking buffers unsynced position on network error and flushes on reconnect',
+        () async {
       final fakeTracking = FakeTrackingService();
       final connectivityNotifier = FakeConnectivityNotifier(true);
 
@@ -167,7 +179,8 @@ void main() {
           deliveryTrackingServiceProvider.overrideWithValue(fakeTracking),
           deliveryActiveOrdersStreamProvider
               .overrideWith((ref) => Stream.value(<DeliveryOrder>[])),
-          networkConnectivityProvider.overrideWith((ref) => connectivityNotifier),
+          networkConnectivityProvider
+              .overrideWith((ref) => connectivityNotifier),
           deliveryAgentProvider.overrideWith((ref) => MockDeliveryNotifier(
                 const DeliveryAgent(
                   id: 'agent_1',
@@ -216,12 +229,15 @@ void main() {
   });
 
   group('Task 9 — Offline UI Banner Tests', () {
-    testWidgets('DeliveryPanelScreen displays offline banner when connectivity is lost', (tester) async {
+    testWidgets(
+        'DeliveryPanelScreen displays offline banner when connectivity is lost',
+        (tester) async {
       final connectivityNotifier = FakeConnectivityNotifier(true);
 
       final container = ProviderContainer(
         overrides: [
-          networkConnectivityProvider.overrideWith((ref) => connectivityNotifier),
+          networkConnectivityProvider
+              .overrideWith((ref) => connectivityNotifier),
           deliveryAgentProvider.overrideWith((ref) => MockDeliveryNotifier(
                 const DeliveryAgent(
                   id: 'agent_1',
@@ -311,7 +327,9 @@ void main() {
       expect(orderData['assignedAgentId'], 'agent_1');
     });
 
-    test('acceptOrder preserves concurrency guard and throws StateError if claimed by another agent', () async {
+    test(
+        'acceptOrder preserves concurrency guard and throws StateError if claimed by another agent',
+        () async {
       final orderData = <String, String?>{
         'status': 'accepted',
         'assignedAgentId': 'agent_1',
@@ -346,7 +364,8 @@ void main() {
       expect(orderData['assignedAgentId'], 'agent_1');
     });
 
-    test('declineOrder is idempotent when order is already Pending/unassigned', () async {
+    test('declineOrder is idempotent when order is already Pending/unassigned',
+        () async {
       final orderData = <String, String?>{
         'status': 'Pending',
         'assignedAgentId': null,

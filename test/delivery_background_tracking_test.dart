@@ -76,9 +76,10 @@ class _CapturingTrackingService extends DeliveryTrackingService {
     String? orderId,
   }) async {
     // Honour the same validation gate as the real service.
-    if (!DeliveryTrackingService.isValidCoordinates(latitude, longitude)) return;
-    captures
-        .add((agentId: agentId, lat: latitude, lng: longitude, orderId: orderId));
+    if (!DeliveryTrackingService.isValidCoordinates(latitude, longitude))
+      return;
+    captures.add(
+        (agentId: agentId, lat: latitude, lng: longitude, orderId: orderId));
   }
 }
 
@@ -182,7 +183,8 @@ void main() {
     });
 
     // ── Test 3 ───────────────────────────────────────────────────────────────
-    test('3. Calling startTracking() twice creates only one stream subscription',
+    test(
+        '3. Calling startTracking() twice creates only one stream subscription',
         () async {
       final container = _makeContainer(loc: loc, tracking: tracking);
       addTearDown(container.dispose);
@@ -211,7 +213,8 @@ void main() {
     });
 
     // ── Test 5 ───────────────────────────────────────────────────────────────
-    test('5. GPS positions are written using the authenticated agent ID', () async {
+    test('5. GPS positions are written using the authenticated agent ID',
+        () async {
       final container = _makeContainer(loc: loc, tracking: tracking);
       addTearDown(container.dispose);
 
@@ -220,16 +223,19 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 60));
 
       expect(tracking.captures, isNotEmpty,
-          reason: 'At least one Firestore write must occur after a position emit');
+          reason:
+              'At least one Firestore write must occur after a position emit');
       final write = tracking.captures.last;
       expect(write.agentId, equals(_agentId),
-          reason: 'Write must target the authenticated agent — never another agent');
+          reason:
+              'Write must target the authenticated agent — never another agent');
       expect(write.lat, closeTo(_lat, 1e-6));
       expect(write.lng, closeTo(_lng, 1e-6));
     });
 
     // ── Test 6 ───────────────────────────────────────────────────────────────
-    test('6. Container disposal (logout / provider teardown) cleans up notifier',
+    test(
+        '6. Container disposal (logout / provider teardown) cleans up notifier',
         () async {
       final container = _makeContainer(loc: loc, tracking: tracking);
 
@@ -245,10 +251,11 @@ void main() {
     });
 
     // ── Test 7 ───────────────────────────────────────────────────────────────
-    test('7. Agent going offDuty (delivery completed) stops tracking', () async {
+    test('7. Agent going offDuty (delivery completed) stops tracking',
+        () async {
       final mockDelivery = _MockDeliveryNotifier(_agent());
-      final container =
-          _makeContainer(loc: loc, tracking: tracking, mockDelivery: mockDelivery);
+      final container = _makeContainer(
+          loc: loc, tracking: tracking, mockDelivery: mockDelivery);
       addTearDown(container.dispose);
 
       final notifier = container.read(agentLiveLocationProvider.notifier);
@@ -267,8 +274,8 @@ void main() {
     test('8. Agent on breakTime (delivery cancelled / failed) stops tracking',
         () async {
       final mockDelivery = _MockDeliveryNotifier(_agent());
-      final container =
-          _makeContainer(loc: loc, tracking: tracking, mockDelivery: mockDelivery);
+      final container = _makeContainer(
+          loc: loc, tracking: tracking, mockDelivery: mockDelivery);
       addTearDown(container.dispose);
 
       final notifier = container.read(agentLiveLocationProvider.notifier);
@@ -305,7 +312,8 @@ void main() {
     });
 
     // ── Test 10 ──────────────────────────────────────────────────────────────
-    test('10. A Firestore write failure does not crash GPS stream or tracking state',
+    test(
+        '10. A Firestore write failure does not crash GPS stream or tracking state',
         () async {
       final throwingService = _ThrowingTrackingService();
       final container = _makeContainer(loc: loc, tracking: throwingService);
@@ -377,21 +385,23 @@ void main() {
       loc.emit(_lat + 0.002, _lng + 0.002);
       await Future<void>.delayed(const Duration(milliseconds: 60));
       expect(tracking.captures.length, equals(2),
-          reason: 'A new position must be written after a duplicate was skipped');
+          reason:
+              'A new position must be written after a duplicate was skipped');
     });
 
     // ── Coordinate Validation Contract (used by every test above) ───────────
     test('Coordinate validation contract used by background tracking', () {
       // These are the validation rules exercised by DeliveryTrackingService
       // before every Firestore write, in both foreground and background modes.
-      expect(DeliveryTrackingService.isValidCoordinates(22.7255, 75.88), isTrue);
-      expect(DeliveryTrackingService.isValidCoordinates(-33.8688, 151.2093), isTrue);
+      expect(
+          DeliveryTrackingService.isValidCoordinates(22.7255, 75.88), isTrue);
+      expect(DeliveryTrackingService.isValidCoordinates(-33.8688, 151.2093),
+          isTrue);
       expect(DeliveryTrackingService.isValidCoordinates(0.0, 0.0), isFalse);
       expect(DeliveryTrackingService.isValidCoordinates(null, null), isFalse);
-      expect(
-          DeliveryTrackingService.isValidCoordinates(double.nan, 75.88), isFalse);
-      expect(
-          DeliveryTrackingService.isValidCoordinates(double.infinity, 75.88),
+      expect(DeliveryTrackingService.isValidCoordinates(double.nan, 75.88),
+          isFalse);
+      expect(DeliveryTrackingService.isValidCoordinates(double.infinity, 75.88),
           isFalse);
       expect(DeliveryTrackingService.isValidCoordinates(95.0, 75.88), isFalse);
       expect(

@@ -146,8 +146,8 @@ class CategoriesScreen extends StatelessWidget {
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                   ),
@@ -201,7 +201,9 @@ class CategoriesScreen extends StatelessWidget {
                         color: cardBg,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: cat.isActive ? cardBorder : cardBorder.withValues(alpha: 0.5),
+                          color: cat.isActive
+                              ? cardBorder
+                              : cardBorder.withValues(alpha: 0.5),
                         ),
                         boxShadow: AppColors.cardShadow,
                       ),
@@ -239,7 +241,8 @@ class CategoriesScreen extends StatelessWidget {
                                           fit: BoxFit.cover,
                                           errorBuilder: (_, __, ___) => Text(
                                             cat.emoji,
-                                            style: const TextStyle(fontSize: 22),
+                                            style:
+                                                const TextStyle(fontSize: 22),
                                           ),
                                         ),
                                       );
@@ -274,8 +277,10 @@ class CategoriesScreen extends StatelessWidget {
                                               horizontal: 8, vertical: 2),
                                           decoration: BoxDecoration(
                                             color: bgColor,
-                                            borderRadius: BorderRadius.circular(8),
-                                            border: Border.all(color: cardBorder),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            border:
+                                                Border.all(color: cardBorder),
                                           ),
                                           child: Text(
                                             '${cat.productCount} Products',
@@ -291,12 +296,17 @@ class CategoriesScreen extends StatelessWidget {
                                               horizontal: 6, vertical: 1.5),
                                           decoration: BoxDecoration(
                                             color: cat.isActive
-                                                ? const Color(0xFF10B981).withValues(alpha: 0.12)
-                                                : Colors.grey.withValues(alpha: 0.15),
-                                            borderRadius: BorderRadius.circular(6),
+                                                ? const Color(0xFF10B981)
+                                                    .withValues(alpha: 0.12)
+                                                : Colors.grey
+                                                    .withValues(alpha: 0.15),
+                                            borderRadius:
+                                                BorderRadius.circular(6),
                                           ),
                                           child: Text(
-                                            cat.isActive ? 'Active' : 'Inactive',
+                                            cat.isActive
+                                                ? 'Active'
+                                                : 'Inactive',
                                             style: GoogleFonts.plusJakartaSans(
                                               fontSize: 9.5,
                                               fontWeight: FontWeight.w700,
@@ -322,13 +332,15 @@ class CategoriesScreen extends StatelessWidget {
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(
                                         minWidth: 26, minHeight: 26),
-                                    onPressed: () =>
-                                        _showCategoryDialog(context, provider, cat),
+                                    onPressed: () => _showCategoryDialog(
+                                        context, provider, cat),
                                   ),
                                   const SizedBox(width: 2),
                                   IconButton(
-                                    icon: const Icon(Icons.delete_outline_rounded,
-                                        size: 18, color: Color(0xFFEF4444)),
+                                    icon: const Icon(
+                                        Icons.delete_outline_rounded,
+                                        size: 18,
+                                        color: Color(0xFFEF4444)),
                                     tooltip: 'Delete Category',
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(
@@ -361,7 +373,8 @@ class CategoriesScreen extends StatelessWidget {
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 5, vertical: 1),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primary.withValues(alpha: 0.08),
+                                    color: AppColors.primary
+                                        .withValues(alpha: 0.08),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
@@ -421,8 +434,8 @@ class CategoriesScreen extends StatelessWidget {
           builder: (ctx, setDialogState) {
             final isNarrow = MediaQuery.sizeOf(ctx).width < 500;
             return AlertDialog(
-              insetPadding: const EdgeInsets.symmetric(
-                  horizontal: 16.0, vertical: 24.0),
+              insetPadding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
               title: Text(
@@ -432,525 +445,531 @@ class CategoriesScreen extends StatelessWidget {
               content: SizedBox(
                 width: math.min(440.0, MediaQuery.sizeOf(ctx).width - 32),
                 child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (errorMessage != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEF4444).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.error_outline,
-                                size: 16, color: Color(0xFFEF4444)),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                errorMessage!,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
-                                  color: const Color(0xFFEF4444),
-                                  fontWeight: FontWeight.w600,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (errorMessage != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color:
+                                const Color(0xFFEF4444).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color: const Color(0xFFEF4444)
+                                    .withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_outline,
+                                  size: 16, color: Color(0xFFEF4444)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  errorMessage!,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    color: const Color(0xFFEF4444),
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    // ── Category Image Selector ──
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            'Category Image',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: isUploadingImage
-                              ? null
-                              : () async {
-                                  try {
-                                    final picker = ImagePicker();
-                                    final picked = await picker.pickImage(
-                                      source: ImageSource.gallery,
-                                      maxWidth: 1024,
-                                      maxHeight: 1024,
-                                      imageQuality: 85,
-                                    );
-                                    if (picked == null) return;
-
-                                    setDialogState(
-                                        () => isUploadingImage = true);
-                                    final bytes = await picked.readAsBytes();
-                                    final catId = existing?.id ??
-                                        'cat_${DateTime.now().millisecondsSinceEpoch % 10000}';
-
-                                    final downloadUrl =
-                                        await FirebaseStorageService
-                                            .instance
-                                            .uploadCategoryImage(
-                                                categoryId: catId,
-                                                bytes: bytes);
-
-                                    setDialogState(() {
-                                      selectedImageUrl = downloadUrl;
-                                      isUploadingImage = false;
-                                    });
-
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                              'Category image uploaded successfully!'),
-                                          backgroundColor: AppColors.freshGreen,
-                                        ),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    setDialogState(
-                                        () => isUploadingImage = false);
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Failed to upload image: ${e.toString().replaceAll("Exception: ", "")}',
-                                          ),
-                                          backgroundColor: AppColors.error,
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                          icon: isUploadingImage
-                              ? const SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.primary,
-                                  ),
-                                )
-                              : const Icon(Icons.cloud_upload_outlined,
-                                  size: 16, color: AppColors.primary),
-                          label: Text(
-                            isUploadingImage ? 'Uploading...' : 'Upload Image',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primary,
-                            ),
+                            ],
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 8),
-                    if (isUploadingImage)
-                      Container(
-                        height: 90,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: AppColors.background,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.cardBorder),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const CircularProgressIndicator(
-                                color: AppColors.primary),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Uploading to Firebase Storage...',
+
+                      // ── Category Image Selector ──
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              'Category Image',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 12,
-                                color: AppColors.textSecondary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
                               ),
                             ),
-                          ],
-                        ),
-                      )
-                    else if (selectedImageUrl.isNotEmpty) ...[
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: selectedImageUrl.startsWith('http')
-                            ? Image.network(
-                                selectedImageUrl,
-                                height: 90,
-                                width: double.infinity,
-                                fit: BoxFit.contain,
-                                loadingBuilder:
-                                    (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Container(
+                          ),
+                          TextButton.icon(
+                            onPressed: isUploadingImage
+                                ? null
+                                : () async {
+                                    try {
+                                      final picker = ImagePicker();
+                                      final picked = await picker.pickImage(
+                                        source: ImageSource.gallery,
+                                        maxWidth: 1024,
+                                        maxHeight: 1024,
+                                        imageQuality: 85,
+                                      );
+                                      if (picked == null) return;
+
+                                      setDialogState(
+                                          () => isUploadingImage = true);
+                                      final bytes = await picked.readAsBytes();
+                                      final catId = existing?.id ??
+                                          'cat_${DateTime.now().millisecondsSinceEpoch % 10000}';
+
+                                      final downloadUrl =
+                                          await FirebaseStorageService.instance
+                                              .uploadCategoryImage(
+                                                  categoryId: catId,
+                                                  bytes: bytes);
+
+                                      setDialogState(() {
+                                        selectedImageUrl = downloadUrl;
+                                        isUploadingImage = false;
+                                      });
+
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                                'Category image uploaded successfully!'),
+                                            backgroundColor:
+                                                AppColors.freshGreen,
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      setDialogState(
+                                          () => isUploadingImage = false);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Failed to upload image: ${e.toString().replaceAll("Exception: ", "")}',
+                                            ),
+                                            backgroundColor: AppColors.error,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
+                            icon: isUploadingImage
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.primary,
+                                    ),
+                                  )
+                                : const Icon(Icons.cloud_upload_outlined,
+                                    size: 16, color: AppColors.primary),
+                            label: Text(
+                              isUploadingImage
+                                  ? 'Uploading...'
+                                  : 'Upload Image',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (isUploadingImage)
+                        Container(
+                          height: 90,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: AppColors.background,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.cardBorder),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const CircularProgressIndicator(
+                                  color: AppColors.primary),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Uploading to Firebase Storage...',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else if (selectedImageUrl.isNotEmpty) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: selectedImageUrl.startsWith('http')
+                              ? Image.network(
+                                  selectedImageUrl,
+                                  height: 90,
+                                  width: double.infinity,
+                                  fit: BoxFit.contain,
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Container(
+                                      height: 90,
+                                      width: double.infinity,
+                                      color: AppColors.background,
+                                      child: const Center(
+                                        child: CircularProgressIndicator(
+                                            color: AppColors.primary),
+                                      ),
+                                    );
+                                  },
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
                                     height: 90,
                                     width: double.infinity,
                                     color: AppColors.background,
-                                    child: const Center(
-                                      child: CircularProgressIndicator(
-                                          color: AppColors.primary),
-                                    ),
-                                  );
-                                },
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Container(
+                                    child: const Icon(Icons.image_not_supported,
+                                        color: AppColors.textMuted),
+                                  ),
+                                )
+                              : Image.asset(
+                                  AppAssets.categoryImage(
+                                        imageUrl: selectedImageUrl,
+                                        categoryKey: nameCtrl.text,
+                                      ) ??
+                                      AppAssets.milkCategory,
                                   height: 90,
                                   width: double.infinity,
-                                  color: AppColors.background,
-                                  child: const Icon(Icons.image_not_supported,
-                                      color: AppColors.textMuted),
-                                ),
-                              )
-                            : Image.asset(
-                                AppAssets.categoryImage(
-                                      imageUrl: selectedImageUrl,
-                                      categoryKey: nameCtrl.text,
-                                    ) ??
-                                    AppAssets.milkCategory,
-                                height: 90,
-                                width: double.infinity,
-                                fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Container(
-                                  height: 90,
-                                  width: double.infinity,
-                                  color: AppColors.background,
-                                  child: const Icon(Icons.image_not_supported,
-                                      color: AppColors.textMuted),
-                                ),
-                              ),
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-                    Text(
-                      'Or choose a preset default category image:',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    SizedBox(
-                      height: 64,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _categoryPresets.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
-                        itemBuilder: (context, index) {
-                          final img = _categoryPresets[index];
-                          final isSelected = selectedImageUrl == img['path'];
-                          return GestureDetector(
-                            onTap: () => setDialogState(
-                                () => selectedImageUrl = img['path']!),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
+                                    height: 90,
+                                    width: double.infinity,
                                     color: AppColors.background,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
+                                    child: const Icon(Icons.image_not_supported,
+                                        color: AppColors.textMuted),
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      Text(
+                        'Or choose a preset default category image:',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        height: 64,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _categoryPresets.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            final img = _categoryPresets[index];
+                            final isSelected = selectedImageUrl == img['path'];
+                            return GestureDetector(
+                              onTap: () => setDialogState(
+                                  () => selectedImageUrl = img['path']!),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.background,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? AppColors.primary
+                                            : AppColors.cardBorder,
+                                        width: isSelected ? 2 : 1,
+                                      ),
+                                    ),
+                                    alignment: Alignment.center,
+                                    padding: const EdgeInsets.all(4),
+                                    child: Image.asset(
+                                      img['path']!,
+                                      fit: BoxFit.contain,
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              const Icon(Icons.image,
+                                                  color: AppColors.textMuted),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    img['label']!,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 9.5,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
                                       color: isSelected
                                           ? AppColors.primary
-                                          : AppColors.cardBorder,
-                                      width: isSelected ? 2 : 1,
+                                          : AppColors.textSecondary,
                                     ),
-                                  ),
-                                  alignment: Alignment.center,
-                                  padding: const EdgeInsets.all(4),
-                                  child: Image.asset(
-                                    img['path']!,
-                                    fit: BoxFit.contain,
-                                    errorBuilder:
-                                        (context, error, stackTrace) =>
-                                            const Icon(Icons.image,
-                                                color: AppColors.textMuted),
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  img['label']!,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 9.5,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                    color: isSelected
-                                        ? AppColors.primary
-                                        : AppColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // ── Form fields ──
-                    TextField(
-                      controller: nameCtrl,
-                      decoration: const InputDecoration(
-                          labelText: 'Category Name *',
-                          hintText: 'e.g. Milk & Creams'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: descCtrl,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                          labelText: 'Description',
-                          hintText: 'Short description of products'),
-                    ),
-                    const SizedBox(height: 12),
-                    if (isNarrow) ...[
-                      TextField(
-                        controller: emojiCtrl,
-                        decoration: const InputDecoration(
-                            labelText: 'Emoji Icon',
-                            hintText: '🥛, 🧀, 🍯'),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: countCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                            labelText: 'Product Count'),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: sortOrderCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                            labelText: 'Display Sort Order',
-                            hintText: '0, 1, 2...'),
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: AppColors.cardBorder),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Active Status',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            Switch(
-                              value: isActive,
-                              activeThumbColor: AppColors.primary,
-                              onChanged: (val) {
-                                setDialogState(() => isActive = val);
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ] else ...[
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: emojiCtrl,
-                              decoration: const InputDecoration(
-                                  labelText: 'Emoji Icon',
-                                  hintText: '🥛, 🧀, 🍯'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextField(
-                              controller: countCtrl,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                  labelText: 'Product Count'),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: sortOrderCtrl,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                  labelText: 'Display Sort Order',
-                                  hintText: '0, 1, 2...'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: AppColors.cardBorder),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      'Active Status',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  Switch(
-                                    value: isActive,
-                                    activeThumbColor: AppColors.primary,
-                                    onChanged: (val) {
-                                      setDialogState(() => isActive = val);
-                                    },
                                   ),
                                 ],
                               ),
-                            ),
-                          ),
-                        ],
+                            );
+                          },
+                        ),
                       ),
+                      const SizedBox(height: 14),
+
+                      // ── Form fields ──
+                      TextField(
+                        controller: nameCtrl,
+                        decoration: const InputDecoration(
+                            labelText: 'Category Name *',
+                            hintText: 'e.g. Milk & Creams'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: descCtrl,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                            labelText: 'Description',
+                            hintText: 'Short description of products'),
+                      ),
+                      const SizedBox(height: 12),
+                      if (isNarrow) ...[
+                        TextField(
+                          controller: emojiCtrl,
+                          decoration: const InputDecoration(
+                              labelText: 'Emoji Icon', hintText: '🥛, 🧀, 🍯'),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: countCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration:
+                              const InputDecoration(labelText: 'Product Count'),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: sortOrderCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                              labelText: 'Display Sort Order',
+                              hintText: '0, 1, 2...'),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.cardBorder),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Active Status',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              Switch(
+                                value: isActive,
+                                activeThumbColor: AppColors.primary,
+                                onChanged: (val) {
+                                  setDialogState(() => isActive = val);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: emojiCtrl,
+                                decoration: const InputDecoration(
+                                    labelText: 'Emoji Icon',
+                                    hintText: '🥛, 🧀, 🍯'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextField(
+                                controller: countCtrl,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                    labelText: 'Product Count'),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: sortOrderCtrl,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                    labelText: 'Display Sort Order',
+                                    hintText: '0, 1, 2...'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Container(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                                decoration: BoxDecoration(
+                                  border:
+                                      Border.all(color: AppColors.cardBorder),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'Active Status',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Switch(
+                                      value: isActive,
+                                      activeThumbColor: AppColors.primary,
+                                      onChanged: (val) {
+                                        setDialogState(() => isActive = val);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  final trimmedName = nameCtrl.text.trim();
-                  if (trimmedName.isEmpty) {
-                    setDialogState(() => errorMessage = 'Please enter a category name');
-                    return;
-                  }
-
-                  // Check duplicate name
-                  final duplicate = provider.categories.any((c) =>
-                      (isEdit ? c.id != existing.id : true) &&
-                      c.name.trim().toLowerCase() == trimmedName.toLowerCase());
-                  if (duplicate) {
-                    setDialogState(() => errorMessage =
-                        'A category named "$trimmedName" already exists.');
-                    return;
-                  }
-
-                  try {
-                    if (isEdit) {
-                      await provider.updateCategory(
-                        existing.copyWith(
-                          name: trimmedName,
-                          description: descCtrl.text.trim(),
-                          emoji: emojiCtrl.text.trim().isEmpty
-                              ? '🥛'
-                              : emojiCtrl.text.trim(),
-                          productCount: int.tryParse(countCtrl.text) ??
-                              existing.productCount,
-                          imageUrl: selectedImageUrl,
-                          isActive: isActive,
-                          sortOrder: int.tryParse(sortOrderCtrl.text) ?? 0,
-                          updatedAt: DateTime.now(),
-                        ),
-                      );
-                      if (context.mounted) {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text(
-                                  'Category "$trimmedName" updated successfully!')),
-                        );
-                      }
-                    } else {
-                      final generatedId =
-                          'cat_${trimmedName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_')}';
-                      await provider.addCategory(
-                        DairyCategory(
-                          id: generatedId,
-                          name: trimmedName,
-                          description: descCtrl.text.trim(),
-                          productCount: int.tryParse(countCtrl.text) ?? 0,
-                          icon: Icons.category_rounded,
-                          color: AppColors.primary,
-                          emoji: emojiCtrl.text.trim().isEmpty
-                              ? '🥛'
-                              : emojiCtrl.text.trim(),
-                          imageUrl: selectedImageUrl,
-                          isActive: isActive,
-                          sortOrder: int.tryParse(sortOrderCtrl.text) ?? 0,
-                          createdAt: DateTime.now(),
-                          updatedAt: DateTime.now(),
-                        ),
-                      );
-                      if (context.mounted) {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text(
-                                  'Category "$trimmedName" added successfully!')),
-                        );
-                      }
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final trimmedName = nameCtrl.text.trim();
+                    if (trimmedName.isEmpty) {
+                      setDialogState(
+                          () => errorMessage = 'Please enter a category name');
+                      return;
                     }
-                  } catch (e) {
-                    setDialogState(() => errorMessage = e
-                        .toString()
-                        .replaceAll('Exception: ', '')
-                        .replaceAll('Error: ', ''));
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
+
+                    // Check duplicate name
+                    final duplicate = provider.categories.any((c) =>
+                        (isEdit ? c.id != existing.id : true) &&
+                        c.name.trim().toLowerCase() ==
+                            trimmedName.toLowerCase());
+                    if (duplicate) {
+                      setDialogState(() => errorMessage =
+                          'A category named "$trimmedName" already exists.');
+                      return;
+                    }
+
+                    try {
+                      if (isEdit) {
+                        await provider.updateCategory(
+                          existing.copyWith(
+                            name: trimmedName,
+                            description: descCtrl.text.trim(),
+                            emoji: emojiCtrl.text.trim().isEmpty
+                                ? '🥛'
+                                : emojiCtrl.text.trim(),
+                            productCount: int.tryParse(countCtrl.text) ??
+                                existing.productCount,
+                            imageUrl: selectedImageUrl,
+                            isActive: isActive,
+                            sortOrder: int.tryParse(sortOrderCtrl.text) ?? 0,
+                            updatedAt: DateTime.now(),
+                          ),
+                        );
+                        if (context.mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(
+                                    'Category "$trimmedName" updated successfully!')),
+                          );
+                        }
+                      } else {
+                        final generatedId =
+                            'cat_${trimmedName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_')}';
+                        await provider.addCategory(
+                          DairyCategory(
+                            id: generatedId,
+                            name: trimmedName,
+                            description: descCtrl.text.trim(),
+                            productCount: int.tryParse(countCtrl.text) ?? 0,
+                            icon: Icons.category_rounded,
+                            color: AppColors.primary,
+                            emoji: emojiCtrl.text.trim().isEmpty
+                                ? '🥛'
+                                : emojiCtrl.text.trim(),
+                            imageUrl: selectedImageUrl,
+                            isActive: isActive,
+                            sortOrder: int.tryParse(sortOrderCtrl.text) ?? 0,
+                            createdAt: DateTime.now(),
+                            updatedAt: DateTime.now(),
+                          ),
+                        );
+                        if (context.mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(
+                                    'Category "$trimmedName" added successfully!')),
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      setDialogState(() => errorMessage = e
+                          .toString()
+                          .replaceAll('Exception: ', '')
+                          .replaceAll('Error: ', ''));
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: Text(
+                    isEdit ? 'Save Changes' : 'Create Category',
+                    style: const TextStyle(color: Colors.white),
+                  ),
                 ),
-                child: Text(
-                  isEdit ? 'Save Changes' : 'Create Category',
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
-          );
-        },
-      );
-    },
-  );
-}
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
   void _showDeleteConfirmation(
       BuildContext context, AdminProvider provider, DairyCategory category) {
@@ -962,9 +981,10 @@ class CategoriesScreen extends StatelessWidget {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          insetPadding: const EdgeInsets.symmetric(
-              horizontal: 16.0, vertical: 24.0),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Row(
             children: [
               const Icon(Icons.shield_outlined, color: Color(0xFFF59E0B)),
@@ -1035,8 +1055,8 @@ class CategoriesScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        insetPadding: const EdgeInsets.symmetric(
-            horizontal: 16.0, vertical: 24.0),
+        insetPadding:
+            const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [

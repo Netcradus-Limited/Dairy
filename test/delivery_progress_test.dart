@@ -138,7 +138,8 @@ Order createTestOrder({
 }
 
 void main() {
-  group('P0.3 — DeliveryDate & Real-Time Today\'s Progress Calculation Tests', () {
+  group('P0.3 — DeliveryDate & Real-Time Today\'s Progress Calculation Tests',
+      () {
     final today = DateTime(2026, 9, 17, 10, 30);
     final yesterday = DateTime(2026, 9, 16, 18, 0);
     final tomorrow = DateTime(2026, 9, 18, 7, 0);
@@ -158,7 +159,8 @@ void main() {
       expect(toMapResult['deliveryDate'], isA<Timestamp>());
     });
 
-    test('2. deliveryDate deserialization from Firestore Timestamp and String', () {
+    test('2. deliveryDate deserialization from Firestore Timestamp and String',
+        () {
       final docMapTimestamp = {
         'status': 'pending',
         'createdAt': Timestamp.fromDate(today),
@@ -180,7 +182,8 @@ void main() {
       expect(orderFromStr.deliveryDate, equals(today));
     });
 
-    test('3. missing deliveryDate safely defaults to null and does not crash', () {
+    test('3. missing deliveryDate safely defaults to null and does not crash',
+        () {
       final docMapEmpty = {
         'status': 'placed',
         'createdAt': Timestamp.fromDate(today),
@@ -297,7 +300,9 @@ void main() {
       expect(progress.completed, 2);
     });
 
-    test('8. pending deliveries calculation (placed, confirmed, preparing, outForDelivery)', () {
+    test(
+        '8. pending deliveries calculation (placed, confirmed, preparing, outForDelivery)',
+        () {
       final orders = [
         createTestOrder(
           id: 'o1',
@@ -336,7 +341,8 @@ void main() {
       expect(progress.total, 5);
     });
 
-    test('9. cancelled deliveries calculation is separated from active pending', () {
+    test('9. cancelled deliveries calculation is separated from active pending',
+        () {
       final orders = [
         createTestOrder(
           id: 'o1',
@@ -371,7 +377,9 @@ void main() {
       expect(progress.total, 2); // Non-cancelled active orders
     });
 
-    test('10. zero deliveries handles empty state gracefully without division by zero', () {
+    test(
+        '10. zero deliveries handles empty state gracefully without division by zero',
+        () {
       final progress = DeliveryManagementService.calculateTodaysProgress(
         [],
         targetDate: today,
@@ -420,7 +428,9 @@ void main() {
       expect(progress.progressFraction, 0.5);
     });
 
-    test('12. status transition from pending to delivered updates progress dynamically', () {
+    test(
+        '12. status transition from pending to delivered updates progress dynamically',
+        () {
       var orders = [
         createTestOrder(
           id: 'o1',
@@ -486,7 +496,8 @@ void main() {
       );
     }
 
-    testWidgets('13. Renders Today\'s Delivery Progress cards with real data and percentage',
+    testWidgets(
+        '13. Renders Today\'s Delivery Progress cards with real data and percentage',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(1200, 900));
 
@@ -514,7 +525,8 @@ void main() {
       expect(find.text('2'), findsOneWidget);
     });
 
-    testWidgets('14. Renders Today\'s Delivery Progress zero/empty state cleanly',
+    testWidgets(
+        '14. Renders Today\'s Delivery Progress zero/empty state cleanly',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(1200, 900));
 
@@ -527,10 +539,12 @@ void main() {
       expect(find.text("Today's Delivery Progress"), findsOneWidget);
       expect(find.text('0% Completed'), findsOneWidget);
       expect(find.text('0 of 0 deliveries fulfilled'), findsOneWidget);
-      expect(find.text('No deliveries scheduled for today yet.'), findsOneWidget);
+      expect(
+          find.text('No deliveries scheduled for today yet.'), findsOneWidget);
     });
 
-    testWidgets('15. Renders Today\'s Delivery Progress loading and error states',
+    testWidgets(
+        '15. Renders Today\'s Delivery Progress loading and error states',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(1200, 900));
 
@@ -546,7 +560,8 @@ void main() {
       await tester.pumpWidget(buildTestScreen(provider));
       await tester.pump();
 
-      expect(find.text('Failed to load orders: network timeout'), findsOneWidget);
+      expect(
+          find.text('Failed to load orders: network timeout'), findsOneWidget);
     });
   });
 }

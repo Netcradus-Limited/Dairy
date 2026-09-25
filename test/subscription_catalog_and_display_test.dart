@@ -5,7 +5,9 @@ import 'package:dairy_app/repositories/product_repository.dart';
 
 void main() {
   group('Subscription Catalog & Quantity Display Verification', () {
-    test('1. Subscribable dairy catalog filters out Water Bottle and Organic Uple', () {
+    test(
+        '1. Subscribable dairy catalog filters out Water Bottle and Organic Uple',
+        () {
       final repo = ProductRepository();
       final allFallback = [
         ...repo.getA2MilkProducts(),
@@ -32,7 +34,9 @@ void main() {
       expect(subscribable.contains('Organic Uple'), false);
     });
 
-    test('2. Product deserialization properly identifies non-subscribable items', () {
+    test(
+        '2. Product deserialization properly identifies non-subscribable items',
+        () {
       final waterProduct = Product.fromFirestore({
         'title': 'Water Bottle 20L',
         'categoryId': 'cat_water',
@@ -62,7 +66,9 @@ void main() {
       expect(milkProduct.subscriptionEnabled, true);
     });
 
-    test('3. Subscription quantity remains integer and formats separately from unit', () {
+    test(
+        '3. Subscription quantity remains integer and formats separately from unit',
+        () {
       final now = DateTime(2026, 9, 18);
       const milk = Product(
         id: 'prod_milk_1l',

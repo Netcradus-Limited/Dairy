@@ -7,7 +7,9 @@ import 'package:dairy_app/models/product_model.dart';
 
 void main() {
   group('Task 2 — Category Model & Serialization Tests', () {
-    test('Category.fromFirestore handles legacy documents missing isActive and sortOrder', () {
+    test(
+        'Category.fromFirestore handles legacy documents missing isActive and sortOrder',
+        () {
       final legacyData = <String, dynamic>{
         'title': 'Milk',
         'subtitle': '100% Pure',
@@ -26,7 +28,9 @@ void main() {
       expect(category.itemCount, equals(8));
     });
 
-    test('Category.fromFirestore handles standard documents with name, description, isActive, sortOrder', () {
+    test(
+        'Category.fromFirestore handles standard documents with name, description, isActive, sortOrder',
+        () {
       final data = <String, dynamic>{
         'name': 'Ghee & Butter',
         'description': 'Rich traditional ghee',
@@ -46,7 +50,8 @@ void main() {
       expect(category.itemCount, equals(4));
     });
 
-    test('Category.toFirestore writes both standard and legacy field aliases', () {
+    test('Category.toFirestore writes both standard and legacy field aliases',
+        () {
       const category = Category(
         id: 'cat_sweets',
         title: 'Mithai & Sweets',
@@ -103,7 +108,8 @@ void main() {
   });
 
   group('Task 2 — Admin Category Management & Validation Logic', () {
-    test('Duplicate category-name detection (case-insensitive and trimmed)', () {
+    test('Duplicate category-name detection (case-insensitive and trimmed)',
+        () {
       final existingCategories = [
         const DairyCategory(
           id: 'cat_milk',
@@ -153,7 +159,8 @@ void main() {
       expect(isDuplicate('Lassi'), isFalse);
     });
 
-    test('Deletion guard blocks deletion if products are linked to category', () {
+    test('Deletion guard blocks deletion if products are linked to category',
+        () {
       final products = [
         const DairyProduct(
           id: 'prod_1',
@@ -211,7 +218,9 @@ void main() {
   });
 
   group('Task 2 — Customer Category Filtering & Sorting', () {
-    test('Active categories are sorted by sortOrder and inactive categories are excluded', () {
+    test(
+        'Active categories are sorted by sortOrder and inactive categories are excluded',
+        () {
       final categories = [
         const Category(
           id: 'cat_3',
@@ -263,7 +272,9 @@ void main() {
       expect(activeSorted.any((c) => c.id == 'cat_hidden'), isFalse);
     });
 
-    test('Dynamic Shop category options list prepends "All" option to live active categories', () {
+    test(
+        'Dynamic Shop category options list prepends "All" option to live active categories',
+        () {
       final firestoreCategories = [
         const Category(
           id: 'cat_milk',

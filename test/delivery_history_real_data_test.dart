@@ -7,67 +7,71 @@ import 'package:dairy_app/providers/delivery_provider.dart';
 
 void main() {
   group('Delivery History Mock Data Removal & Firestore Integration', () {
-    test('DeliveryHistoryNotifier starts with an empty list and no mock data', () {
+    test('DeliveryHistoryNotifier starts with an empty list and no mock data',
+        () {
       final notifier = DeliveryHistoryNotifier();
       expect(notifier.state, isEmpty);
     });
 
-    test('deliveryHistoryStreamProvider filters delivered and cancelled orders from deliveryOrdersStreamProvider', () async {
+    test(
+        'deliveryHistoryStreamProvider filters delivered and cancelled orders from deliveryOrdersStreamProvider',
+        () async {
       final container = ProviderContainer(
         overrides: [
           deliveryOrdersStreamProvider.overrideWith((ref) => Stream.value([
-            DeliveryOrder(
-              id: 'ord_1',
-              orderId: 'ord_1',
-              orderCode: 'REAL-001',
-              customerName: 'Real Customer 1',
-              customerPhone: '9876543210',
-              customerAddress: '123 Real Street',
-              pickupLocation: 'Hub',
-              pickupPhone: '1234567890',
-              items: ['Milk 1L x1'],
-              amount: 60.0,
-              deliveryFee: 15.0,
-              status: DeliveryOrderStatus.delivered,
-              orderTime: DateTime(2026, 3, 1, 10, 0),
-              distance: '2.5 km',
-              estimatedTime: '20 mins',
-            ),
-            DeliveryOrder(
-              id: 'ord_2',
-              orderId: 'ord_2',
-              orderCode: 'REAL-002',
-              customerName: 'Real Customer 2',
-              customerPhone: '9876543211',
-              customerAddress: '456 Real Avenue',
-              pickupLocation: 'Hub',
-              pickupPhone: '1234567890',
-              items: ['Ghee 500g x1'],
-              amount: 350.0,
-              deliveryFee: 20.0,
-              status: DeliveryOrderStatus.accepted, // Active, not historical
-              orderTime: DateTime(2026, 3, 1, 11, 0),
-              distance: '1.2 km',
-              estimatedTime: '15 mins',
-            ),
-            DeliveryOrder(
-              id: 'ord_3',
-              orderId: 'ord_3',
-              orderCode: 'REAL-003',
-              customerName: 'Real Customer 3',
-              customerPhone: '9876543212',
-              customerAddress: '789 Real Road',
-              pickupLocation: 'Hub',
-              pickupPhone: '1234567890',
-              items: ['Curd 400g x2'],
-              amount: 80.0,
-              deliveryFee: 10.0,
-              status: DeliveryOrderStatus.cancelled,
-              orderTime: DateTime(2026, 3, 1, 12, 0),
-              distance: '3.0 km',
-              estimatedTime: '25 mins',
-            ),
-          ])),
+                DeliveryOrder(
+                  id: 'ord_1',
+                  orderId: 'ord_1',
+                  orderCode: 'REAL-001',
+                  customerName: 'Real Customer 1',
+                  customerPhone: '9876543210',
+                  customerAddress: '123 Real Street',
+                  pickupLocation: 'Hub',
+                  pickupPhone: '1234567890',
+                  items: ['Milk 1L x1'],
+                  amount: 60.0,
+                  deliveryFee: 15.0,
+                  status: DeliveryOrderStatus.delivered,
+                  orderTime: DateTime(2026, 3, 1, 10, 0),
+                  distance: '2.5 km',
+                  estimatedTime: '20 mins',
+                ),
+                DeliveryOrder(
+                  id: 'ord_2',
+                  orderId: 'ord_2',
+                  orderCode: 'REAL-002',
+                  customerName: 'Real Customer 2',
+                  customerPhone: '9876543211',
+                  customerAddress: '456 Real Avenue',
+                  pickupLocation: 'Hub',
+                  pickupPhone: '1234567890',
+                  items: ['Ghee 500g x1'],
+                  amount: 350.0,
+                  deliveryFee: 20.0,
+                  status:
+                      DeliveryOrderStatus.accepted, // Active, not historical
+                  orderTime: DateTime(2026, 3, 1, 11, 0),
+                  distance: '1.2 km',
+                  estimatedTime: '15 mins',
+                ),
+                DeliveryOrder(
+                  id: 'ord_3',
+                  orderId: 'ord_3',
+                  orderCode: 'REAL-003',
+                  customerName: 'Real Customer 3',
+                  customerPhone: '9876543212',
+                  customerAddress: '789 Real Road',
+                  pickupLocation: 'Hub',
+                  pickupPhone: '1234567890',
+                  items: ['Curd 400g x2'],
+                  amount: 80.0,
+                  deliveryFee: 10.0,
+                  status: DeliveryOrderStatus.cancelled,
+                  orderTime: DateTime(2026, 3, 1, 12, 0),
+                  distance: '3.0 km',
+                  estimatedTime: '25 mins',
+                ),
+              ])),
         ],
       );
 
@@ -81,11 +85,13 @@ void main() {
       expect(historyVal.hasValue, isTrue);
       final historyOrders = historyVal.value!;
       expect(historyOrders.length, equals(2));
-      expect(historyOrders.map((o) => o.orderCode).toList(), containsAll(['REAL-001', 'REAL-003']));
+      expect(historyOrders.map((o) => o.orderCode).toList(),
+          containsAll(['REAL-001', 'REAL-003']));
       expect(historyOrders.any((o) => o.orderCode == 'REAL-002'), isFalse);
     });
 
-    testWidgets('OrdersTab renders loading indicator while stream is loading', (tester) async {
+    testWidgets('OrdersTab renders loading indicator while stream is loading',
+        (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -106,7 +112,9 @@ void main() {
       expect(find.text('No Delivery History'), findsNothing);
     });
 
-    testWidgets('OrdersTab renders error state on stream error without fake data fallback', (tester) async {
+    testWidgets(
+        'OrdersTab renders error state on stream error without fake data fallback',
+        (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -128,7 +136,8 @@ void main() {
       expect(find.text('Meena Gupta'), findsNothing);
     });
 
-    testWidgets('OrdersTab renders empty state when real history list is empty', (tester) async {
+    testWidgets('OrdersTab renders empty state when real history list is empty',
+        (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -145,12 +154,15 @@ void main() {
       );
 
       expect(find.text('No Delivery History'), findsOneWidget);
-      expect(find.text('Completed deliveries will appear here'), findsOneWidget);
+      expect(
+          find.text('Completed deliveries will appear here'), findsOneWidget);
       expect(find.text('Rahul Singh'), findsNothing);
       expect(find.text('Meena Gupta'), findsNothing);
     });
 
-    testWidgets('OrdersTab renders real orders with correct status and no mock orders', (tester) async {
+    testWidgets(
+        'OrdersTab renders real orders with correct status and no mock orders',
+        (tester) async {
       final realOrders = [
         DeliveryOrder(
           id: 'real_doc_101',

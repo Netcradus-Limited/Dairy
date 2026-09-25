@@ -230,16 +230,15 @@ service cloud.firestore {
     // ── 8. orders Collection ────────────────────────────────────────────────
     match /orders/{orderId} {
       // Customers: read own orders.
-      // Delivery: read pending unassigned orders (to accept) or assigned orders.
+      // Delivery: read ONLY orders assigned to this authenticated agent.
       // Admins & staff: read all orders if authorized.
       allow read: if isSuperAdmin()
           || hasPermission('viewOrders')
           || isAdmin()
           || (isSignedIn() && resource.data.userId == request.auth.uid)
           || (isDelivery()
-              && (isUnassignedPendingOrder()
-                  || (('assignedAgentId' in resource.data)
-                      && resource.data.assignedAgentId == request.auth.uid)));
+              && ('assignedAgentId' in resource.data)
+              && resource.data.assignedAgentId == request.auth.uid);
 
       // Customers can create legitimate orders owned by themselves starting in 'Pending' state.
       allow create: if isSuperAdmin()
@@ -251,14 +250,11 @@ service cloud.firestore {
               && !('acceptedAt' in request.resource.data));
 
       // Order update:
-      // Admins & staff: Full management based on permissions.
+      // Admins & staff: Full management based on permissions (with admin workflow enforcement).
       // Customers: Can cancel their own pending/placed/confirmed orders before dispatch.
-      // Delivery Agents: Controlled state transition and assignment operations.
+      // Delivery Agents: Controlled state transition strictly on own assigned order.
       allow update: if isSuperAdmin()
-          || hasPermission('editOrders')
-          || hasPermission('assignDeliveryAgent')
-          || hasPermission('cancelOrders')
-          || isAdmin()
+          || (isAdmin() && canAdminUpdateOrder())
           || (isSignedIn() && canCustomerCancelOrder())
           || (isDelivery() && canUpdateAssignedOrder());
 
@@ -266,18 +262,24 @@ service cloud.firestore {
       allow delete: if isSuperAdmin() || hasPermission('cancelOrders');
     }
 
-    // Guard for checking pending unassigned orders that agents may browse
-    function isUnassignedPendingOrder() {
-      return resource.data.status in ['Pending', 'pending', 'placed']
-          && (!('assignedAgentId' in resource.data)
-              || resource.data.assignedAgentId == null
-              || resource.data.assignedAgentId == '');
+    // Admin order update validation:
+    // Ensures admin cannot assign an agent while order is still in Pending state (must be Confirmed first).
+    function canAdminUpdateOrder() {
+      let isAssigning = ('assignedAgentId' in request.resource.data)
+          && request.resource.data.assignedAgentId != null
+          && request.resource.data.assignedAgentId != ''
+          && (!('assignedAgentId' in resource.data) || resource.data.assignedAgentId != request.resource.data.assignedAgentId);
+
+      let isCurrentPending = ('status' in resource.data) && resource.data.status.lower() in ['pending', 'placed'];
+
+      // Assigning an agent to an unapproved pending order is strictly forbidden
+      return isAssigning ? !isCurrentPending : true;
     }
 
     // Customer cancellation guard
     function canCustomerCancelOrder() {
       let isMine = resource.data.userId == request.auth.uid;
-      let isCancellable = resource.data.status in ['Pending', 'pending', 'placed', 'Placed', 'confirmed', 'Confirmed', 'accepted', 'Accepted'];
+      let isCancellable = resource.data.status in ['Pending', 'pending', 'placed', 'Placed', 'confirmed', 'Confirmed', 'accepted', 'Accepted', 'assigned', 'Assigned'];
       let changed = request.resource.data.diff(resource.data).affectedKeys();
       let setsCancelled = request.resource.data.status in ['cancelled', 'Cancelled'];
 
@@ -293,44 +295,39 @@ service cloud.firestore {
       let toLower = (toStatus is string) ? toStatus.lower() : '';
 
       let isUnchanged = fromLower == toLower;
-      let fromAccepted = (fromLower in ['accepted', 'confirmed'])
-          && (toLower in ['accepted', 'confirmed', 'preparing', 'pickup', 'outfordelivery', 'out for delivery', 'cancelled']);
+      let fromAssigned = (fromLower in ['assigned', 'confirmed'])
+          && (toLower in ['assigned', 'accepted', 'confirmed', 'preparing', 'pickup', 'outfordelivery', 'out for delivery', 'cancelled']);
+      let fromAccepted = (fromLower in ['accepted'])
+          && (toLower in ['accepted', 'preparing', 'pickup', 'outfordelivery', 'out for delivery', 'cancelled']);
       let fromPreparing = (fromLower in ['preparing', 'pickup'])
           && (toLower in ['preparing', 'pickup', 'outfordelivery', 'out for delivery', 'cancelled']);
       let fromOutForDelivery = (fromLower in ['outfordelivery', 'out for delivery'])
           && (toLower in ['outfordelivery', 'out for delivery', 'delivered', 'cancelled']);
 
-      return isUnchanged || fromAccepted || fromPreparing || fromOutForDelivery;
+      return isUnchanged || fromAssigned || fromAccepted || fromPreparing || fromOutForDelivery;
     }
 
-    // Delivery-agent order mutation guard
+    // Delivery-agent order mutation guard:
+    // Agent can ONLY update orders already assigned to them.
+    // Self-assignment of unassigned orders is strictly forbidden.
     function canUpdateAssignedOrder() {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
       let isMine = ('assignedAgentId' in resource.data)
           && resource.data.assignedAgentId == request.auth.uid;
-      let isUnassigned = (!('assignedAgentId' in resource.data)
-          || resource.data.assignedAgentId == null
-          || resource.data.assignedAgentId == '')
-          && (resource.data.status in ['Pending', 'pending', 'placed']);
-      let claimsSelf = ('assignedAgentId' in request.resource.data)
-          && request.resource.data.assignedAgentId == request.auth.uid
-          && (request.resource.data.status.lower() in ['accepted', 'confirmed', 'preparing', 'pickup', 'outfordelivery', 'out for delivery']);
+
+      // Agent can release/decline the order back to 'confirmed' / unassigned for Admin reassignment
       let releases = ('assignedAgentId' in request.resource.data)
-          && request.resource.data.assignedAgentId == null
-          && (request.resource.data.status.lower() in ['pending', 'placed']);
+          && (request.resource.data.assignedAgentId == null || request.resource.data.assignedAgentId == '')
+          && (request.resource.data.status.lower() in ['confirmed', 'pending', 'placed']);
 
       let isNonTerminal = !(resource.data.status.lower() in ['delivered', 'cancelled']);
       let validTransition = !('status' in request.resource.data)
           || isValidDeliveryStatusTransition(resource.data.status, request.resource.data.status);
 
-      return isMine
-          ? isNonTerminal && validTransition && (
-              changed.hasOnly(['status', 'acceptedAt', 'deliveredAt', 'deliveryConfirmed', 'cancellationReason', 'updatedAt'])
-              || (changed.hasOnly(['status', 'assignedAgentId', 'acceptedAt', 'updatedAt']) && releases)
-            )
-          : (isUnassigned
-              ? changed.hasOnly(['status', 'assignedAgentId', 'acceptedAt', 'updatedAt']) && claimsSelf
-              : false);
+      return isMine && isNonTerminal && (
+        (validTransition && changed.hasOnly(['status', 'acceptedAt', 'deliveredAt', 'deliveryConfirmed', 'cancellationReason', 'updatedAt']))
+        || (releases && changed.hasOnly(['status', 'assignedAgentId', 'assignedAgentName', 'assignedAt', 'acceptedAt', 'updatedAt']))
+      );
     }
 
     // ── 9. delivery_agents Collection ───────────────────────────────────────

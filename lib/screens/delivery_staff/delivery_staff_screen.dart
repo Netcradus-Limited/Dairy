@@ -127,8 +127,8 @@ class DeliveryStaffScreen extends StatelessWidget {
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                   ),
@@ -271,8 +271,7 @@ class DeliveryStaffScreen extends StatelessWidget {
                                                       : 'D',
                                                   style: GoogleFonts
                                                       .plusJakartaSans(
-                                                    fontWeight:
-                                                        FontWeight.w800,
+                                                    fontWeight: FontWeight.w800,
                                                     color: AppColors.primary,
                                                   ),
                                                 ),
@@ -385,7 +384,8 @@ class DeliveryStaffScreen extends StatelessWidget {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           IconButton(
-                                            icon: const Icon(Icons.edit_outlined,
+                                            icon: const Icon(
+                                                Icons.edit_outlined,
                                                 size: 16,
                                                 color: AppColors.ordersBlue),
                                             tooltip: 'Edit Staff',
@@ -558,8 +558,8 @@ class DeliveryStaffScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildDetailRow(
-                    context, Icons.phone_outlined, 'Phone', rider.phone.isNotEmpty ? rider.phone : '—'),
+                _buildDetailRow(context, Icons.phone_outlined, 'Phone',
+                    rider.phone.isNotEmpty ? rider.phone : '—'),
                 const SizedBox(height: 10),
                 _buildDetailRow(context, Icons.email_outlined, 'Email',
                     rider.email.isNotEmpty ? rider.email : '—'),
@@ -593,19 +593,16 @@ class DeliveryStaffScreen extends StatelessWidget {
                     'Deliveries Today',
                     '${rider.totalDeliveriesToday} Completed'),
                 const SizedBox(height: 10),
-            _buildDetailRow(
-    context,
-    Icons.star_rounded,
-    'Customer Rating',
-    rider.rating != null
-        ? '${rider.rating!.toStringAsFixed(1)} / 5.0'
-        : '—'),
-const SizedBox(height: 10),
-_buildDetailRow(
-    context,
-    Icons.calendar_today_outlined,
-    'Joined Date',
-    rider.joinedDate),
+                _buildDetailRow(
+                    context,
+                    Icons.star_rounded,
+                    'Customer Rating',
+                    rider.rating != null
+                        ? '${rider.rating!.toStringAsFixed(1)} / 5.0'
+                        : '—'),
+                const SizedBox(height: 10),
+                _buildDetailRow(context, Icons.calendar_today_outlined,
+                    'Joined Date', rider.joinedDate),
               ],
             ),
           ),
@@ -689,8 +686,7 @@ _buildDetailRow(
     final vehicleCtrl = TextEditingController(text: existing?.vehicle ?? '');
     final vehicleNumCtrl =
         TextEditingController(text: existing?.vehicleNumber ?? '');
-    final zoneCtrl =
-        TextEditingController(text: existing?.assignedZone ?? '');
+    final zoneCtrl = TextEditingController(text: existing?.assignedZone ?? '');
     final ratingCtrl = TextEditingController(
         text: existing?.rating != null ? existing!.rating!.toString() : '');
     String selectedStatus = existing?.status ?? 'Active';
@@ -701,247 +697,252 @@ _buildDetailRow(
         builder: (ctx, setState) {
           final isNarrow = MediaQuery.sizeOf(ctx).width < 500;
           return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(
-            isEdit ? 'Edit Delivery Staff' : 'Register New Delivery Staff',
-            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
-          ),
-          content: SizedBox(
-            width: math.min(440.0, MediaQuery.sizeOf(ctx).width - 32),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameCtrl,
-                    decoration:
-                        const InputDecoration(labelText: 'Staff Full Name *'),
-                  ),
-                  const SizedBox(height: 12),
-                  if (isNarrow) ...[
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text(
+              isEdit ? 'Edit Delivery Staff' : 'Register New Delivery Staff',
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+            ),
+            content: SizedBox(
+              width: math.min(440.0, MediaQuery.sizeOf(ctx).width - 32),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     TextField(
-                      controller: phoneCtrl,
+                      controller: nameCtrl,
                       decoration:
-                          const InputDecoration(labelText: 'Phone Number *'),
+                          const InputDecoration(labelText: 'Staff Full Name *'),
                     ),
                     const SizedBox(height: 12),
-                    TextField(
-                      controller: emailCtrl,
-                      decoration:
-                          const InputDecoration(labelText: 'Email Address'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: vehicleCtrl,
-                      decoration: const InputDecoration(
-                          labelText: 'Vehicle Model / Type'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: vehicleNumCtrl,
-                      decoration: const InputDecoration(
-                          labelText: 'Registration No.'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: zoneCtrl,
-                      decoration: const InputDecoration(
-                          labelText: 'Assigned Delivery Zone'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: ratingCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true),
-                      decoration: const InputDecoration(
-                          labelText: 'Rating (optional)'),
-                    ),
-                  ] else ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: phoneCtrl,
-                            decoration: const InputDecoration(
-                                labelText: 'Phone Number *'),
+                    if (isNarrow) ...[
+                      TextField(
+                        controller: phoneCtrl,
+                        decoration:
+                            const InputDecoration(labelText: 'Phone Number *'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: emailCtrl,
+                        decoration:
+                            const InputDecoration(labelText: 'Email Address'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: vehicleCtrl,
+                        decoration: const InputDecoration(
+                            labelText: 'Vehicle Model / Type'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: vehicleNumCtrl,
+                        decoration: const InputDecoration(
+                            labelText: 'Registration No.'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: zoneCtrl,
+                        decoration: const InputDecoration(
+                            labelText: 'Assigned Delivery Zone'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: ratingCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration: const InputDecoration(
+                            labelText: 'Rating (optional)'),
+                      ),
+                    ] else ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: phoneCtrl,
+                              decoration: const InputDecoration(
+                                  labelText: 'Phone Number *'),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: emailCtrl,
-                            decoration:
-                                const InputDecoration(labelText: 'Email Address'),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: emailCtrl,
+                              decoration: const InputDecoration(
+                                  labelText: 'Email Address'),
+                            ),
                           ),
-                        ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: vehicleCtrl,
+                              decoration: const InputDecoration(
+                                  labelText: 'Vehicle Model / Type'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: vehicleNumCtrl,
+                              decoration: const InputDecoration(
+                                  labelText: 'Registration No.'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: zoneCtrl,
+                              decoration: const InputDecoration(
+                                  labelText: 'Assigned Delivery Zone'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: ratingCtrl,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
+                              decoration: const InputDecoration(
+                                  labelText: 'Rating (optional)'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedStatus,
+                      decoration: const InputDecoration(labelText: 'Status'),
+                      items: const [
+                        DropdownMenuItem(
+                            value: 'Active', child: Text('Active / On Duty')),
+                        DropdownMenuItem(
+                            value: 'Break', child: Text('On Break')),
+                        DropdownMenuItem(
+                            value: 'Offline',
+                            child: Text('Offline / Off-Duty')),
                       ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: vehicleCtrl,
-                            decoration: const InputDecoration(
-                                labelText: 'Vehicle Model / Type'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: vehicleNumCtrl,
-                            decoration: const InputDecoration(
-                                labelText: 'Registration No.'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: zoneCtrl,
-                            decoration: const InputDecoration(
-                                labelText: 'Assigned Delivery Zone'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: ratingCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
-                            decoration: const InputDecoration(
-                                labelText: 'Rating (optional)'),
-                          ),
-                        ),
-                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() => selectedStatus = val);
+                        }
+                      },
                     ),
                   ],
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedStatus,
-                    decoration: const InputDecoration(labelText: 'Status'),
-                    items: const [
-                      DropdownMenuItem(
-                          value: 'Active', child: Text('Active / On Duty')),
-                      DropdownMenuItem(value: 'Break', child: Text('On Break')),
-                      DropdownMenuItem(
-                          value: 'Offline', child: Text('Offline / Off-Duty')),
-                    ],
-                    onChanged: (val) {
-                      if (val != null) {
-                        setState(() => selectedStatus = val);
-                      }
-                    },
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (nameCtrl.text.trim().isNotEmpty) {
-                  final isOnline = selectedStatus.toLowerCase() == 'active';
-                  final ratingText = ratingCtrl.text.trim();
-                  final rating = ratingText.isNotEmpty
-                      ? double.tryParse(ratingText)
-                      : null;
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (nameCtrl.text.trim().isNotEmpty) {
+                    final isOnline = selectedStatus.toLowerCase() == 'active';
+                    final ratingText = ratingCtrl.text.trim();
+                    final rating = ratingText.isNotEmpty
+                        ? double.tryParse(ratingText)
+                        : null;
 
-                  try {
-                    if (isEdit) {
-                      await provider.updateRider(
-                        existing.copyWith(
-                          name: nameCtrl.text.trim(),
-                          phone: phoneCtrl.text.trim(),
-                          email: emailCtrl.text.trim(),
-                          vehicle: vehicleCtrl.text.trim(),
-                          vehicleNumber: vehicleNumCtrl.text.trim().toUpperCase(),
-                          assignedZone: zoneCtrl.text.trim(),
-                          status: selectedStatus,
-                          rating: rating,
-                          isOnline: isOnline,
-                        ),
-                      );
-                      if (ctx.mounted) Navigator.pop(ctx);
+                    try {
+                      if (isEdit) {
+                        await provider.updateRider(
+                          existing.copyWith(
+                            name: nameCtrl.text.trim(),
+                            phone: phoneCtrl.text.trim(),
+                            email: emailCtrl.text.trim(),
+                            vehicle: vehicleCtrl.text.trim(),
+                            vehicleNumber:
+                                vehicleNumCtrl.text.trim().toUpperCase(),
+                            assignedZone: zoneCtrl.text.trim(),
+                            status: selectedStatus,
+                            rating: rating,
+                            isOnline: isOnline,
+                          ),
+                        );
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  'Staff "${nameCtrl.text}" updated successfully!'),
+                              backgroundColor: AppColors.revenueGreen,
+                            ),
+                          );
+                        }
+                      } else {
+                        final riderId =
+                            'RDR-${DateTime.now().millisecondsSinceEpoch}';
+                        await provider.addRider(
+                          DeliveryRider(
+                            id: riderId,
+                            name: nameCtrl.text.trim(),
+                            phone: phoneCtrl.text.trim(),
+                            email: emailCtrl.text.trim().isEmpty
+                                ? '${nameCtrl.text.toLowerCase().replaceAll(' ', '')}@sawariyadairy.com'
+                                : emailCtrl.text.trim(),
+                            vehicle: vehicleCtrl.text.trim(),
+                            vehicleNumber:
+                                vehicleNumCtrl.text.trim().toUpperCase(),
+                            assignedZone: zoneCtrl.text.trim(),
+                            totalDeliveriesToday: 0,
+                            pendingDeliveries: 0,
+                            rating: rating,
+                            status: selectedStatus,
+                            isOnline: isOnline,
+                            joinedDate: DateFormat('dd MMM yyyy')
+                                .format(DateTime.now()),
+                          ),
+                        );
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  'Staff member "${nameCtrl.text}" added successfully!'),
+                              backgroundColor: AppColors.revenueGreen,
+                            ),
+                          );
+                        }
+                      }
+                    } catch (e) {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(
-                                'Staff "${nameCtrl.text}" updated successfully!'),
-                            backgroundColor: AppColors.revenueGreen,
+                            content: Text('Failed to save delivery staff: $e'),
+                            backgroundColor: AppColors.error,
                           ),
                         );
                       }
-                    } else {
-                      final riderId =
-                          'RDR-${DateTime.now().millisecondsSinceEpoch}';
-                      await provider.addRider(
-                        DeliveryRider(
-                          id: riderId,
-                          name: nameCtrl.text.trim(),
-                          phone: phoneCtrl.text.trim(),
-                          email: emailCtrl.text.trim().isEmpty
-                              ? '${nameCtrl.text.toLowerCase().replaceAll(' ', '')}@sawariyadairy.com'
-                              : emailCtrl.text.trim(),
-                          vehicle: vehicleCtrl.text.trim(),
-                          vehicleNumber: vehicleNumCtrl.text.trim().toUpperCase(),
-                          assignedZone: zoneCtrl.text.trim(),
-                          totalDeliveriesToday: 0,
-                          pendingDeliveries: 0,
-                          rating: rating,
-                          status: selectedStatus,
-                          isOnline: isOnline,
-                          joinedDate:
-                              DateFormat('dd MMM yyyy').format(DateTime.now()),
-                        ),
-                      );
-                      if (ctx.mounted) Navigator.pop(ctx);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                                'Staff member "${nameCtrl.text}" added successfully!'),
-                            backgroundColor: AppColors.revenueGreen,
-                          ),
-                        );
-                      }
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Failed to save delivery staff: $e'),
-                          backgroundColor: AppColors.error,
-                        ),
-                      );
                     }
                   }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+                child: Text(
+                  isEdit ? 'Save Changes' : 'Register Staff',
+                  style: const TextStyle(color: Colors.white),
+                ),
               ),
-              child: Text(
-                isEdit ? 'Save Changes' : 'Register Staff',
-                style: const TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        );
-      },
-    ),
-  );
-}
+            ],
+          );
+        },
+      ),
+    );
+  }
 
   void _showDeleteConfirmation(
       BuildContext context, AdminProvider provider, DeliveryRider rider) {

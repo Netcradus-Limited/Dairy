@@ -32,13 +32,18 @@ class _OrdersScreenState extends State<OrdersScreen> {
     setState(() => _updating = true);
     try {
       await provider.updateOrderStatus(orderId, newStatus);
-    } catch (_) {
+    } catch (e) {
       if (!context.mounted) return;
+      final msg = e is StateError
+          ? e.message
+          : (e is ArgumentError
+              ? e.message.toString()
+              : 'Could not update order status. Please try again.');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Could not update order status. Please try again.',
-            style: TextStyle(color: Colors.white),
+            msg,
+            style: const TextStyle(color: Colors.white),
           ),
           backgroundColor: AppColors.statusCancelled,
         ),
@@ -92,7 +97,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 borderRadius: BorderRadius.circular(16),
                 side: BorderSide(color: cardBorder),
               ),
-              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              insetPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
                   maxWidth: math.min(540.0, screenWidth - 32),
@@ -122,9 +128,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        order.isAssigned
-                                            ? 'Reassign Delivery Agent'
-                                            : 'Assign Delivery Agent',
+                                        order.status == OrderStatus.pending
+                                            ? 'Approve & Assign Agent'
+                                            : (order.isAssigned
+                                                ? 'Reassign Delivery Agent'
+                                                : 'Assign Delivery Agent'),
                                         style: GoogleFonts.plusJakartaSans(
                                           fontSize: 18,
                                           fontWeight: FontWeight.w800,
@@ -431,13 +439,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
                             ElevatedButton(
                               onPressed: (isSubmitting ||
                                       selectedAgentId == null ||
-                                      selectedAgentId ==
-                                          order.assignedAgentId)
+                                      selectedAgentId == order.assignedAgentId)
                                   ? null
                                   : () async {
-                                      setDialogState(
-                                          () => isSubmitting = true);
+                                      setDialogState(() => isSubmitting = true);
                                       try {
+                                        if (order.status == OrderStatus.pending) {
+                                          await provider.updateOrderStatus(
+                                            order.id,
+                                            OrderStatus.confirmed,
+                                          );
+                                        }
                                         await provider.assignDeliveryAgent(
                                           order.id,
                                           selectedAgentId,
@@ -453,7 +465,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                               content: Text(
                                                 order.isAssigned
                                                     ? 'Order reassigned to ${selectedRider?.name ?? "agent"}.'
-                                                    : 'Order assigned to ${selectedRider?.name ?? "agent"}.',
+                                                    : (order.status == OrderStatus.pending
+                                                        ? 'Order approved & assigned to ${selectedRider?.name ?? "agent"}.'
+                                                        : 'Order assigned to ${selectedRider?.name ?? "agent"}.'),
                                               ),
                                               backgroundColor:
                                                   AppColors.revenueGreen,
@@ -495,9 +509,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                       ),
                                     )
                                   : Text(
-                                      order.isAssigned
-                                          ? 'Confirm Reassignment'
-                                          : 'Assign Agent',
+                                      order.status == OrderStatus.pending
+                                          ? 'Approve & Assign'
+                                          : (order.isAssigned
+                                              ? 'Confirm Reassignment'
+                                              : 'Assign Agent'),
                                       style: const TextStyle(
                                         fontWeight: FontWeight.w700,
                                         fontSize: 13,
@@ -517,9 +533,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                                 () => isSubmitting = true);
                                             try {
                                               await provider
-                                                  .assignDeliveryAgent(order.id, null);
+                                                  .assignDeliveryAgent(
+                                                      order.id, null);
                                               if (dialogContext.mounted) {
-                                                Navigator.of(dialogContext).pop();
+                                                Navigator.of(dialogContext)
+                                                    .pop();
                                               }
                                               if (context.mounted) {
                                                 ScaffoldMessenger.of(context)
@@ -541,8 +559,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                                   SnackBar(
                                                     content: Text(
                                                         'Failed to unassign agent: $e'),
-                                                    backgroundColor:
-                                                        AppColors.statusCancelled,
+                                                    backgroundColor: AppColors
+                                                        .statusCancelled,
                                                   ),
                                                 );
                                               }
@@ -594,8 +612,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                         setDialogState(
                                             () => isSubmitting = true);
                                         try {
-                                          await provider
-                                              .assignDeliveryAgent(order.id, null);
+                                          await provider.assignDeliveryAgent(
+                                              order.id, null);
                                           if (dialogContext.mounted) {
                                             Navigator.of(dialogContext).pop();
                                           }
@@ -665,6 +683,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                           setDialogState(
                                               () => isSubmitting = true);
                                           try {
+                                            if (order.status == OrderStatus.pending) {
+                                              await provider.updateOrderStatus(
+                                                order.id,
+                                                OrderStatus.confirmed,
+                                              );
+                                            }
                                             await provider.assignDeliveryAgent(
                                               order.id,
                                               selectedAgentId,
@@ -680,7 +704,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                                   content: Text(
                                                     order.isAssigned
                                                         ? 'Order reassigned to ${selectedRider?.name ?? "agent"}.'
-                                                        : 'Order assigned to ${selectedRider?.name ?? "agent"}.',
+                                                        : (order.status == OrderStatus.pending
+                                                            ? 'Order approved & assigned to ${selectedRider?.name ?? "agent"}.'
+                                                            : 'Order assigned to ${selectedRider?.name ?? "agent"}.'),
                                                   ),
                                                   backgroundColor:
                                                       AppColors.revenueGreen,
@@ -696,8 +722,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                                   SnackBar(
                                                     content: Text(
                                                         'Failed to assign agent: $e'),
-                                                    backgroundColor:
-                                                        AppColors.statusCancelled,
+                                                    backgroundColor: AppColors
+                                                        .statusCancelled,
                                                   ),
                                                 );
                                             }
@@ -756,7 +782,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
     final textPrimary = AppColors.textPrimaryOf(context);
     final textSecondary = AppColors.textSecondaryOf(context);
     final textMuted = AppColors.textMutedOf(context);
-    final currencyFormatter = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+    final currencyFormatter =
+        NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
 
     await showDialog<void>(
       context: context,
@@ -863,10 +890,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF6366F1).withValues(alpha: 0.08),
+                          color:
+                              const Color(0xFF6366F1).withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+                            color:
+                                const Color(0xFF6366F1).withValues(alpha: 0.3),
                           ),
                         ),
                         child: Column(
@@ -1058,7 +1087,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               ),
                               Text(
                                 order.isAssigned
-                                    ? (order.assignedAgentName ?? order.assignedAgentId ?? 'Assigned')
+                                    ? (order.assignedAgentName ??
+                                        order.assignedAgentId ??
+                                        'Assigned')
                                     : 'Not Assigned',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 12,
@@ -1211,16 +1242,24 @@ class _OrdersScreenState extends State<OrdersScreen> {
       );
     }
 
+    final isPending = order.status == OrderStatus.pending;
     return OutlinedButton.icon(
       onPressed: () => _showAssignAgentDialog(context, provider, order),
-      icon: const Icon(Icons.person_add_alt_1_outlined, size: 14),
-      label: const Text(
-        'Assign Agent',
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+      icon: Icon(
+        isPending
+            ? Icons.verified_user_outlined
+            : Icons.person_add_alt_1_outlined,
+        size: 14,
+      ),
+      label: Text(
+        isPending ? 'Approve & Assign' : 'Assign Agent',
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
       ),
       style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.primary,
-        side: const BorderSide(color: AppColors.primary),
+        foregroundColor: isPending ? AppColors.revenueGreen : AppColors.primary,
+        side: BorderSide(
+          color: isPending ? AppColors.revenueGreen : AppColors.primary,
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
@@ -1289,6 +1328,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 'All',
                 'Pending',
                 'Confirmed',
+                'Assigned',
                 'Preparing',
                 'Out for Delivery',
                 'Delivered',
@@ -1476,17 +1516,22 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                     horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: order.isSubscription
-                                      ? const Color(0xFF6366F1).withValues(alpha: 0.12)
-                                      : AppColors.primary.withValues(alpha: 0.1),
+                                      ? const Color(0xFF6366F1)
+                                          .withValues(alpha: 0.12)
+                                      : AppColors.primary
+                                          .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: order.isSubscription
                                         ? const Color(0xFF6366F1)
-                                        : AppColors.primary.withValues(alpha: 0.4),
+                                        : AppColors.primary
+                                            .withValues(alpha: 0.4),
                                   ),
                                 ),
                                 child: Text(
-                                  order.isSubscription ? 'SUBSCRIPTION' : 'NORMAL',
+                                  order.isSubscription
+                                      ? 'SUBSCRIPTION'
+                                      : 'NORMAL',
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 9,
                                     fontWeight: FontWeight.w800,
@@ -1670,17 +1715,22 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                       horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
                                     color: order.isSubscription
-                                        ? const Color(0xFF6366F1).withValues(alpha: 0.12)
-                                        : AppColors.primary.withValues(alpha: 0.1),
+                                        ? const Color(0xFF6366F1)
+                                            .withValues(alpha: 0.12)
+                                        : AppColors.primary
+                                            .withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: order.isSubscription
                                           ? const Color(0xFF6366F1)
-                                          : AppColors.primary.withValues(alpha: 0.4),
+                                          : AppColors.primary
+                                              .withValues(alpha: 0.4),
                                     ),
                                   ),
                                   child: Text(
-                                    order.isSubscription ? 'SUBSCRIPTION' : 'NORMAL',
+                                    order.isSubscription
+                                        ? 'SUBSCRIPTION'
+                                        : 'NORMAL',
                                     style: GoogleFonts.plusJakartaSans(
                                       fontSize: 9,
                                       fontWeight: FontWeight.w800,

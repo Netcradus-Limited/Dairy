@@ -45,7 +45,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
   Stream<List<CustomerDeliveryRecord>>? _deliveryRecordsStream;
 
   // History tab filters
-  String _historyFilter = 'All'; // All, Today, Yesterday, This Week, This Month, Custom
+  String _historyFilter =
+      'All'; // All, Today, Yesterday, This Week, This Month, Custom
   DateTime? _selectedSingleDate;
   DateTimeRange? _customDateRange;
   bool _sortNewestFirst = true;
@@ -123,7 +124,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                           customRecords: customRecords,
                         );
 
-                        final tomorrowsDeliveries = _service.getTomorrowsDeliveries(
+                        final tomorrowsDeliveries =
+                            _service.getTomorrowsDeliveries(
                           customerId: widget.customer.id,
                           orders: orders,
                           subscription: subscription,
@@ -131,7 +133,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                           customRecords: customRecords,
                         );
 
-                        final monthlyDeliveredTotal = _service.getMonthlyDeliveredTotal(
+                        final monthlyDeliveredTotal =
+                            _service.getMonthlyDeliveredTotal(
                           customerId: widget.customer.id,
                           orders: orders,
                           subscription: subscription,
@@ -210,29 +213,38 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                                           fontSize: 13.5,
                                           fontWeight: FontWeight.w700,
                                         ),
-                                        unselectedLabelStyle: GoogleFonts.plusJakartaSans(
+                                        unselectedLabelStyle:
+                                            GoogleFonts.plusJakartaSans(
                                           fontSize: 13.5,
                                           fontWeight: FontWeight.w500,
                                         ),
                                         tabs: const [
                                           Tab(
-                                            icon: Icon(Icons.today_rounded, size: 18),
+                                            icon: Icon(Icons.today_rounded,
+                                                size: 18),
                                             text: 'Today',
                                           ),
                                           Tab(
-                                            icon: Icon(Icons.event_available_rounded, size: 18),
+                                            icon: Icon(
+                                                Icons.event_available_rounded,
+                                                size: 18),
                                             text: 'Tomorrow',
                                           ),
                                           Tab(
-                                            icon: Icon(Icons.history_rounded, size: 18),
+                                            icon: Icon(Icons.history_rounded,
+                                                size: 18),
                                             text: 'Purchase History',
                                           ),
                                           Tab(
-                                            icon: Icon(Icons.autorenew_rounded, size: 18),
+                                            icon: Icon(Icons.autorenew_rounded,
+                                                size: 18),
                                             text: 'Subscription',
                                           ),
                                           Tab(
-                                            icon: Icon(Icons.account_balance_wallet_outlined, size: 18),
+                                            icon: Icon(
+                                                Icons
+                                                    .account_balance_wallet_outlined,
+                                                size: 18),
                                             text: 'Payments',
                                           ),
                                         ],
@@ -379,16 +391,19 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
               onTap: () => adminProv.clearSelectedCustomer(),
               borderRadius: BorderRadius.circular(8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                  border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.primary),
+                    const Icon(Icons.arrow_back_rounded,
+                        size: 16, color: AppColors.primary),
                     const SizedBox(width: 4),
                     Text(
                       'Back to Customers',
@@ -457,7 +472,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: AppColors.lightBlue.withValues(alpha: 0.15),
+                                  color: AppColors.lightBlue
+                                      .withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
@@ -476,19 +492,23 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                             spacing: 16,
                             runSpacing: 6,
                             children: [
-                              _buildInfoChip(
-                                  Icons.phone_outlined, widget.customer.phone, textSecondary),
+                              _buildInfoChip(Icons.phone_outlined,
+                                  widget.customer.phone, textSecondary),
                               if (widget.customer.email.isNotEmpty)
-                                _buildInfoChip(
-                                    Icons.email_outlined, widget.customer.email, textSecondary),
+                                _buildInfoChip(Icons.email_outlined,
+                                    widget.customer.email, textSecondary),
                               if (widget.customer.address.isNotEmpty)
-                                _buildInfoChip(
-                                    Icons.location_on_outlined, widget.customer.address, textSecondary),
+                                _buildInfoChip(Icons.location_on_outlined,
+                                    widget.customer.address, textSecondary),
                               if (widget.customer.deliveryZone.isNotEmpty)
                                 _buildInfoChip(
-                                    Icons.map_outlined, widget.customer.deliveryZone, textSecondary),
-                              _buildInfoChip(Icons.calendar_today_outlined,
-                                  'Joined: ${widget.customer.joinedDate}', textSecondary),
+                                    Icons.map_outlined,
+                                    widget.customer.deliveryZone,
+                                    textSecondary),
+                              _buildInfoChip(
+                                  Icons.calendar_today_outlined,
+                                  'Joined: ${widget.customer.joinedDate}',
+                                  textSecondary),
                             ],
                           ),
                         ],
@@ -497,7 +517,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
 
                     // Wallet Balance Callout
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFAF7F0),
                         borderRadius: BorderRadius.circular(12),
@@ -516,7 +537,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            currencyFormatter.format(widget.customer.walletBalance),
+                            currencyFormatter
+                                .format(widget.customer.walletBalance),
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
@@ -559,12 +581,14 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                                 runSpacing: 4,
                                 crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
-                                  StatusBadge.fromString(widget.customer.status),
+                                  StatusBadge.fromString(
+                                      widget.customer.status),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 8, vertical: 3),
                                     decoration: BoxDecoration(
-                                      color: AppColors.lightBlue.withValues(alpha: 0.15),
+                                      color: AppColors.lightBlue
+                                          .withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
@@ -588,17 +612,17 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                     const SizedBox(height: 10),
 
                     // Details Column with full text wrap / ellipsis
-                    _buildDetailRow(
-                        Icons.phone_outlined, widget.customer.phone, textSecondary),
+                    _buildDetailRow(Icons.phone_outlined, widget.customer.phone,
+                        textSecondary),
                     if (widget.customer.email.isNotEmpty)
-                      _buildDetailRow(
-                          Icons.email_outlined, widget.customer.email, textSecondary),
+                      _buildDetailRow(Icons.email_outlined,
+                          widget.customer.email, textSecondary),
                     if (widget.customer.address.isNotEmpty)
-                      _buildDetailRow(
-                          Icons.location_on_outlined, widget.customer.address, textSecondary),
+                      _buildDetailRow(Icons.location_on_outlined,
+                          widget.customer.address, textSecondary),
                     if (widget.customer.deliveryZone.isNotEmpty)
-                      _buildDetailRow(
-                          Icons.map_outlined, widget.customer.deliveryZone, textSecondary),
+                      _buildDetailRow(Icons.map_outlined,
+                          widget.customer.deliveryZone, textSecondary),
                     _buildDetailRow(Icons.calendar_today_outlined,
                         'Joined: ${widget.customer.joinedDate}', textSecondary),
 
@@ -619,7 +643,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                           ),
                         ),
                         Text(
-                          currencyFormatter.format(widget.customer.walletBalance),
+                          currencyFormatter
+                              .format(widget.customer.walletBalance),
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -696,7 +721,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
     Color textPrimary,
     Color textSecondary,
   ) {
-    final double todayAmount = todayItems.fold(0.0, (acc, i) => acc + i.totalAmount);
+    final double todayAmount =
+        todayItems.fold(0.0, (acc, i) => acc + i.totalAmount);
     final String todaySummary = todayItems.isNotEmpty
         ? '${todayItems.fold(0, (acc, i) => acc + i.quantity)} Items • ${todayItems.first.productName}'
         : 'No Scheduled Deliveries';
@@ -710,7 +736,9 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
     final cards = [
       _buildKpiCard(
         title: 'TODAY',
-        mainValue: todayItems.isNotEmpty ? currencyFormatter.format(todayAmount) : '₹0',
+        mainValue: todayItems.isNotEmpty
+            ? currencyFormatter.format(todayAmount)
+            : '₹0',
         subtitle: todaySummary,
         icon: Icons.today_rounded,
         iconColor: AppColors.primary,
@@ -751,8 +779,10 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
         mainValue: currencyFormatter.format(totalDue),
         subtitle: totalDue > 0 ? 'Pending Payment Balance' : 'All Dues Cleared',
         icon: Icons.account_balance_wallet_rounded,
-        iconColor: totalDue > 0 ? const Color(0xFFEF4444) : AppColors.revenueGreen,
-        bgColor: totalDue > 0 ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7),
+        iconColor:
+            totalDue > 0 ? const Color(0xFFEF4444) : AppColors.revenueGreen,
+        bgColor:
+            totalDue > 0 ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7),
         cardBg: cardBg,
         cardBorder: cardBorder,
         textPrimary: textPrimary,
@@ -762,10 +792,13 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
 
     if (isDesktop) {
       return Row(
-        children: cards.map((c) => Expanded(child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6),
-          child: c,
-        ))).toList(),
+        children: cards
+            .map((c) => Expanded(
+                    child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: c,
+                )))
+            .toList(),
       );
     } else {
       final isVerySmall = MediaQuery.of(context).size.width < 360;
@@ -884,7 +917,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
       return _buildEmptyTabState(
         icon: Icons.today_rounded,
         title: 'No delivery scheduled for today',
-        subtitle: 'This customer has no products scheduled for $todayFormatted.',
+        subtitle:
+            'This customer has no products scheduled for $todayFormatted.',
         textSecondary: textSecondary,
       );
     }
@@ -896,7 +930,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
         children: [
           Row(
             children: [
-              const Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.primary),
+              const Icon(Icons.calendar_today_rounded,
+                  size: 16, color: AppColors.primary),
               const SizedBox(width: 8),
               Text(
                 'Today • $todayStr',
@@ -916,7 +951,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (ctx, idx) {
               final item = items[idx];
-              return _buildDeliveryItemCard(item, cardBorder, textPrimary, textSecondary);
+              return _buildDeliveryItemCard(
+                  item, cardBorder, textPrimary, textSecondary);
             },
           ),
         ],
@@ -943,7 +979,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
       return _buildEmptyTabState(
         icon: Icons.event_available_rounded,
         title: 'No delivery scheduled for tomorrow',
-        subtitle: 'This customer has no products scheduled for $tomorrowFormatted.',
+        subtitle:
+            'This customer has no products scheduled for $tomorrowFormatted.',
         textSecondary: textSecondary,
       );
     }
@@ -955,7 +992,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
         children: [
           Row(
             children: [
-              const Icon(Icons.event_available_rounded, size: 16, color: AppColors.primaryBlue),
+              const Icon(Icons.event_available_rounded,
+                  size: 16, color: AppColors.primaryBlue),
               const SizedBox(width: 8),
               Text(
                 'Tomorrow • $tomorrowStr',
@@ -975,7 +1013,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (ctx, idx) {
               final item = items[idx];
-              return _buildDeliveryItemCard(item, cardBorder, textPrimary, textSecondary);
+              return _buildDeliveryItemCard(
+                  item, cardBorder, textPrimary, textSecondary);
             },
           ),
         ],
@@ -1061,7 +1100,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                   StatusBadge.fromString(item.deliveryStatus),
                   const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: item.paymentStatus.toLowerCase() == 'paid'
                           ? const Color(0xFFDCFCE7)
@@ -1109,10 +1149,10 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
     DateTime rangeEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
     if (_selectedSingleDate != null) {
-      rangeStart = DateTime(
-          _selectedSingleDate!.year, _selectedSingleDate!.month, _selectedSingleDate!.day);
-      rangeEnd = DateTime(
-          _selectedSingleDate!.year, _selectedSingleDate!.month, _selectedSingleDate!.day, 23, 59, 59);
+      rangeStart = DateTime(_selectedSingleDate!.year,
+          _selectedSingleDate!.month, _selectedSingleDate!.day);
+      rangeEnd = DateTime(_selectedSingleDate!.year, _selectedSingleDate!.month,
+          _selectedSingleDate!.day, 23, 59, 59);
     } else {
       switch (_historyFilter) {
         case 'Today':
@@ -1125,7 +1165,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
           break;
         case 'This Week':
           rangeStart = now.subtract(Duration(days: now.weekday - 1));
-          rangeStart = DateTime(rangeStart.year, rangeStart.month, rangeStart.day);
+          rangeStart =
+              DateTime(rangeStart.year, rangeStart.month, rangeStart.day);
           break;
         case 'This Month':
           rangeStart = DateTime(now.year, now.month, 1);
@@ -1133,8 +1174,13 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
         case 'Custom':
           if (_customDateRange != null) {
             rangeStart = _customDateRange!.start;
-            rangeEnd = DateTime(_customDateRange!.end.year, _customDateRange!.end.month,
-                _customDateRange!.end.day, 23, 59, 59);
+            rangeEnd = DateTime(
+                _customDateRange!.end.year,
+                _customDateRange!.end.month,
+                _customDateRange!.end.day,
+                23,
+                59,
+                59);
           } else {
             rangeStart = now.subtract(const Duration(days: 90));
           }
@@ -1185,8 +1231,10 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   // Filter Chips
-                  ...['All', 'Today', 'Yesterday', 'This Week', 'This Month'].map((filter) {
-                    final isSelected = _selectedSingleDate == null && _historyFilter == filter;
+                  ...['All', 'Today', 'Yesterday', 'This Week', 'This Month']
+                      .map((filter) {
+                    final isSelected =
+                        _selectedSingleDate == null && _historyFilter == filter;
                     return ChoiceChip(
                       label: Text(filter),
                       selected: isSelected,
@@ -1217,7 +1265,9 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: _selectedSingleDate != null ? Colors.white : AppColors.primary,
+                        color: _selectedSingleDate != null
+                            ? Colors.white
+                            : AppColors.primary,
                       ),
                     ),
                     backgroundColor: _selectedSingleDate != null
@@ -1252,11 +1302,15 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                   // Sort Button
                   IconButton(
                     icon: Icon(
-                      _sortNewestFirst ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                      _sortNewestFirst
+                          ? Icons.arrow_downward_rounded
+                          : Icons.arrow_upward_rounded,
                       size: 18,
                       color: AppColors.primary,
                     ),
-                    tooltip: _sortNewestFirst ? 'Sort: Newest First' : 'Sort: Oldest First',
+                    tooltip: _sortNewestFirst
+                        ? 'Sort: Newest First'
+                        : 'Sort: Oldest First',
                     onPressed: () {
                       setState(() {
                         _sortNewestFirst = !_sortNewestFirst;
@@ -1285,8 +1339,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (ctx, idx) {
                     final item = list[idx];
-                    return _buildHistoryRecordRow(
-                        item, cardBorder, textPrimary, textSecondary, isDesktop);
+                    return _buildHistoryRecordRow(item, cardBorder, textPrimary,
+                        textSecondary, isDesktop);
                   },
                 ),
         ),
@@ -1467,7 +1521,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
               if (isDesktop) ...[
                 const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: item.paymentStatus.toLowerCase() == 'paid'
                         ? const Color(0xFFDCFCE7)
@@ -1609,7 +1664,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                           if (sub.isActive)
                             OutlinedButton.icon(
                               onPressed: () => _handlePauseSubscription(sub),
-                              icon: const Icon(Icons.pause_circle_outline, size: 16),
+                              icon: const Icon(Icons.pause_circle_outline,
+                                  size: 16),
                               label: const Text('Pause'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: const Color(0xFFF59E0B),
@@ -1618,7 +1674,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                           if (sub.isPaused)
                             ElevatedButton.icon(
                               onPressed: () => _handleResumeSubscription(sub),
-                              icon: const Icon(Icons.play_circle_outline, size: 16),
+                              icon: const Icon(Icons.play_circle_outline,
+                                  size: 16),
                               label: const Text('Resume'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
@@ -1627,7 +1684,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                             ),
                           ElevatedButton.icon(
                             onPressed: () => _handleSkipDateDialog(sub),
-                            icon: const Icon(Icons.event_busy_rounded, size: 16),
+                            icon:
+                                const Icon(Icons.event_busy_rounded, size: 16),
                             label: const Text('Skip Date'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF1E293B),
@@ -1658,7 +1716,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                           if (sub.isActive)
                             OutlinedButton.icon(
                               onPressed: () => _handlePauseSubscription(sub),
-                              icon: const Icon(Icons.pause_circle_outline, size: 16),
+                              icon: const Icon(Icons.pause_circle_outline,
+                                  size: 16),
                               label: const Text('Pause'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: const Color(0xFFF59E0B),
@@ -1667,7 +1726,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                           if (sub.isPaused)
                             ElevatedButton.icon(
                               onPressed: () => _handleResumeSubscription(sub),
-                              icon: const Icon(Icons.play_circle_outline, size: 16),
+                              icon: const Icon(Icons.play_circle_outline,
+                                  size: 16),
                               label: const Text('Resume'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
@@ -1676,7 +1736,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                             ),
                           ElevatedButton.icon(
                             onPressed: () => _handleSkipDateDialog(sub),
-                            icon: const Icon(Icons.event_busy_rounded, size: 16),
+                            icon:
+                                const Icon(Icons.event_busy_rounded, size: 16),
                             label: const Text('Skip Date'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF1E293B),
@@ -1753,7 +1814,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to pause: $e'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('Failed to pause: $e'), backgroundColor: Colors.red),
       );
     }
   }
@@ -1771,7 +1833,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to resume: $e'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('Failed to resume: $e'), backgroundColor: Colors.red),
       );
     }
   }
@@ -1798,7 +1861,9 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to skip date: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Failed to skip date: $e'),
+              backgroundColor: Colors.red),
         );
       }
     }
@@ -1839,27 +1904,62 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen>
                 ? Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      Expanded(child: _buildLedgerMetric('Total Purchases', currencyFormatter.format(ledger.totalPurchases), textPrimary)),
-                      Expanded(child: _buildLedgerMetric('Total Paid', currencyFormatter.format(ledger.totalPaid), AppColors.revenueGreen)),
-                      Expanded(child: _buildLedgerMetric('Pending Amount', currencyFormatter.format(ledger.pendingAmount), const Color(0xFFEF4444))),
-                      Expanded(child: _buildLedgerMetric('Wallet Balance', currencyFormatter.format(ledger.walletBalance), AppColors.primary)),
+                      Expanded(
+                          child: _buildLedgerMetric(
+                              'Total Purchases',
+                              currencyFormatter.format(ledger.totalPurchases),
+                              textPrimary)),
+                      Expanded(
+                          child: _buildLedgerMetric(
+                              'Total Paid',
+                              currencyFormatter.format(ledger.totalPaid),
+                              AppColors.revenueGreen)),
+                      Expanded(
+                          child: _buildLedgerMetric(
+                              'Pending Amount',
+                              currencyFormatter.format(ledger.pendingAmount),
+                              const Color(0xFFEF4444))),
+                      Expanded(
+                          child: _buildLedgerMetric(
+                              'Wallet Balance',
+                              currencyFormatter.format(ledger.walletBalance),
+                              AppColors.primary)),
                     ],
                   )
                 : Column(
                     children: [
                       Row(
                         children: [
-                          Expanded(child: _buildLedgerMetric('Total Purchases', currencyFormatter.format(ledger.totalPurchases), textPrimary)),
+                          Expanded(
+                              child: _buildLedgerMetric(
+                                  'Total Purchases',
+                                  currencyFormatter
+                                      .format(ledger.totalPurchases),
+                                  textPrimary)),
                           const SizedBox(width: 8),
-                          Expanded(child: _buildLedgerMetric('Total Paid', currencyFormatter.format(ledger.totalPaid), AppColors.revenueGreen)),
+                          Expanded(
+                              child: _buildLedgerMetric(
+                                  'Total Paid',
+                                  currencyFormatter.format(ledger.totalPaid),
+                                  AppColors.revenueGreen)),
                         ],
                       ),
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          Expanded(child: _buildLedgerMetric('Pending Amount', currencyFormatter.format(ledger.pendingAmount), const Color(0xFFEF4444))),
+                          Expanded(
+                              child: _buildLedgerMetric(
+                                  'Pending Amount',
+                                  currencyFormatter
+                                      .format(ledger.pendingAmount),
+                                  const Color(0xFFEF4444))),
                           const SizedBox(width: 8),
-                          Expanded(child: _buildLedgerMetric('Wallet Balance', currencyFormatter.format(ledger.walletBalance), AppColors.primary)),
+                          Expanded(
+                              child: _buildLedgerMetric(
+                                  'Wallet Balance',
+                                  currencyFormatter
+                                      .format(ledger.walletBalance),
+                                  AppColors.primary)),
                         ],
                       ),
                     ],

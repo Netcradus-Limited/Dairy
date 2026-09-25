@@ -179,7 +179,8 @@ class _AdminProfileScreenState extends ConsumerState<AdminProfileScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Invalid image format. Please choose a valid image file.'),
+              content: Text(
+                  'Invalid image format. Please choose a valid image file.'),
               backgroundColor: AppColors.error,
             ),
           );
@@ -216,7 +217,8 @@ class _AdminProfileScreenState extends ConsumerState<AdminProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Photo upload failed: ${e.toString().replaceAll('Exception: ', '')}'),
+            content: Text(
+                'Photo upload failed: ${e.toString().replaceAll('Exception: ', '')}'),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -299,7 +301,8 @@ class _AdminProfileScreenState extends ConsumerState<AdminProfileScreen> {
               decoration: BoxDecoration(
                 color: AppColors.error.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                border:
+                    Border.all(color: AppColors.error.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -520,7 +523,8 @@ class _AdminProfileScreenState extends ConsumerState<AdminProfileScreen> {
                     ),
                     decoration: InputDecoration(
                       hintText: 'Enter your full name',
-                      prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
+                      prefixIcon:
+                          const Icon(Icons.person_outline_rounded, size: 20),
                       filled: true,
                       fillColor: AppColors.bgOf(context),
                       border: OutlineInputBorder(
@@ -611,7 +615,8 @@ class _AdminProfileScreenState extends ConsumerState<AdminProfileScreen> {
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.email_outlined, size: 20),
                       suffixIcon: const Tooltip(
-                        message: 'Email is locked to your Firebase Authentication account.',
+                        message:
+                            'Email is locked to your Firebase Authentication account.',
                         child: Icon(Icons.lock_outline_rounded, size: 18),
                       ),
                       filled: true,
@@ -688,7 +693,9 @@ class _AdminProfileScreenState extends ConsumerState<AdminProfileScreen> {
                             )
                           : const Icon(Icons.check_rounded, size: 18),
                       label: Text(
-                        _isSaving ? 'Saving Changes...' : 'Save Profile Changes',
+                        _isSaving
+                            ? 'Saving Changes...'
+                            : 'Save Profile Changes',
                         style: GoogleFonts.plusJakartaSans(
                           fontWeight: FontWeight.w700,
                           fontSize: 14,

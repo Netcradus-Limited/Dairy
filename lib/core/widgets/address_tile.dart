@@ -74,8 +74,7 @@ class AddressTile extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color:
-                            AppColors.freshGreen.withValues(alpha: 0.12),
+                        color: AppColors.freshGreen.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Row(

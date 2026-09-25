@@ -288,9 +288,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       deliveryCharge: delivery,
                       discount: discount,
                       grandTotal: grandTotal,
-                      actionButtonText: _isPlacingOrder
-                          ? 'Processing...'
-                          : 'Place Order Now',
+                      actionButtonText:
+                          _isPlacingOrder ? 'Processing...' : 'Place Order Now',
                       onActionButtonPressed:
                           _isPlacingOrder ? () {} : _onPlaceOrder,
                     ),
@@ -301,8 +300,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  Widget _buildAddressSection(
-      BuildContext context, Address? selectedAddress) {
+  Widget _buildAddressSection(BuildContext context, Address? selectedAddress) {
     return Container(
       padding: const EdgeInsets.all(AppSizes.p16),
       decoration: BoxDecoration(
@@ -461,9 +459,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             ),
                           );
                           if (newAddr != null) {
-                            ref
-                                .read(selectedAddressIdProvider.notifier)
-                                .state = newAddr.id;
+                            ref.read(selectedAddressIdProvider.notifier).state =
+                                newAddr.id;
                           }
                         },
                         icon: const Icon(Icons.my_location_rounded, size: 16),
@@ -489,9 +486,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             ),
                           );
                           if (chosen != null) {
-                            ref
-                                .read(selectedAddressIdProvider.notifier)
-                                .state = chosen.id;
+                            ref.read(selectedAddressIdProvider.notifier).state =
+                                chosen.id;
                           }
                         },
                         icon: const Icon(Icons.list_alt_rounded, size: 16),

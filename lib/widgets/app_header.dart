@@ -46,8 +46,8 @@ class AppHeader extends ConsumerWidget {
     }
   }
 
-  Widget _buildDesktopHeader(
-      BuildContext context, AdminProvider provider, int unreadCount, String formattedDate) {
+  Widget _buildDesktopHeader(BuildContext context, AdminProvider provider,
+      int unreadCount, String formattedDate) {
     final cardBg = AppColors.cardBgOf(context);
     final cardBorder = AppColors.cardBorderOf(context);
     final textPrimary = AppColors.textPrimaryOf(context);
@@ -161,8 +161,8 @@ class AppHeader extends ConsumerWidget {
     );
   }
 
-  Widget _buildMobileHeader(
-      BuildContext context, AdminProvider provider, int unreadCount, String formattedDate) {
+  Widget _buildMobileHeader(BuildContext context, AdminProvider provider,
+      int unreadCount, String formattedDate) {
     final cardBg = AppColors.cardBgOf(context);
     final cardBorder = AppColors.cardBorderOf(context);
     final textPrimary = AppColors.textPrimaryOf(context);
@@ -231,7 +231,8 @@ class AppHeader extends ConsumerWidget {
                 ],
               ),
             ),
-            _buildNotificationBell(context, provider, unreadCount, isMobile: true),
+            _buildNotificationBell(context, provider, unreadCount,
+                isMobile: true),
           ],
         ),
         const SizedBox(height: 12),
@@ -308,8 +309,7 @@ class AppHeader extends ConsumerWidget {
             right: -3,
             child: IgnorePointer(
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                 decoration: BoxDecoration(
                   color: const Color(0xFFEF4444),
                   borderRadius: BorderRadius.circular(10),
@@ -322,8 +322,7 @@ class AppHeader extends ConsumerWidget {
                     ),
                   ],
                 ),
-                constraints:
-                    const BoxConstraints(minWidth: 18, minHeight: 18),
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
                 alignment: Alignment.center,
                 child: Text(
                   unreadCount > 99 ? '99+' : '$unreadCount',

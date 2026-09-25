@@ -73,8 +73,7 @@ class NotificationDestination {
     final type = data['type']?.toString().trim();
 
     return NotificationDestination(
-      notificationId:
-          (notifId != null && notifId.isNotEmpty) ? notifId : null,
+      notificationId: (notifId != null && notifId.isNotEmpty) ? notifId : null,
       orderId: (orderId != null && orderId.isNotEmpty) ? orderId : null,
       route: (route != null && route.isNotEmpty) ? route : null,
       type: (type != null && type.isNotEmpty) ? type : null,
@@ -324,18 +323,23 @@ class NotificationService {
   /// or matches the exact messageId or data signature.
   bool isDuplicateTap(String? messageId, Map<String, dynamic> data) {
     final now = DateTime.now();
-    final orderId = data['orderId']?.toString() ?? data['order_id']?.toString() ?? '';
+    final orderId =
+        data['orderId']?.toString() ?? data['order_id']?.toString() ?? '';
     final route = data['route']?.toString() ?? '';
     final signature = '${messageId ?? ''}_${orderId}_$route';
 
     if (_lastProcessedTimestamp != null &&
         now.difference(_lastProcessedTimestamp!) < const Duration(seconds: 2)) {
-      if (messageId != null && messageId.isNotEmpty && messageId == _lastProcessedMessageId) {
-        debugPrint('[NOTIFICATION DEDUP] Duplicate messageId: $messageId ignored');
+      if (messageId != null &&
+          messageId.isNotEmpty &&
+          messageId == _lastProcessedMessageId) {
+        debugPrint(
+            '[NOTIFICATION DEDUP] Duplicate messageId: $messageId ignored');
         return true;
       }
       if (signature.isNotEmpty && signature == _lastProcessedSignature) {
-        debugPrint('[NOTIFICATION DEDUP] Duplicate signature: $signature ignored');
+        debugPrint(
+            '[NOTIFICATION DEDUP] Duplicate signature: $signature ignored');
         return true;
       }
     }
@@ -357,7 +361,8 @@ class NotificationService {
     if (user.isDelivery) {
       // Delivery agent: route must NOT lead into admin screens
       if (explicitRoute != null && explicitRoute.startsWith('/admin')) {
-        debugPrint('[NOTIFICATION RBAC] Blocked delivery agent from admin route: $explicitRoute');
+        debugPrint(
+            '[NOTIFICATION RBAC] Blocked delivery agent from admin route: $explicitRoute');
         return '/delivery';
       }
       // If orderId is provided, delivery agent goes to /delivery (DeliveryPanel) with focused order
@@ -393,8 +398,10 @@ class NotificationService {
     // 3. Customer User
     // Block customer from /admin or /delivery routes
     if (explicitRoute != null &&
-        (explicitRoute.startsWith('/admin') || explicitRoute.startsWith('/delivery'))) {
-      debugPrint('[NOTIFICATION RBAC] Blocked customer from protected route: $explicitRoute');
+        (explicitRoute.startsWith('/admin') ||
+            explicitRoute.startsWith('/delivery'))) {
+      debugPrint(
+          '[NOTIFICATION RBAC] Blocked customer from protected route: $explicitRoute');
       return '/notifications';
     }
 
@@ -441,9 +448,11 @@ class NotificationService {
     if (orderId != null && orderId.isNotEmpty) {
       try {
         _ref.read(lastTappedOrderIdProvider.notifier).state = orderId;
-        debugPrint('[NOTIFICATION ROUTE] Set lastTappedOrderIdProvider to: $orderId');
+        debugPrint(
+            '[NOTIFICATION ROUTE] Set lastTappedOrderIdProvider to: $orderId');
       } catch (e) {
-        debugPrint('[NOTIFICATION ROUTE] Could not set lastTappedOrderIdProvider: $e');
+        debugPrint(
+            '[NOTIFICATION ROUTE] Could not set lastTappedOrderIdProvider: $e');
       }
     }
 
@@ -459,7 +468,8 @@ class NotificationService {
     final user = _ref.read(userProvider);
     bool isAuthenticated = false;
     try {
-      if (Firebase.apps.isNotEmpty && FirebaseAuth.instance.currentUser != null) {
+      if (Firebase.apps.isNotEmpty &&
+          FirebaseAuth.instance.currentUser != null) {
         isAuthenticated = true;
       }
     } catch (_) {}
@@ -469,7 +479,8 @@ class NotificationService {
     if (notifId != null && notifId.isNotEmpty && user.id.isNotEmpty) {
       try {
         _ref.read(notificationRepositoryProvider).markAsRead(user.id, notifId);
-        debugPrint('[NOTIFICATION TAP] Marked notification $notifId as read for ${user.id}');
+        debugPrint(
+            '[NOTIFICATION TAP] Marked notification $notifId as read for ${user.id}');
       } catch (e) {
         debugPrint('[NOTIFICATION TAP] Could not mark as read: $e');
       }
@@ -477,8 +488,10 @@ class NotificationService {
 
     // If user is unauthenticated or user profile has not loaded yet, buffer it
     if (!isAuthenticated || user.id.isEmpty) {
-      debugPrint('[NOTIFICATION TAP] User unauthenticated or profile pending; buffering destination.');
-      _ref.read(pendingNotificationDestinationProvider.notifier).state = destination;
+      debugPrint(
+          '[NOTIFICATION TAP] User unauthenticated or profile pending; buffering destination.');
+      _ref.read(pendingNotificationDestinationProvider.notifier).state =
+          destination;
       return;
     }
 
@@ -543,8 +556,7 @@ class NotificationService {
     final title = notification?.title ??
         message.data['title']?.toString() ??
         'Sawariya Dairy';
-    final body =
-        notification?.body ?? message.data['body']?.toString() ?? '';
+    final body = notification?.body ?? message.data['body']?.toString() ?? '';
 
     final payloadString = jsonEncode(message.data);
 
@@ -599,12 +611,14 @@ class NotificationService {
         final router = GoRouter.of(context);
         final currentLoc = router.routeInformationProvider.value.uri.toString();
         if (currentLoc == route) {
-          debugPrint('[NOTIFICATION NAVIGATION] Already at route $route; skipping redundant push.');
+          debugPrint(
+              '[NOTIFICATION NAVIGATION] Already at route $route; skipping redundant push.');
           return;
         }
         router.push(route);
       } else {
-        debugPrint('[NOTIFICATION NAVIGATION] Context not mounted; buffering route.');
+        debugPrint(
+            '[NOTIFICATION NAVIGATION] Context not mounted; buffering route.');
         _ref.read(pendingNotificationDestinationProvider.notifier).state =
             NotificationDestination(route: route, data: const {});
       }

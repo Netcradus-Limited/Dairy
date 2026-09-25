@@ -53,7 +53,8 @@ void main() {
       orderService = OrderService(firestore: fakeFirestore);
     });
 
-    test('1. Customer creates subscription and persists to Firestore correctly', () async {
+    test('1. Customer creates subscription and persists to Firestore correctly',
+        () async {
       final now = DateTime(2026, 9, 18);
       final sub = Subscription(
         id: 'sub_cust_001',
@@ -93,7 +94,9 @@ void main() {
       expect(data['deliveryTimeSlot'], 'Morning (6:00 AM - 9:00 AM)');
     });
 
-    test('2. Scheduled subscription delivery order generation contains all required fields', () async {
+    test(
+        '2. Scheduled subscription delivery order generation contains all required fields',
+        () async {
       final now = DateTime(2026, 9, 18, 6, 30);
       final sub = Subscription(
         id: 'sub_cust_001',
@@ -146,7 +149,9 @@ void main() {
       expect(orderData['quantity'], 2);
     });
 
-    test('3. Duplicate delivery order prevention on same subscriptionId + deliveryDate', () async {
+    test(
+        '3. Duplicate delivery order prevention on same subscriptionId + deliveryDate',
+        () async {
       final targetDate = DateTime(2026, 9, 18);
       final sub = Subscription(
         id: 'sub_cust_002',
@@ -184,7 +189,8 @@ void main() {
       expect(allOrdersSnap.docs.length, 1);
     });
 
-    test('4. Delivery panel mapping provides Subscription badge and metadata', () async {
+    test('4. Delivery panel mapping provides Subscription badge and metadata',
+        () async {
       final targetDate = DateTime(2026, 9, 18);
       final normalOrder = Order(
         id: 'ord_normal_001',
@@ -227,7 +233,9 @@ void main() {
       expect(deliverySub.productImageUrl, isNotNull);
     });
 
-    test('5. Delivery agent workflow: Accepted -> Out for Delivery -> Delivered advances nextDeliveryDate while keeping subscription Active', () async {
+    test(
+        '5. Delivery agent workflow: Accepted -> Out for Delivery -> Delivered advances nextDeliveryDate while keeping subscription Active',
+        () async {
       final targetDate = DateTime(2026, 9, 18);
       final sub = Subscription(
         id: 'sub_cust_flow',
@@ -259,7 +267,8 @@ void main() {
       expect(orderSnap.data()!['assignedAgentId'], 'agent_raghav');
 
       // 4. Driver transitions to out for delivery
-      await orderService.updateOrderStatus(genOrder.id, OrderStatus.outForDelivery);
+      await orderService.updateOrderStatus(
+          genOrder.id, OrderStatus.outForDelivery);
       orderSnap =
           await fakeFirestore.collection('orders').doc(genOrder.id).get();
       expect(orderSnap.data()!['status'], 'outForDelivery');
@@ -293,10 +302,13 @@ void main() {
       expect(currentSub, isNotNull);
       expect(currentSub!.status, SubscriptionStatus.active);
       expect(currentSub.isActive, true);
-      expect(currentSub.nextDeliveryDate!.day, targetDate.add(const Duration(days: 1)).day);
+      expect(currentSub.nextDeliveryDate!.day,
+          targetDate.add(const Duration(days: 1)).day);
     });
 
-    test('6. Skip Next Delivery advances nextDeliveryDate without creating skipped order', () async {
+    test(
+        '6. Skip Next Delivery advances nextDeliveryDate without creating skipped order',
+        () async {
       final initialDate = DateTime(2026, 9, 18);
       final sub = Subscription(
         id: 'sub_skip_test',
@@ -311,10 +323,12 @@ void main() {
       await subscriptionService.createSubscription('user_skip', sub);
 
       // Customer chooses to skip next delivery
-      final updatedSub = await subscriptionService.skipNextDelivery('user_skip');
+      final updatedSub =
+          await subscriptionService.skipNextDelivery('user_skip');
 
       // nextDeliveryDate advanced to 2026-09-19
-      expect(updatedSub.nextDeliveryDate!.day, initialDate.add(const Duration(days: 1)).day);
+      expect(updatedSub.nextDeliveryDate!.day,
+          initialDate.add(const Duration(days: 1)).day);
 
       // Ensure NO order document was generated for the skipped date (2026-09-18)
       final dateKey = SubscriptionService.formatOrderDateKey(initialDate);
@@ -334,7 +348,9 @@ void main() {
       expect(skippedRecord.exists, true);
     });
 
-    test('7. Pause stops future delivery generation, Resume recalculates next valid date', () async {
+    test(
+        '7. Pause stops future delivery generation, Resume recalculates next valid date',
+        () async {
       final now = DateTime(2026, 9, 18);
       final sub = Subscription(
         id: 'sub_pause_test',
@@ -349,24 +365,29 @@ void main() {
       await subscriptionService.createSubscription('user_pause', sub);
 
       // Pause subscription
-      final pausedSub = await subscriptionService.pauseSubscription('user_pause');
+      final pausedSub =
+          await subscriptionService.pauseSubscription('user_pause');
       expect(pausedSub.status, SubscriptionStatus.paused);
       expect(pausedSub.isPaused, true);
 
       // Order generation should fail for paused subscription
       expect(
-        () => subscriptionService.generateOrderForSubscription('user_pause', pausedSub),
+        () => subscriptionService.generateOrderForSubscription(
+            'user_pause', pausedSub),
         throwsA(isA<StateError>()),
       );
 
       // Resume subscription
-      final resumedSub = await subscriptionService.resumeSubscription('user_pause');
+      final resumedSub =
+          await subscriptionService.resumeSubscription('user_pause');
       expect(resumedSub.status, SubscriptionStatus.active);
       expect(resumedSub.isActive, true);
       expect(resumedSub.nextDeliveryDate, isNotNull);
     });
 
-    test('8. Alternate-day (+2 days) and Weekly (+7 days) frequency calculations', () {
+    test(
+        '8. Alternate-day (+2 days) and Weekly (+7 days) frequency calculations',
+        () {
       final baseDate = DateTime(2026, 9, 18);
 
       final nextDaily = subscriptionService.calculateNextDeliveryDate(
@@ -388,7 +409,8 @@ void main() {
       expect(nextWeekly.difference(baseDate).inDays, 7);
     });
 
-    test('9. Delivery failure states: Customer unavailable & Unable to deliver', () async {
+    test('9. Delivery failure states: Customer unavailable & Unable to deliver',
+        () async {
       final order = await orderService.placeOrder(
         userId: 'user_fail_test',
         items: const [CartItem(product: testProduct, quantity: 1)],
@@ -400,14 +422,18 @@ void main() {
       final failedOrderSnap =
           await fakeFirestore.collection('orders').doc(order.id).get();
       expect(failedOrderSnap.data()!['status'], 'cancelled');
-      expect(failedOrderSnap.data()!['cancellationReason'], 'Customer unavailable');
+      expect(failedOrderSnap.data()!['cancellationReason'],
+          'Customer unavailable');
 
-      final failedPaymentSnap =
-          await fakeFirestore.collection('payments').doc('PAY_${order.id}').get();
+      final failedPaymentSnap = await fakeFirestore
+          .collection('payments')
+          .doc('PAY_${order.id}')
+          .get();
       expect(failedPaymentSnap.data()!['status'], 'Cancelled');
     });
 
-    test('10. Admin DairyOrder correctly reflects orderType and subscriptionId', () {
+    test('10. Admin DairyOrder correctly reflects orderType and subscriptionId',
+        () {
       const dairyOrder = admin_order.DairyOrder(
         id: 'ord_admin_test',
         orderCode: 'SUB999',
@@ -429,7 +455,9 @@ void main() {
       expect(dairyOrder.orderType, 'subscription');
     });
 
-    test('11. Complete Multi-Subscription Flow: Create 3, Edit Ghee, Pause Milk, Cancel Paneer, Admin Oversight', () async {
+    test(
+        '11. Complete Multi-Subscription Flow: Create 3, Edit Ghee, Pause Milk, Cancel Paneer, Admin Oversight',
+        () async {
       const milkProd = Product(
         id: 'prod_milk',
         title: 'Sawariya Milk 1L',
@@ -496,9 +524,18 @@ void main() {
       await subscriptionService.createSubscription(customerId, subPaneer);
 
       // ── Step 2: Verify Firestore contains 3 separate documents ─────────
-      final snapMilk = await fakeFirestore.collection('subscriptions').doc('SUB_MILK_01').get();
-      final snapGhee = await fakeFirestore.collection('subscriptions').doc('SUB_GHEE_01').get();
-      final snapPaneer = await fakeFirestore.collection('subscriptions').doc('SUB_PANEER_01').get();
+      final snapMilk = await fakeFirestore
+          .collection('subscriptions')
+          .doc('SUB_MILK_01')
+          .get();
+      final snapGhee = await fakeFirestore
+          .collection('subscriptions')
+          .doc('SUB_GHEE_01')
+          .get();
+      final snapPaneer = await fakeFirestore
+          .collection('subscriptions')
+          .doc('SUB_PANEER_01')
+          .get();
 
       expect(snapMilk.exists, true);
       expect(snapGhee.exists, true);
@@ -509,7 +546,8 @@ void main() {
       expect(snapPaneer.data()!['productTitle'], 'Sawariya Paneer');
 
       // ── Step 3: Verify My Subscriptions query retrieves all THREE ─────
-      final allUserSubs = await subscriptionService.getSubscriptionsForUser(customerId);
+      final allUserSubs =
+          await subscriptionService.getSubscriptionsForUser(customerId);
       expect(allUserSubs.length, 3);
       final titles = allUserSubs.map((s) => s.product.title).toSet();
       expect(titles.contains('Sawariya Milk 1L'), true);
@@ -517,40 +555,55 @@ void main() {
       expect(titles.contains('Sawariya Paneer'), true);
 
       // ── Step 4: Edit Ghee (quantity 1 -> 3) ─────────────────────────────
-      final gheeDoc = await subscriptionService.getCurrentSubscription(customerId, subscriptionId: 'SUB_GHEE_01');
+      final gheeDoc = await subscriptionService
+          .getCurrentSubscription(customerId, subscriptionId: 'SUB_GHEE_01');
       expect(gheeDoc, isNotNull);
-      final updatedGhee = gheeDoc!.copyWith(quantity: 3, deliveryTimeSlot: 'Evening (5:00 PM - 8:00 PM)');
+      final updatedGhee = gheeDoc!.copyWith(
+          quantity: 3, deliveryTimeSlot: 'Evening (5:00 PM - 8:00 PM)');
       await subscriptionService.updateSubscription(customerId, updatedGhee);
 
-      final freshGhee = await subscriptionService.getCurrentSubscription(customerId, subscriptionId: 'SUB_GHEE_01');
+      final freshGhee = await subscriptionService
+          .getCurrentSubscription(customerId, subscriptionId: 'SUB_GHEE_01');
       expect(freshGhee!.quantity, 3);
       expect(freshGhee.deliveryTimeSlot, 'Evening (5:00 PM - 8:00 PM)');
 
       // Verify Milk and Paneer remain unchanged
-      final freshMilk = await subscriptionService.getCurrentSubscription(customerId, subscriptionId: 'SUB_MILK_01');
-      final freshPaneer = await subscriptionService.getCurrentSubscription(customerId, subscriptionId: 'SUB_PANEER_01');
+      final freshMilk = await subscriptionService
+          .getCurrentSubscription(customerId, subscriptionId: 'SUB_MILK_01');
+      final freshPaneer = await subscriptionService
+          .getCurrentSubscription(customerId, subscriptionId: 'SUB_PANEER_01');
       expect(freshMilk!.quantity, 1);
       expect(freshPaneer!.quantity, 2);
 
       // ── Step 5: Pause Milk ─────────────────────────────────────────────
-      await subscriptionService.pauseSubscription(customerId, subscriptionId: 'SUB_MILK_01');
-      final pausedMilk = await subscriptionService.getCurrentSubscription(customerId, subscriptionId: 'SUB_MILK_01');
-      final activeGhee = await subscriptionService.getCurrentSubscription(customerId, subscriptionId: 'SUB_GHEE_01');
-      final activePaneer = await subscriptionService.getCurrentSubscription(customerId, subscriptionId: 'SUB_PANEER_01');
+      await subscriptionService.pauseSubscription(customerId,
+          subscriptionId: 'SUB_MILK_01');
+      final pausedMilk = await subscriptionService
+          .getCurrentSubscription(customerId, subscriptionId: 'SUB_MILK_01');
+      final activeGhee = await subscriptionService
+          .getCurrentSubscription(customerId, subscriptionId: 'SUB_GHEE_01');
+      final activePaneer = await subscriptionService
+          .getCurrentSubscription(customerId, subscriptionId: 'SUB_PANEER_01');
 
       expect(pausedMilk!.isPaused, true);
       expect(activeGhee!.isActive, true);
       expect(activePaneer!.isActive, true);
 
       // ── Step 6: Cancel Paneer (preserves doc) ──────────────────────────
-      await subscriptionService.cancelSubscription(customerId, subscriptionId: 'SUB_PANEER_01');
-      final docPaneerAfterCancel = await fakeFirestore.collection('subscriptions').doc('SUB_PANEER_01').get();
+      await subscriptionService.cancelSubscription(customerId,
+          subscriptionId: 'SUB_PANEER_01');
+      final docPaneerAfterCancel = await fakeFirestore
+          .collection('subscriptions')
+          .doc('SUB_PANEER_01')
+          .get();
       expect(docPaneerAfterCancel.exists, true);
       expect(docPaneerAfterCancel.data()!['status'], 'Cancelled');
 
-      final subsAfterCancel = await subscriptionService.getSubscriptionsForUser(customerId);
+      final subsAfterCancel =
+          await subscriptionService.getSubscriptionsForUser(customerId);
       expect(subsAfterCancel.length, 3);
-      final cancelledPaneer = subsAfterCancel.firstWhere((s) => s.id == 'SUB_PANEER_01');
+      final cancelledPaneer =
+          subsAfterCancel.firstWhere((s) => s.id == 'SUB_PANEER_01');
       expect(cancelledPaneer.isCancelled, true);
 
       // ── Step 7: Admin Oversight ────────────────────────────────────────

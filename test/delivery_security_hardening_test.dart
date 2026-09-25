@@ -6,13 +6,15 @@ import 'package:dairy_app/services/delivery_tracking_service.dart';
 import 'package:dairy_app/services/order_service.dart';
 
 void main() {
-  group('Task 7: Delivery Panel Production Security Hardening & Audit Tests', () {
-
+  group('Task 7: Delivery Panel Production Security Hardening & Audit Tests',
+      () {
     // =========================================================================
     // 1. AUTHENTICATION & ROLE (RBAC) SECURITY
     // =========================================================================
     group('1. Authentication & Role Boundaries', () {
-      test('Unknown, malformed, or injected roles safely default to customer (least privilege)', () {
+      test(
+          'Unknown, malformed, or injected roles safely default to customer (least privilege)',
+          () {
         expect(UserRole.fromString(null), UserRole.customer);
         expect(UserRole.fromString(''), UserRole.customer);
         expect(UserRole.fromString('unknown'), UserRole.customer);
@@ -62,41 +64,43 @@ void main() {
     // 2. STATUS TRANSITION STATE MACHINE (FIRESTORE RULES SIMULATION)
     // =========================================================================
     group('2. Status Transition State Machine in Firestore Rules', () {
-      bool evaluateDeliveryStatusTransition(String fromStatus, String toStatus) {
+      bool evaluateDeliveryStatusTransition(
+          String fromStatus, String toStatus) {
         final fromLower = fromStatus.toLowerCase().trim();
         final toLower = toStatus.toLowerCase().trim();
 
         final isUnchanged = fromLower == toLower;
-        final fromAccepted = (fromLower == 'accepted' || fromLower == 'confirmed') &&
-            [
-              'accepted',
-              'confirmed',
-              'preparing',
-              'pickup',
-              'outfordelivery',
-              'out for delivery',
-              'cancelled'
-            ].contains(toLower);
-
-        final fromPreparing = (fromLower == 'preparing' || fromLower == 'pickup') &&
-            [
-              'preparing',
-              'pickup',
-              'outfordelivery',
-              'out for delivery',
-              'cancelled'
-            ].contains(toLower);
-
-        final fromOutForDelivery =
-            (fromLower == 'outfordelivery' || fromLower == 'out for delivery') &&
+        final fromAccepted =
+            (fromLower == 'accepted' || fromLower == 'confirmed') &&
                 [
+                  'accepted',
+                  'confirmed',
+                  'preparing',
+                  'pickup',
                   'outfordelivery',
                   'out for delivery',
-                  'delivered',
                   'cancelled'
                 ].contains(toLower);
 
-        return isUnchanged || fromAccepted || fromPreparing || fromOutForDelivery;
+        final fromPreparing =
+            (fromLower == 'preparing' || fromLower == 'pickup') &&
+                [
+                  'preparing',
+                  'pickup',
+                  'outfordelivery',
+                  'out for delivery',
+                  'cancelled'
+                ].contains(toLower);
+
+        final fromOutForDelivery = (fromLower == 'outfordelivery' ||
+                fromLower == 'out for delivery') &&
+            ['outfordelivery', 'out for delivery', 'delivered', 'cancelled']
+                .contains(toLower);
+
+        return isUnchanged ||
+            fromAccepted ||
+            fromPreparing ||
+            fromOutForDelivery;
       }
 
       bool evaluateCanUpdateAssignedOrder({
@@ -126,10 +130,8 @@ void main() {
             ['pending', 'placed']
                 .contains((requestData['status'] as String?)?.toLowerCase());
 
-        final isNonTerminal = ![
-          'delivered',
-          'cancelled'
-        ].contains((existingData['status'] as String?)?.toLowerCase());
+        final isNonTerminal = !['delivered', 'cancelled']
+            .contains((existingData['status'] as String?)?.toLowerCase());
 
         final validTransition = !requestData.containsKey('status') ||
             evaluateDeliveryStatusTransition(
@@ -167,7 +169,8 @@ void main() {
             'acceptedAt',
             'updatedAt'
           ];
-          return requestData.keys.every(allowedClaimKeys.contains) && claimsSelf;
+          return requestData.keys.every(allowedClaimKeys.contains) &&
+              claimsSelf;
         }
 
         return false;
@@ -197,7 +200,9 @@ void main() {
         );
       });
 
-      test('Claiming an unassigned pending order REJECTS direct leap to delivered', () {
+      test(
+          'Claiming an unassigned pending order REJECTS direct leap to delivered',
+          () {
         final existing = {
           'status': 'Pending',
           'assignedAgentId': null,
@@ -218,11 +223,14 @@ void main() {
             requestData: maliciousRequest,
           ),
           isFalse,
-          reason: 'Bypassing acceptance and pickup directly to delivered must be blocked',
+          reason:
+              'Bypassing acceptance and pickup directly to delivered must be blocked',
         );
       });
 
-      test('Assigned order in accepted state: allows transition to preparing or outForDelivery', () {
+      test(
+          'Assigned order in accepted state: allows transition to preparing or outForDelivery',
+          () {
         final existing = {
           'status': 'accepted',
           'assignedAgentId': 'agent_1',
@@ -251,7 +259,9 @@ void main() {
         );
       });
 
-      test('Assigned order in accepted state: REJECTS direct transition to delivered', () {
+      test(
+          'Assigned order in accepted state: REJECTS direct transition to delivered',
+          () {
         final existing = {
           'status': 'accepted',
           'assignedAgentId': 'agent_1',
@@ -271,7 +281,9 @@ void main() {
         );
       });
 
-      test('Assigned order in outForDelivery state: permits transition to delivered or cancelled', () {
+      test(
+          'Assigned order in outForDelivery state: permits transition to delivered or cancelled',
+          () {
         final existing = {
           'status': 'outForDelivery',
           'assignedAgentId': 'agent_1',
@@ -294,13 +306,18 @@ void main() {
             authUid: 'agent_1',
             authRole: 'delivery',
             existingData: existing,
-            requestData: {'status': 'cancelled', 'cancellationReason': 'Customer unavailable'},
+            requestData: {
+              'status': 'cancelled',
+              'cancellationReason': 'Customer unavailable'
+            },
           ),
           isTrue,
         );
       });
 
-      test('Assigned order in delivered (terminal) state: REJECTS any mutation by delivery agent', () {
+      test(
+          'Assigned order in delivered (terminal) state: REJECTS any mutation by delivery agent',
+          () {
         final existing = {
           'status': 'delivered',
           'assignedAgentId': 'agent_1',
@@ -316,7 +333,8 @@ void main() {
             requestData: {'status': 'pending'},
           ),
           isFalse,
-          reason: 'Delivered orders are terminal; cannot transition back to pending',
+          reason:
+              'Delivered orders are terminal; cannot transition back to pending',
         );
 
         expect(
@@ -331,7 +349,9 @@ void main() {
         );
       });
 
-      test('Assigned order in cancelled (terminal) state: REJECTS any mutation by delivery agent', () {
+      test(
+          'Assigned order in cancelled (terminal) state: REJECTS any mutation by delivery agent',
+          () {
         final existing = {
           'status': 'cancelled',
           'assignedAgentId': 'agent_1',
@@ -351,7 +371,9 @@ void main() {
         );
       });
 
-      test('Agent cannot tamper with totalAmount, subtotal, customerId, or items', () {
+      test(
+          'Agent cannot tamper with totalAmount, subtotal, customerId, or items',
+          () {
         final existing = {
           'status': 'accepted',
           'assignedAgentId': 'agent_1',
@@ -433,7 +455,8 @@ void main() {
         return isAssignedToAgent && hasOnlyAllowed;
       }
 
-      test('Delivery agent CAN update payment on order assigned to themselves', () {
+      test('Delivery agent CAN update payment on order assigned to themselves',
+          () {
         final payment = {
           'id': 'PAY_ORD_1',
           'orderId': 'ORD_1',
@@ -458,7 +481,9 @@ void main() {
         );
       });
 
-      test('Delivery agent CANNOT update payment on order assigned to another agent', () {
+      test(
+          'Delivery agent CANNOT update payment on order assigned to another agent',
+          () {
         final payment = {
           'id': 'PAY_ORD_2',
           'orderId': 'ORD_2',
@@ -473,7 +498,8 @@ void main() {
 
         expect(
           evaluatePaymentUpdateRule(
-            authUid: 'agent_1', // Agent 1 attempting to update Agent 2's payment
+            authUid:
+                'agent_1', // Agent 1 attempting to update Agent 2's payment
             authRole: 'delivery',
             paymentDoc: payment,
             linkedOrderDoc: order,
@@ -484,7 +510,9 @@ void main() {
         );
       });
 
-      test('Delivery agent CANNOT update payment without an assigned order link', () {
+      test(
+          'Delivery agent CANNOT update payment without an assigned order link',
+          () {
         final payment = {
           'id': 'PAY_STANDALONE',
           'orderId': null,
@@ -510,15 +538,22 @@ void main() {
     // =========================================================================
     group('4. GPS Coordinate & Location Hardening', () {
       test('DeliveryTrackingService rejects out-of-bounds coordinates', () {
-        expect(DeliveryTrackingService.isValidCoordinates(28.6139, 77.2090), isTrue);
-        expect(DeliveryTrackingService.isValidCoordinates(0.0, 0.0), isFalse); // Null island rejected
-        expect(DeliveryTrackingService.isValidCoordinates(91.0, 77.0), isFalse); // Invalid lat
-        expect(DeliveryTrackingService.isValidCoordinates(-91.0, 77.0), isFalse); // Invalid lat
-        expect(DeliveryTrackingService.isValidCoordinates(28.0, 181.0), isFalse); // Invalid lng
-        expect(DeliveryTrackingService.isValidCoordinates(28.0, -181.0), isFalse); // Invalid lng
+        expect(DeliveryTrackingService.isValidCoordinates(28.6139, 77.2090),
+            isTrue);
+        expect(DeliveryTrackingService.isValidCoordinates(0.0, 0.0),
+            isFalse); // Null island rejected
+        expect(DeliveryTrackingService.isValidCoordinates(91.0, 77.0),
+            isFalse); // Invalid lat
+        expect(DeliveryTrackingService.isValidCoordinates(-91.0, 77.0),
+            isFalse); // Invalid lat
+        expect(DeliveryTrackingService.isValidCoordinates(28.0, 181.0),
+            isFalse); // Invalid lng
+        expect(DeliveryTrackingService.isValidCoordinates(28.0, -181.0),
+            isFalse); // Invalid lng
       });
 
-      test('Delivery agent writing GPS to another agent document is rejected', () {
+      test('Delivery agent writing GPS to another agent document is rejected',
+          () {
         bool evaluateGpsWrite({
           required String authUid,
           required String targetAgentId,
@@ -526,8 +561,10 @@ void main() {
           return authUid == targetAgentId;
         }
 
-        expect(evaluateGpsWrite(authUid: 'agent_1', targetAgentId: 'agent_1'), isTrue);
-        expect(evaluateGpsWrite(authUid: 'agent_1', targetAgentId: 'agent_2'), isFalse);
+        expect(evaluateGpsWrite(authUid: 'agent_1', targetAgentId: 'agent_1'),
+            isTrue);
+        expect(evaluateGpsWrite(authUid: 'agent_1', targetAgentId: 'agent_2'),
+            isFalse);
       });
     });
 
@@ -535,7 +572,9 @@ void main() {
     // 5. NOTIFICATION RBAC ROUTE CONFINEMENT
     // =========================================================================
     group('5. Notification Route Confinement', () {
-      test('Delivery agent is strictly blocked from navigating into admin routes via push notifications', () {
+      test(
+          'Delivery agent is strictly blocked from navigating into admin routes via push notifications',
+          () {
         const deliveryUser = User(
           id: 'agent_1',
           name: 'Delivery Agent',
@@ -548,7 +587,8 @@ void main() {
           explicitRoute: '/admin/orders',
           orderId: 'ORD_123',
         );
-        expect(route1, '/delivery', reason: 'Must redirect to delivery panel, blocking admin path');
+        expect(route1, '/delivery',
+            reason: 'Must redirect to delivery panel, blocking admin path');
 
         final route2 = NotificationService.resolveNotificationRoute(
           user: deliveryUser,
@@ -557,7 +597,9 @@ void main() {
         expect(route2, '/delivery', reason: 'Must block admin home');
       });
 
-      test('Customer is strictly blocked from navigating into delivery or admin routes via push notifications', () {
+      test(
+          'Customer is strictly blocked from navigating into delivery or admin routes via push notifications',
+          () {
         const customerUser = User(
           id: 'cust_1',
           name: 'Customer One',
@@ -569,13 +611,15 @@ void main() {
           user: customerUser,
           explicitRoute: '/delivery',
         );
-        expect(routeDelivery, '/notifications', reason: 'Customer must be blocked from /delivery');
+        expect(routeDelivery, '/notifications',
+            reason: 'Customer must be blocked from /delivery');
 
         final routeAdmin = NotificationService.resolveNotificationRoute(
           user: customerUser,
           explicitRoute: '/admin/settings',
         );
-        expect(routeAdmin, '/notifications', reason: 'Customer must be blocked from /admin');
+        expect(routeAdmin, '/notifications',
+            reason: 'Customer must be blocked from /admin');
       });
     });
 
@@ -596,7 +640,8 @@ void main() {
         const orderId = 'ORD_ABC_999';
         const earningDocId1 = orderId;
         const earningDocId2 = orderId;
-        expect(earningDocId1, earningDocId2, reason: 'Doc ID collision prevents duplicate creation');
+        expect(earningDocId1, earningDocId2,
+            reason: 'Doc ID collision prevents duplicate creation');
       });
     });
   });

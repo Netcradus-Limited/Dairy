@@ -4,7 +4,8 @@ import 'package:dairy_app/features/auth/widgets/otp_input_field.dart';
 
 void main() {
   group('OtpInputField Autofill and Input Tests', () {
-    testWidgets('OtpInputField renders AutofillGroup and AutofillHints.oneTimeCode',
+    testWidgets(
+        'OtpInputField renders AutofillGroup and AutofillHints.oneTimeCode',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -65,7 +66,8 @@ void main() {
       expect(find.text('1'), findsOneWidget);
     });
 
-    testWidgets('Manual single-digit entry advances through boxes and triggers onCompleted',
+    testWidgets(
+        'Manual single-digit entry advances through boxes and triggers onCompleted',
         (WidgetTester tester) async {
       String? completedCode;
 

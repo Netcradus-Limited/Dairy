@@ -1,6 +1,7 @@
 enum OrderStatus {
   pending,
   confirmed,
+  assigned,
   preparing,
   outForDelivery,
   delivered,
@@ -12,6 +13,8 @@ enum OrderStatus {
         return 'Pending';
       case OrderStatus.confirmed:
         return 'Confirmed';
+      case OrderStatus.assigned:
+        return 'Assigned';
       case OrderStatus.preparing:
         return 'Preparing';
       case OrderStatus.outForDelivery:

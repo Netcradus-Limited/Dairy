@@ -507,6 +507,7 @@ class _OrderCard extends ConsumerWidget {
     switch (status) {
       case OrderStatus.placed:
       case OrderStatus.confirmed:
+      case OrderStatus.assigned:
       case OrderStatus.preparing:
         return const Color(0xFFD97706); // Orange
       case OrderStatus.outForDelivery:
@@ -522,6 +523,7 @@ class _OrderCard extends ConsumerWidget {
     switch (status) {
       case OrderStatus.placed:
       case OrderStatus.confirmed:
+      case OrderStatus.assigned:
       case OrderStatus.preparing:
         return const Color(0xFFFFFBEB);
       case OrderStatus.outForDelivery:

@@ -16,8 +16,8 @@ import 'package:dairy_app/models/product.dart';
 // Shared test fixtures
 // ---------------------------------------------------------------------------
 
-const _agentPos    = LatLng(22.7300, 75.8900); // agent current location
-const _pickupPos   = LatLng(22.7255, 75.8800); // pickup / hub
+const _agentPos = LatLng(22.7300, 75.8900); // agent current location
+const _pickupPos = LatLng(22.7255, 75.8800); // pickup / hub
 const _customerPos = LatLng(22.7196, 75.8577); // customer delivery address
 
 // Slightly different position within the 50 m threshold (≈ 5 m away)
@@ -27,9 +27,9 @@ const _agentPosNearlyUnchanged = LatLng(22.7300451, 75.8900451);
 const _agentPosFarAway = LatLng(22.7350, 75.8950);
 
 // Invalid coordinate sentinels
-const _zeroPos     = LatLng(0.0, 0.0);
-const _nanLat      = LatLng(double.nan, 75.8800);
-const _infLng      = LatLng(22.7255, double.infinity);
+const _zeroPos = LatLng(0.0, 0.0);
+const _nanLat = LatLng(double.nan, 75.8800);
+const _infLng = LatLng(22.7255, double.infinity);
 const _outOfBounds = LatLng(95.0, 75.8800); // lat > 90
 
 // ---------------------------------------------------------------------------
@@ -104,7 +104,8 @@ void main() {
       expect(result!.isDrawable, isTrue);
       expect(result.points.length, 3);
       expect(result.isStraightLineFallback, isTrue,
-          reason: 'No road-routing API is configured; must be marked as fallback');
+          reason:
+              'No road-routing API is configured; must be marked as fallback');
     });
 
     // Test 2: agent → pickup → customer ordering is correct
@@ -263,7 +264,7 @@ void main() {
     // Test 8: dynamic pickup coordinates are used (not hardcoded hub)
     test('8. Dynamic pickup coordinates are used per order', () {
       const dynamicPickup = LatLng(22.7400, 75.9000); // not the default hub
-      const defaultHub    = LatLng(22.7255, 75.8800);
+      const defaultHub = LatLng(22.7255, 75.8800);
 
       final resultDynamic = RouteService.buildStraightLineRoute(
         agentPos: _agentPos,
@@ -283,11 +284,13 @@ void main() {
       expect(resultDynamic!.points[1], equals(dynamicPickup));
       expect(resultHub!.points[1], equals(defaultHub));
       expect(resultDynamic.points[1], isNot(equals(resultHub.points[1])),
-          reason: 'Route must use the actual per-order pickup coords, not a constant');
+          reason:
+              'Route must use the actual per-order pickup coords, not a constant');
     });
 
     // Test 9: route is not unnecessarily recalculated for unchanged coords
-    test('9. hasCoordinatesChangedEnough: no rebuild within 50 m threshold', () {
+    test('9. hasCoordinatesChangedEnough: no rebuild within 50 m threshold',
+        () {
       // Same position → no movement → threshold NOT crossed
       expect(
         RouteService.hasCoordinatesChangedEnough(_agentPos, _agentPos),
@@ -358,10 +361,12 @@ void main() {
 
       expect(result, isNotNull);
       expect(result!.points[1].latitude, closeTo(22.7400, 0.0001),
-          reason: 'Pickup waypoint must come from the order, not the hardcoded hub');
+          reason:
+              'Pickup waypoint must come from the order, not the hardcoded hub');
     });
 
-    test('9b. No rebuild when order id unchanged and agent within threshold', () {
+    test('9b. No rebuild when order id unchanged and agent within threshold',
+        () {
       // Simulate two consecutive build() calls with nearly identical agent pos
       String? lastOrderId;
       LatLng? lastAgentPos;
@@ -398,17 +403,23 @@ void main() {
   // ─────────────────────────────────────────────────────────────────────────
 
   group('Task 6 — Coordinate validation foundation', () {
-    test('10. DeliveryTrackingService.isValidCoordinates rejects all invalid forms', () {
-      expect(DeliveryTrackingService.isValidCoordinates(null, null),   isFalse);
-      expect(DeliveryTrackingService.isValidCoordinates(0.0, 0.0),     isFalse);
-      expect(DeliveryTrackingService.isValidCoordinates(double.nan, 75.8), isFalse);
-      expect(DeliveryTrackingService.isValidCoordinates(22.7, double.infinity), isFalse);
-      expect(DeliveryTrackingService.isValidCoordinates(95.0, 75.8),   isFalse);
-      expect(DeliveryTrackingService.isValidCoordinates(-95.0, 75.8),  isFalse);
-      expect(DeliveryTrackingService.isValidCoordinates(22.7, 185.0),  isFalse);
+    test(
+        '10. DeliveryTrackingService.isValidCoordinates rejects all invalid forms',
+        () {
+      expect(DeliveryTrackingService.isValidCoordinates(null, null), isFalse);
+      expect(DeliveryTrackingService.isValidCoordinates(0.0, 0.0), isFalse);
+      expect(DeliveryTrackingService.isValidCoordinates(double.nan, 75.8),
+          isFalse);
+      expect(DeliveryTrackingService.isValidCoordinates(22.7, double.infinity),
+          isFalse);
+      expect(DeliveryTrackingService.isValidCoordinates(95.0, 75.8), isFalse);
+      expect(DeliveryTrackingService.isValidCoordinates(-95.0, 75.8), isFalse);
+      expect(DeliveryTrackingService.isValidCoordinates(22.7, 185.0), isFalse);
       // Valid
-      expect(DeliveryTrackingService.isValidCoordinates(22.7255, 75.8800), isTrue);
-      expect(DeliveryTrackingService.isValidCoordinates(-33.8688, 151.2093), isTrue);
+      expect(
+          DeliveryTrackingService.isValidCoordinates(22.7255, 75.8800), isTrue);
+      expect(DeliveryTrackingService.isValidCoordinates(-33.8688, 151.2093),
+          isTrue);
     });
 
     test('10b. hasValidCoordinates on DeliveryOrder rejects invalid forms', () {
@@ -422,8 +433,8 @@ void main() {
       final zeroCustomer = _makeOrder(customerLat: 0.0, customerLng: 0.0);
       expect(zeroCustomer.hasValidCoordinates, isFalse);
 
-      final noPickup = _makeOrder(pickupLat: null, pickupLng: null,
-          pickupLocation: 'Custom Hub');
+      final noPickup = _makeOrder(
+          pickupLat: null, pickupLng: null, pickupLocation: 'Custom Hub');
       expect(noPickup.hasValidPickupCoordinates, isFalse);
     });
   });

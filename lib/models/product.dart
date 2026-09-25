@@ -130,13 +130,19 @@ class Product {
       isA2CowMilk: (data['isA2CowMilk'] as bool?) ?? false,
       inStock: (data['inStock'] as bool?) ?? true,
       subscriptionEnabled: (data['subscriptionEnabled'] as bool?) ??
-          (!(((data['categoryId'] as String?) ?? (data['category'] as String?) ?? '')
+          (!(((data['categoryId'] as String?) ??
+                      (data['category'] as String?) ??
+                      '')
                   .toLowerCase()
                   .contains('uple') ||
-              ((data['categoryId'] as String?) ?? (data['category'] as String?) ?? '')
+              ((data['categoryId'] as String?) ??
+                      (data['category'] as String?) ??
+                      '')
                   .toLowerCase()
                   .contains('water') ||
-              ((data['categoryId'] as String?) ?? (data['category'] as String?) ?? '')
+              ((data['categoryId'] as String?) ??
+                      (data['category'] as String?) ??
+                      '')
                   .toLowerCase()
                   .contains('pooja') ||
               ((data['title'] as String?) ?? (data['name'] as String?) ?? '')
@@ -202,13 +208,19 @@ class Product {
       isA2CowMilk: (map['isA2CowMilk'] as bool?) ?? false,
       inStock: (map['inStock'] as bool?) ?? true,
       subscriptionEnabled: (map['subscriptionEnabled'] as bool?) ??
-          (!(((map['categoryId'] as String?) ?? (map['category'] as String?) ?? '')
+          (!(((map['categoryId'] as String?) ??
+                      (map['category'] as String?) ??
+                      '')
                   .toLowerCase()
                   .contains('uple') ||
-              ((map['categoryId'] as String?) ?? (map['category'] as String?) ?? '')
+              ((map['categoryId'] as String?) ??
+                      (map['category'] as String?) ??
+                      '')
                   .toLowerCase()
                   .contains('water') ||
-              ((map['categoryId'] as String?) ?? (map['category'] as String?) ?? '')
+              ((map['categoryId'] as String?) ??
+                      (map['category'] as String?) ??
+                      '')
                   .toLowerCase()
                   .contains('pooja') ||
               ((map['title'] as String?) ?? (map['name'] as String?) ?? '')

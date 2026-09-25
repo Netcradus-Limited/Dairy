@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
+import '../../core/constants/app_strings.dart';
 import '../../core/responsive/responsive.dart';
 import '../../models/complaint_model.dart';
 import '../../providers/complaint_provider.dart';
@@ -16,12 +17,11 @@ import '../../widgets/status_badge.dart';
 // ── Support Contact Configuration ─────────────────────────────────────────────
 // Replace these with official contact values when available:
 // e.g. const String SUPPORT_PHONE = '+91XXXXXXXXXX';
-//      const String SUPPORT_EMAIL = 'support@yourdomain.com';
 //      const String SUPPORT_WHATSAPP = '+91XXXXXXXXXX';
 // ignore: constant_identifier_names
 const String SUPPORT_PHONE = '';
 // ignore: constant_identifier_names
-const String SUPPORT_EMAIL = '';
+const String SUPPORT_EMAIL = AppStrings.supportEmail;
 // ignore: constant_identifier_names
 const String SUPPORT_WHATSAPP = '';
 
@@ -36,7 +36,8 @@ const List<String> _complaintCategories = [
 ];
 
 class CustomerSupportScreen extends ConsumerStatefulWidget {
-  const CustomerSupportScreen({super.key});
+  final bool? isWebOverride;
+  const CustomerSupportScreen({super.key, this.isWebOverride});
 
   @override
   ConsumerState<CustomerSupportScreen> createState() =>
@@ -44,6 +45,7 @@ class CustomerSupportScreen extends ConsumerStatefulWidget {
 }
 
 class _CustomerSupportScreenState extends ConsumerState<CustomerSupportScreen> {
+  bool get _isWeb => widget.isWebOverride ?? kIsWeb;
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -161,6 +163,34 @@ class _CustomerSupportScreenState extends ConsumerState<CustomerSupportScreen> {
     }
   }
 
+  Future<void> _copyPhone() async {
+    if (SUPPORT_PHONE.trim().isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Support phone number is not configured yet.'),
+            backgroundColor: AppColors.primaryBlue,
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      await Clipboard.setData(const ClipboardData(text: SUPPORT_PHONE));
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Support phone copied'),
+            backgroundColor: AppColors.primaryBlue,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (_) {}
+  }
+
   Future<void> _email() async {
     if (SUPPORT_EMAIL.trim().isEmpty) {
       if (mounted) {
@@ -174,20 +204,161 @@ class _CustomerSupportScreenState extends ConsumerState<CustomerSupportScreen> {
       return;
     }
 
-    // 1. Always copy the support email to clipboard as immediate guarantee
-    try {
-      await Clipboard.setData(const ClipboardData(text: SUPPORT_EMAIL));
-    } catch (_) {}
+    await showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: AppSizes.borderLarge,
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.mail_outline_rounded,
+                color: AppColors.primaryBlue, size: 22),
+            SizedBox(width: 8),
+            Text(
+              'Email Customer Support',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Reach out to our customer support team directly at:',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.inputBackground,
+                borderRadius: AppSizes.borderMedium,
+                border: Border.all(color: AppColors.border, width: 1),
+              ),
+              child: const SelectableText(
+                SUPPORT_EMAIL,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primaryBlue,
+                ),
+              ),
+            ),
+            if (_isWeb) ...[
+              const SizedBox(height: 10),
+              const Text(
+                'Copy this email address and use your preferred email service.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ],
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          if (_isWeb)
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(dialogCtx).pop();
+                _copyEmail();
+              },
+              icon: const Icon(Icons.copy_rounded, size: 16),
+              label: const Text('Copy Email'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: AppSizes.borderMedium,
+                ),
+              ),
+            )
+          else ...[
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(dialogCtx).pop();
+                _copyEmail();
+              },
+              icon: const Icon(Icons.copy_rounded, size: 16),
+              label: const Text('Copy Email'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primaryBlue,
+                side: const BorderSide(color: AppColors.primaryBlue),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: AppSizes.borderMedium,
+                ),
+              ),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(dialogCtx).pop();
+                _launchMailto();
+              },
+              icon: const Icon(Icons.open_in_new_rounded, size: 16),
+              label: const Text('Open Email App'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: AppSizes.borderMedium,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _launchMailto() async {
+    if (_isWeb) return; // Web never opens mailto
+
+    if (SUPPORT_EMAIL.trim().isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Support email is not configured yet.'),
+            backgroundColor: AppColors.primaryBlue,
+          ),
+        );
+      }
+      return;
+    }
 
     final mailtoUri = Uri(
       scheme: 'mailto',
       path: SUPPORT_EMAIL,
       queryParameters: {
-        'subject': 'Sawariya Dairy Support Request',
+        'subject': AppStrings.supportEmailSubject,
       },
     );
 
-    // 2. Try launching standard system mail handler
     try {
       if (await canLaunchUrl(mailtoUri)) {
         final launched = await launchUrl(
@@ -195,56 +366,62 @@ class _CustomerSupportScreenState extends ConsumerState<CustomerSupportScreen> {
           mode: LaunchMode.externalApplication,
         );
         if (launched) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                    'Opening email app... ($SUPPORT_EMAIL copied to clipboard)'),
-                backgroundColor: AppColors.primaryBlue,
-                duration: Duration(seconds: 3),
-              ),
-            );
-          }
           return;
         }
       }
     } catch (_) {}
 
-    // 3. Fallback on Web: Open Gmail Web Composer in new tab
-    if (kIsWeb) {
-      final gmailWebUri = Uri.parse(
-        'https://mail.google.com/mail/?view=cm&fs=1&to=$SUPPORT_EMAIL&su=${Uri.encodeComponent('Sawariya Dairy Support Request')}',
-      );
-      try {
-        if (await canLaunchUrl(gmailWebUri)) {
-          final launched = await launchUrl(
-            gmailWebUri,
-            mode: LaunchMode.externalApplication,
-          );
-          if (launched && mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                    'Opening Gmail in new tab... ($SUPPORT_EMAIL copied to clipboard)'),
-                backgroundColor: AppColors.primaryBlue,
-                duration: Duration(seconds: 3),
-              ),
-            );
-            return;
-          }
-        }
-      } catch (_) {}
-    }
+    // Fallback: If mailto launch fails on any platform, copy email safely and inform user
+    try {
+      await Clipboard.setData(const ClipboardData(text: SUPPORT_EMAIL));
+    } catch (_) {}
 
-    // 4. Final Fallback: Inform user that address is copied
     if (mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Email address copied to clipboard: $SUPPORT_EMAIL'),
+          content: Text('Could not open an email app. Support email copied.'),
           backgroundColor: AppColors.primaryBlue,
           duration: Duration(seconds: 4),
         ),
       );
+    }
+  }
+
+  Future<void> _copyEmail() async {
+    if (SUPPORT_EMAIL.trim().isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Support email is not configured yet.'),
+            backgroundColor: AppColors.primaryBlue,
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      await Clipboard.setData(const ClipboardData(text: SUPPORT_EMAIL));
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Support email copied'),
+            backgroundColor: AppColors.primaryBlue,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to copy email: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -516,6 +693,7 @@ class _CustomerSupportScreenState extends ConsumerState<CustomerSupportScreen> {
                                   ? SUPPORT_PHONE
                                   : 'Phone: Not configured yet',
                               onTap: _call,
+                              onCopy: _copyPhone,
                             ),
                             const SizedBox(height: 6),
                             _contactRow(
@@ -524,6 +702,7 @@ class _CustomerSupportScreenState extends ConsumerState<CustomerSupportScreen> {
                                   ? SUPPORT_EMAIL
                                   : 'Email: Not configured yet',
                               onTap: _email,
+                              onCopy: _copyEmail,
                             ),
                           ],
                         ),
@@ -845,48 +1024,48 @@ class _CustomerSupportScreenState extends ConsumerState<CustomerSupportScreen> {
                       border: Border.all(color: AppColors.border, width: 1.0),
                     ),
                     child: ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _faqs.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final faq = _faqs[index];
-                      return ExpansionTile(
-                        tilePadding: const EdgeInsets.symmetric(
-                          horizontal: AppSizes.p16,
-                        ),
-                        title: Text(
-                          faq['q']!,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _faqs.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final faq = _faqs[index];
+                        return ExpansionTile(
+                          tilePadding: const EdgeInsets.symmetric(
+                            horizontal: AppSizes.p16,
                           ),
-                        ),
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              AppSizes.p16,
-                              0,
-                              AppSizes.p16,
-                              AppSizes.p16,
+                          title: Text(
+                            faq['q']!,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
                             ),
-                            child: Text(
-                              faq['a']!,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                height: 1.5,
-                                color: AppColors.textSecondary,
+                          ),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppSizes.p16,
+                                0,
+                                AppSizes.p16,
+                                AppSizes.p16,
+                              ),
+                              child: Text(
+                                faq['a']!,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  height: 1.5,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      );
-                    },
+                          ],
+                        );
+                      },
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: AppSizes.p24),
+                const SizedBox(height: AppSizes.p24),
               ],
             ),
           ),
@@ -1053,30 +1232,53 @@ class _CustomerSupportScreenState extends ConsumerState<CustomerSupportScreen> {
     );
   }
 
-  Widget _contactRow(IconData icon, String value, {VoidCallback? onTap}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 2),
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.white, size: 18),
-            const SizedBox(width: AppSizes.p8),
-            Expanded(
-              child: Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                  decoration: TextDecoration.underline,
-                  decorationColor: Colors.white70,
+  Widget _contactRow(
+    IconData icon,
+    String value, {
+    VoidCallback? onTap,
+    VoidCallback? onCopy,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap ?? onCopy,
+        borderRadius: BorderRadius.circular(6),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 2),
+          child: Row(
+            children: [
+              Icon(icon, color: Colors.white, size: 18),
+              const SizedBox(width: AppSizes.p8),
+              Expanded(
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    decoration: TextDecoration.underline,
+                    decorationColor: Colors.white70,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ),
-            const Icon(Icons.copy_rounded, color: Colors.white70, size: 14),
-          ],
+              const SizedBox(width: 4),
+              if (onCopy != null)
+                IconButton(
+                  icon: const Icon(Icons.copy_rounded,
+                      color: Colors.white70, size: 15),
+                  onPressed: onCopy,
+                  splashRadius: 16,
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 28, minHeight: 28),
+                  tooltip: 'Copy',
+                )
+              else
+                const Icon(Icons.copy_rounded, color: Colors.white70, size: 14),
+            ],
+          ),
         ),
       ),
     );

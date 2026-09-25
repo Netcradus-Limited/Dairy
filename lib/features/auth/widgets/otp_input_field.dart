@@ -94,8 +94,7 @@ class _OtpInputFieldState extends State<OtpInputField> {
           _focusNodes[5].unfocus();
         }
 
-        final code =
-            _controllers.map((c) => c.text.replaceAll(' ', '')).join();
+        final code = _controllers.map((c) => c.text.replaceAll(' ', '')).join();
         widget.onChanged?.call(code);
         if (code.length == 6) {
           widget.onCompleted(code);

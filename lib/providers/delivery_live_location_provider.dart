@@ -34,7 +34,8 @@ enum GpsTrackingStatus {
 }
 
 class GpsTrackingStatusNotifier extends StateNotifier<GpsTrackingStatus> {
-  GpsTrackingStatusNotifier([GpsTrackingStatus initial = GpsTrackingStatus.idle])
+  GpsTrackingStatusNotifier(
+      [GpsTrackingStatus initial = GpsTrackingStatus.idle])
       : super(initial);
 
   void setStatus(GpsTrackingStatus status) {
@@ -150,9 +151,9 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
     _writeCurrentPosition();
 
     _subscription = location.getPositionStream().listen(
-      _onPosition,
-      onError: _onStreamError,
-    );
+          _onPosition,
+          onError: _onStreamError,
+        );
   }
 
   /// Stops GPS tracking and releases the stream subscription.
@@ -268,19 +269,19 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
     // In addition, save pending offline coordinates to sync upon reconnect.
     _ref
         .read(deliveryTrackingServiceProvider)
-        .updateAgentLocation(agentId, latitude, longitude, orderId: activeOrderId)
+        .updateAgentLocation(agentId, latitude, longitude,
+            orderId: activeOrderId)
         .then((_) {
-          _pendingOfflineLat = null;
-          _pendingOfflineLng = null;
-        })
-        .catchError((_) {
-          /* Write failures are non-fatal — tracking continues */
-          _pendingOfflineLat = latitude;
-          _pendingOfflineLng = longitude;
-          // Clear _lastWrittenLat so the next tick or reconnection can retry writing
-          _lastWrittenLat = null;
-          _lastWrittenLng = null;
-        });
+      _pendingOfflineLat = null;
+      _pendingOfflineLng = null;
+    }).catchError((_) {
+      /* Write failures are non-fatal — tracking continues */
+      _pendingOfflineLat = latitude;
+      _pendingOfflineLng = longitude;
+      // Clear _lastWrittenLat so the next tick or reconnection can retry writing
+      _lastWrittenLat = null;
+      _lastWrittenLng = null;
+    });
   }
 
   void _flushPendingLocation() {

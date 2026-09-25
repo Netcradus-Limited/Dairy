@@ -52,8 +52,7 @@ class MainLayoutScreen extends ConsumerWidget {
           onNotificationTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                  builder: (_) => const NotificationsScreen()),
+              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
             );
           },
           onCartTap: () {

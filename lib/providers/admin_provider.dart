@@ -140,8 +140,9 @@ class AdminProvider extends ChangeNotifier {
       _subscriptions.where((s) => s.status == SubscriptionStatus.active).length;
   int get pausedSubscriptionsCount =>
       _subscriptions.where((s) => s.status == SubscriptionStatus.paused).length;
-  int get cancelledSubscriptionsCount =>
-      _subscriptions.where((s) => s.status == SubscriptionStatus.cancelled).length;
+  int get cancelledSubscriptionsCount => _subscriptions
+      .where((s) => s.status == SubscriptionStatus.cancelled)
+      .length;
 
   int get todaySubscriptionDeliveriesCount {
     final now = DateTime.now();
@@ -259,7 +260,8 @@ class AdminProvider extends ChangeNotifier {
       .where((o) => _mapFromServiceStatus(o.status) == OrderStatus.preparing)
       .length;
   int get outForDeliveryOrdersCount => filteredDashboardOrders
-      .where((o) => _mapFromServiceStatus(o.status) == OrderStatus.outForDelivery)
+      .where(
+          (o) => _mapFromServiceStatus(o.status) == OrderStatus.outForDelivery)
       .length;
   int get deliveredOrdersCount => filteredDashboardOrders
       .where((o) => _mapFromServiceStatus(o.status) == OrderStatus.delivered)
@@ -293,8 +295,8 @@ class AdminProvider extends ChangeNotifier {
         final pid = item.product.id.trim();
         if (pid.isEmpty) continue;
         productSales[pid] = (productSales[pid] ?? 0) + item.quantity;
-        productRevenues[pid] =
-            (productRevenues[pid] ?? 0.0) + (item.product.price * item.quantity);
+        productRevenues[pid] = (productRevenues[pid] ?? 0.0) +
+            (item.product.price * item.quantity);
         productMap[pid] = item.product;
       }
     }
@@ -306,32 +308,35 @@ class AdminProvider extends ChangeNotifier {
     final sortedProductIds = productSales.keys.toList()
       ..sort((a, b) => productSales[b]!.compareTo(productSales[a]!));
 
-    return sortedProductIds.map((pid) {
-      final p = productMap[pid]!;
-      final existing = _products.cast<DairyProduct?>().firstWhere(
-            (dp) => dp?.id == pid,
-            orElse: () => null,
+    return sortedProductIds
+        .map((pid) {
+          final p = productMap[pid]!;
+          final existing = _products.cast<DairyProduct?>().firstWhere(
+                (dp) => dp?.id == pid,
+                orElse: () => null,
+              );
+          if (existing != null) {
+            return existing.copyWith(
+              ordersCount: productSales[pid] ?? 0,
+              totalRevenue: productRevenues[pid] ?? 0.0,
+            );
+          }
+          return DairyProduct(
+            id: p.id,
+            name: p.title,
+            subtitle: p.description.isNotEmpty ? p.description : p.categoryName,
+            category: p.categoryName,
+            unit: p.unit,
+            price: p.price,
+            ordersCount: productSales[pid] ?? 0,
+            totalRevenue: productRevenues[pid] ?? 0.0,
+            imageUrl: p.imageUrl,
+            inStock: p.inStock,
+            isBestSeller: p.isBestSeller,
           );
-      if (existing != null) {
-        return existing.copyWith(
-          ordersCount: productSales[pid] ?? 0,
-          totalRevenue: productRevenues[pid] ?? 0.0,
-        );
-      }
-      return DairyProduct(
-        id: p.id,
-        name: p.title,
-        subtitle: p.description.isNotEmpty ? p.description : p.categoryName,
-        category: p.categoryName,
-        unit: p.unit,
-        price: p.price,
-        ordersCount: productSales[pid] ?? 0,
-        totalRevenue: productRevenues[pid] ?? 0.0,
-        imageUrl: p.imageUrl,
-        inStock: p.inStock,
-        isBestSeller: p.isBestSeller,
-      );
-    }).take(5).toList();
+        })
+        .take(5)
+        .toList();
   }
 
   @visibleForTesting
@@ -363,8 +368,7 @@ class AdminProvider extends ChangeNotifier {
         _complaintService = complaintService ?? ComplaintService(),
         _paymentService = paymentService ?? PaymentService(),
         _deliveryService = deliveryService ?? DeliveryManagementService(),
-        _subscriptionService =
-            subscriptionService ?? SubscriptionService() {
+        _subscriptionService = subscriptionService ?? SubscriptionService() {
     _listenToProducts();
     _listenToCategories();
     _listenToOrders();
@@ -541,6 +545,8 @@ class AdminProvider extends ChangeNotifier {
         return OrderStatus.pending;
       case order.OrderStatus.confirmed:
         return OrderStatus.confirmed;
+      case order.OrderStatus.assigned:
+        return OrderStatus.assigned;
       case order.OrderStatus.preparing:
         return OrderStatus.preparing;
       case order.OrderStatus.outForDelivery:
@@ -559,6 +565,8 @@ class AdminProvider extends ChangeNotifier {
         return order.OrderStatus.placed;
       case OrderStatus.confirmed:
         return order.OrderStatus.confirmed;
+      case OrderStatus.assigned:
+        return order.OrderStatus.assigned;
       case OrderStatus.preparing:
         return order.OrderStatus.preparing;
       case OrderStatus.outForDelivery:
@@ -605,6 +613,9 @@ class AdminProvider extends ChangeNotifier {
         _orders[idx] = _orders[idx].copyWith(
           assignedAgentId: effectiveAgentId,
           assignedAgentName: resolvedAgentName,
+          status: effectiveAgentId != null
+              ? OrderStatus.assigned
+              : OrderStatus.confirmed,
         );
         notifyListeners();
       }
@@ -1042,7 +1053,8 @@ class AdminProvider extends ChangeNotifier {
         KpiMetric(
           title: 'Active / On Route',
           value: '$activeOrdersCount',
-          growthText: '$outForDeliveryOrdersCount out for delivery (${_dashboardDateFilter.displayName})',
+          growthText:
+              '$outForDeliveryOrdersCount out for delivery (${_dashboardDateFilter.displayName})',
           isPositive: activeOrdersCount > 0,
           icon: Icons.local_shipping_outlined,
           themeColor: AppColors.statusOutForDelivery,
@@ -1558,7 +1570,8 @@ class AdminProvider extends ChangeNotifier {
       } else if (parsedRole.canAccessAdminPortal) {
         // Administrative / Staff account
         // Deduplicate if multiple documents exist for the same staff member phone
-        if (normalizedPhone.isNotEmpty && seenStaffPhones.contains(normalizedPhone)) {
+        if (normalizedPhone.isNotEmpty &&
+            seenStaffPhones.contains(normalizedPhone)) {
           continue;
         }
         if (normalizedPhone.isNotEmpty) {
@@ -1573,7 +1586,8 @@ class AdminProvider extends ChangeNotifier {
           'email': email.isNotEmpty ? email : 'admin@sawariyadairy.com',
           'role': parsedRole.isAdmin
               ? 'Super Admin'
-              : (data['roleTitle'] as String? ?? StaffRolePresets.getDisplayTitleForRole(cleanRole)),
+              : (data['roleTitle'] as String? ??
+                  StaffRolePresets.getDisplayTitleForRole(cleanRole)),
           'status': (data['status'] as String? ?? 'Active'),
         });
       } else {
@@ -1699,11 +1713,13 @@ class AdminProvider extends ChangeNotifier {
     final String targetDocId;
     if (existingDoc != null) {
       targetDocId = existingDoc.id;
-      debugPrint('[STAFF PROMOTION] Found existing user doc: $targetDocId for phone: $phone');
+      debugPrint(
+          '[STAFF PROMOTION] Found existing user doc: $targetDocId for phone: $phone');
     } else {
       final newDocRef = fs.collection('users').doc();
       targetDocId = newDocRef.id;
-      debugPrint('[STAFF PROVISION] Pre-provisioning new staff doc: $targetDocId for phone: $phone');
+      debugPrint(
+          '[STAFF PROVISION] Pre-provisioning new staff doc: $targetDocId for phone: $phone');
     }
 
     // 2. Update/Promote user with Staff / RBAC fields using merge semantics
@@ -1726,9 +1742,11 @@ class AdminProvider extends ChangeNotifier {
       if (orphan.id != targetDocId) {
         try {
           await fs.collection('users').doc(orphan.id).delete();
-          debugPrint('[STAFF CLEANUP] Removed duplicate orphaned doc: ${orphan.id}');
+          debugPrint(
+              '[STAFF CLEANUP] Removed duplicate orphaned doc: ${orphan.id}');
         } catch (e) {
-          debugPrint('[STAFF CLEANUP] Error deleting orphaned doc ${orphan.id}: $e');
+          debugPrint(
+              '[STAFF CLEANUP] Error deleting orphaned doc ${orphan.id}: $e');
         }
       }
     }
@@ -1867,7 +1885,8 @@ class AdminProvider extends ChangeNotifier {
     }
 
     if (normalizedPhone.isNotEmpty) {
-      final phoneAdminDoc = await fs.collection('admins').doc(normalizedPhone).get();
+      final phoneAdminDoc =
+          await fs.collection('admins').doc(normalizedPhone).get();
       if (phoneAdminDoc.exists) {
         await fs.collection('admins').doc(normalizedPhone).delete();
       }
@@ -1880,7 +1899,8 @@ class AdminProvider extends ChangeNotifier {
     if (fs == null) return;
     try {
       final userDocsSnapshot = await fs.collection('users').get();
-      final Map<String, List<QueryDocumentSnapshot<Map<String, dynamic>>>> phoneMap = {};
+      final Map<String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>
+          phoneMap = {};
 
       for (final doc in userDocsSnapshot.docs) {
         final phone = (doc.data()['phone'] as String? ?? '').trim();
@@ -1895,16 +1915,24 @@ class AdminProvider extends ChangeNotifier {
         if (docs.length > 1) {
           // Identify genuine Auth UID document (Firebase Auth UIDs are 28 chars, auto-IDs are 20 chars)
           // or document with existing customer subcollections/profile data
-          QueryDocumentSnapshot<Map<String, dynamic>> primaryDoc = docs.firstWhere(
-            (d) => d.id.length > 25 || d.data()['walletBalance'] != null || d.data()['address'] != null,
+          QueryDocumentSnapshot<Map<String, dynamic>> primaryDoc =
+              docs.firstWhere(
+            (d) =>
+                d.id.length > 25 ||
+                d.data()['walletBalance'] != null ||
+                d.data()['address'] != null,
             orElse: () => docs.first,
           );
 
           QueryDocumentSnapshot<Map<String, dynamic>>? staffOrphanDoc;
           for (final d in docs) {
             if (d.id != primaryDoc.id) {
-              final role = (d.data()['role'] as String? ?? '').toLowerCase().trim();
-              if (role == 'admin' || role == 'dispatcher' || role == 'manager' || role == 'staff') {
+              final role =
+                  (d.data()['role'] as String? ?? '').toLowerCase().trim();
+              if (role == 'admin' ||
+                  role == 'dispatcher' ||
+                  role == 'manager' ||
+                  role == 'staff') {
                 staffOrphanDoc = d;
                 break;
               }
@@ -1913,7 +1941,8 @@ class AdminProvider extends ChangeNotifier {
 
           if (staffOrphanDoc != null && primaryDoc.id != staffOrphanDoc.id) {
             final staffData = staffOrphanDoc.data();
-            debugPrint('[ADMIN RECONCILE] Migrating staff data from orphan ${staffOrphanDoc.id} into primary ${primaryDoc.id}');
+            debugPrint(
+                '[ADMIN RECONCILE] Migrating staff data from orphan ${staffOrphanDoc.id} into primary ${primaryDoc.id}');
             await fs.collection('users').doc(primaryDoc.id).set({
               'role': staffData['role'],
               'roleTitle': staffData['roleTitle'],
@@ -1923,16 +1952,19 @@ class AdminProvider extends ChangeNotifier {
               'updatedAt': FieldValue.serverTimestamp(),
             }, SetOptions(merge: true));
 
-            final verify = await fs.collection('users').doc(primaryDoc.id).get();
+            final verify =
+                await fs.collection('users').doc(primaryDoc.id).get();
             if (verify.exists && verify.data()?['role'] == staffData['role']) {
               await fs.collection('users').doc(staffOrphanDoc.id).delete();
-              debugPrint('[ADMIN RECONCILE] Orphan ${staffOrphanDoc.id} deleted successfully.');
+              debugPrint(
+                  '[ADMIN RECONCILE] Orphan ${staffOrphanDoc.id} deleted successfully.');
             }
           }
         }
       }
     } catch (e) {
-      debugPrint('[ADMIN RECONCILE] Error during orphaned staff docs reconciliation: $e');
+      debugPrint(
+          '[ADMIN RECONCILE] Error during orphaned staff docs reconciliation: $e');
     }
   }
 

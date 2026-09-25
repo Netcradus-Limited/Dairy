@@ -46,7 +46,8 @@ class FakeCustomerProfileService extends CustomerProfileService {
       Stream.value([]);
 
   @override
-  Stream<List<CustomerDeliveryRecord>> streamDeliveryRecords(String customerId) =>
+  Stream<List<CustomerDeliveryRecord>> streamDeliveryRecords(
+          String customerId) =>
       Stream.value([]);
 }
 
@@ -121,7 +122,8 @@ class FakeAdminProvider extends ChangeNotifier implements AdminProvider {
       ];
 
   @override
-  TodaysDeliveryProgress get todaysDeliveryProgress => const TodaysDeliveryProgress(
+  TodaysDeliveryProgress get todaysDeliveryProgress =>
+      const TodaysDeliveryProgress(
         completed: 12,
         pending: 12,
         cancelled: 0,
@@ -316,7 +318,8 @@ class FakeAdminProvider extends ChangeNotifier implements AdminProvider {
   int get totalPaymentsCount => payments.length;
 
   @override
-  int get successfulPaymentsCount => payments.where((p) => p.status == 'Success').length;
+  int get successfulPaymentsCount =>
+      payments.where((p) => p.status == 'Success').length;
 
   @override
   bool get usersLoading => false;
@@ -496,7 +499,8 @@ class FakeAdminProvider extends ChangeNotifier implements AdminProvider {
   Future<void> toggleProductStock(String productId) async {}
 
   @override
-  Future<void> assignDeliveryAgent(String orderId, String? agentId, {String? agentName}) async {}
+  Future<void> assignDeliveryAgent(String orderId, String? agentId,
+      {String? agentName}) async {}
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -727,7 +731,8 @@ void main() {
         expect(tester.takeException(), isNull);
       });
 
-      testWidgets('DeliveryManagementScreen dispatch card renders without overflow on $name',
+      testWidgets(
+          'DeliveryManagementScreen dispatch card renders without overflow on $name',
           (WidgetTester tester) async {
         tester.view.physicalSize = size;
         tester.view.devicePixelRatio = 1.0;
@@ -832,7 +837,8 @@ void main() {
       });
     }
 
-    testWidgets('OrdersScreen Reassign Delivery Agent Dialog renders without overflow on 375x667',
+    testWidgets(
+        'OrdersScreen Reassign Delivery Agent Dialog renders without overflow on 375x667',
         (WidgetTester tester) async {
       tester.view.physicalSize = const Size(375, 667);
       tester.view.devicePixelRatio = 1.0;
@@ -867,7 +873,8 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('CategoriesScreen Add/Update Category Dialog renders without overflow on 375x667',
+    testWidgets(
+        'CategoriesScreen Add/Update Category Dialog renders without overflow on 375x667',
         (WidgetTester tester) async {
       tester.view.physicalSize = const Size(375, 667);
       tester.view.devicePixelRatio = 1.0;
@@ -901,7 +908,8 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('ProductsScreen Add Product Dialog renders without overflow on 375x667',
+    testWidgets(
+        'ProductsScreen Add Product Dialog renders without overflow on 375x667',
         (WidgetTester tester) async {
       tester.view.physicalSize = const Size(375, 667);
       tester.view.devicePixelRatio = 1.0;

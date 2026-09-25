@@ -57,7 +57,8 @@ void main() {
   }
 
   group('Task 2 — Dynamic Pickup Hub & Store Information Tests', () {
-    test('1. Order.fromFirestore parses top-level pickup fields accurately', () {
+    test('1. Order.fromFirestore parses top-level pickup fields accurately',
+        () {
       final data = <String, dynamic>{
         'orderCode': 'ORD888',
         'status': 'Pending',
@@ -103,7 +104,9 @@ void main() {
       expect(order.pickupLongitude, 75.8350);
     });
 
-    test('3. Order.fromFirestore supports fallback keys (storeName, storePhone, pickupLat)', () {
+    test(
+        '3. Order.fromFirestore supports fallback keys (storeName, storePhone, pickupLat)',
+        () {
       final data = <String, dynamic>{
         'orderCode': 'ORD777',
         'status': 'Pending',
@@ -125,7 +128,9 @@ void main() {
       expect(order.pickupLongitude, 75.8650);
     });
 
-    test('4. Order serialization preserves pickupLocation, pickupPhone, and coordinates', () {
+    test(
+        '4. Order serialization preserves pickupLocation, pickupPhone, and coordinates',
+        () {
       final order = createBaseOrder(
         id: 'ord_serialize_test',
         pickupLocation: 'Rau Outlet',
@@ -142,7 +147,9 @@ void main() {
       expect(map['pickupLongitude'], 75.8100);
     });
 
-    test('5. Distinct orders yield distinct dynamic pickup locations (no single hardcoding)', () {
+    test(
+        '5. Distinct orders yield distinct dynamic pickup locations (no single hardcoding)',
+        () {
       final orderA = createBaseOrder(
         id: 'order_A',
         pickupLocation: 'Palasia Depot #4',
@@ -177,12 +184,17 @@ void main() {
       expect(deliveryOrderB.hasValidPickupCoordinates, isTrue);
 
       // Verify they are NOT identical
-      expect(deliveryOrderA.pickupLocation, isNot(equals(deliveryOrderB.pickupLocation)));
-      expect(deliveryOrderA.pickupPhone, isNot(equals(deliveryOrderB.pickupPhone)));
-      expect(deliveryOrderA.pickupLatitude, isNot(equals(deliveryOrderB.pickupLatitude)));
+      expect(deliveryOrderA.pickupLocation,
+          isNot(equals(deliveryOrderB.pickupLocation)));
+      expect(deliveryOrderA.pickupPhone,
+          isNot(equals(deliveryOrderB.pickupPhone)));
+      expect(deliveryOrderA.pickupLatitude,
+          isNot(equals(deliveryOrderB.pickupLatitude)));
     });
 
-    test('6. Missing/null pickup data uses legitimate default dairy hub fallback', () {
+    test(
+        '6. Missing/null pickup data uses legitimate default dairy hub fallback',
+        () {
       final orderWithNull = createBaseOrder(
         id: 'order_null_pickup',
         pickupLocation: null,
@@ -198,7 +210,9 @@ void main() {
       expect(deliveryOrder.hasValidPickupCoordinates, isTrue);
     });
 
-    test('7. Empty pickup data displays "Not specified" and does not display misleading hub information', () {
+    test(
+        '7. Empty pickup data displays "Not specified" and does not display misleading hub information',
+        () {
       final orderWithEmpty = createBaseOrder(
         id: 'order_empty_pickup',
         pickupLocation: '   ',
@@ -214,7 +228,9 @@ void main() {
       expect(deliveryOrder.hasValidPickupCoordinates, isFalse);
     });
 
-    test('8. Custom pickup location without coordinates does NOT invent fake coordinates', () {
+    test(
+        '8. Custom pickup location without coordinates does NOT invent fake coordinates',
+        () {
       final orderNoCoords = createBaseOrder(
         id: 'order_no_coords',
         pickupLocation: 'Khandwa Road Dairy Center',
@@ -232,25 +248,32 @@ void main() {
       expect(deliveryOrder.hasValidPickupCoordinates, isFalse);
     });
 
-    test('9. hasValidPickupCoordinates validates bounds and rejects 0,0 / NaN / Infinite', () {
+    test(
+        '9. hasValidPickupCoordinates validates bounds and rejects 0,0 / NaN / Infinite',
+        () {
       final validOrder = createBaseOrder(id: '1').copyWith(
         pickupLocation: 'Hub A',
       );
       final deliveryOrder = deliveryOrderFromOrder(validOrder);
 
-      final zeroOrder = deliveryOrder.copyWith(pickupLatitude: 0.0, pickupLongitude: 0.0);
+      final zeroOrder =
+          deliveryOrder.copyWith(pickupLatitude: 0.0, pickupLongitude: 0.0);
       expect(zeroOrder.hasValidPickupCoordinates, isFalse);
 
-      final nanOrder = deliveryOrder.copyWith(pickupLatitude: double.nan, pickupLongitude: 75.88);
+      final nanOrder = deliveryOrder.copyWith(
+          pickupLatitude: double.nan, pickupLongitude: 75.88);
       expect(nanOrder.hasValidPickupCoordinates, isFalse);
 
-      final infOrder = deliveryOrder.copyWith(pickupLatitude: 22.72, pickupLongitude: double.infinity);
+      final infOrder = deliveryOrder.copyWith(
+          pickupLatitude: 22.72, pickupLongitude: double.infinity);
       expect(infOrder.hasValidPickupCoordinates, isFalse);
 
-      final outOfBounds = deliveryOrder.copyWith(pickupLatitude: 95.0, pickupLongitude: 75.88);
+      final outOfBounds =
+          deliveryOrder.copyWith(pickupLatitude: 95.0, pickupLongitude: 75.88);
       expect(outOfBounds.hasValidPickupCoordinates, isFalse);
 
-      final validCoordsOrder = deliveryOrder.copyWith(pickupLatitude: 22.7500, pickupLongitude: 75.8900);
+      final validCoordsOrder = deliveryOrder.copyWith(
+          pickupLatitude: 22.7500, pickupLongitude: 75.8900);
       expect(validCoordsOrder.hasValidPickupCoordinates, isTrue);
     });
   });

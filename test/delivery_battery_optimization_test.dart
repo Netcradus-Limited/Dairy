@@ -105,18 +105,26 @@ void main() {
           .setMockMethodCallHandler(const MethodChannel(channelName), null);
     });
 
-    test('isIgnoringBatteryOptimizations and isBatteryOptimizationRestricted via MethodChannel on Android', () async {
-      final service = BatteryOptimizationService(targetPlatformOverride: TargetPlatform.android);
+    test(
+        'isIgnoringBatteryOptimizations and isBatteryOptimizationRestricted via MethodChannel on Android',
+        () async {
+      final service = BatteryOptimizationService(
+          targetPlatformOverride: TargetPlatform.android);
       final isIgnoring = await service.isIgnoringBatteryOptimizations();
       expect(isIgnoring, isFalse); // Mock channel returned false
 
       final isRestricted = await service.isBatteryOptimizationRestricted();
       expect(isRestricted, isTrue);
-      expect(methodCalls.any((c) => c.method == 'isIgnoringBatteryOptimizations'), isTrue);
+      expect(
+          methodCalls.any((c) => c.method == 'isIgnoringBatteryOptimizations'),
+          isTrue);
     });
 
-    test('isIgnoringBatteryOptimizations safe fallback on non-Android platform (e.g. iOS / Web / Desktop)', () async {
-      final service = BatteryOptimizationService(targetPlatformOverride: TargetPlatform.iOS);
+    test(
+        'isIgnoringBatteryOptimizations safe fallback on non-Android platform (e.g. iOS / Web / Desktop)',
+        () async {
+      final service = BatteryOptimizationService(
+          targetPlatformOverride: TargetPlatform.iOS);
       final isIgnoring = await service.isIgnoringBatteryOptimizations();
       expect(isIgnoring, isTrue);
 
@@ -124,15 +132,22 @@ void main() {
       expect(isRestricted, isFalse);
     });
 
-    test('openBatteryOptimizationSettings invokes channel on Android', () async {
-      final service = BatteryOptimizationService(targetPlatformOverride: TargetPlatform.android);
+    test('openBatteryOptimizationSettings invokes channel on Android',
+        () async {
+      final service = BatteryOptimizationService(
+          targetPlatformOverride: TargetPlatform.android);
       final opened = await service.openBatteryOptimizationSettings();
       expect(opened, isTrue);
-      expect(methodCalls.any((c) => c.method == 'openBatteryOptimizationSettings'), isTrue);
+      expect(
+          methodCalls.any((c) => c.method == 'openBatteryOptimizationSettings'),
+          isTrue);
     });
 
-    test('openBatteryOptimizationSettings safe fallback on non-Android platform', () async {
-      final service = BatteryOptimizationService(targetPlatformOverride: TargetPlatform.iOS);
+    test(
+        'openBatteryOptimizationSettings safe fallback on non-Android platform',
+        () async {
+      final service = BatteryOptimizationService(
+          targetPlatformOverride: TargetPlatform.iOS);
       final opened = await service.openBatteryOptimizationSettings();
       expect(opened, isFalse);
     });
@@ -191,7 +206,9 @@ void main() {
       expect(mockService.openSettingsCount, equals(1));
     });
 
-    test('checkStatus gracefully handles exceptions without throwing or crashing', () async {
+    test(
+        'checkStatus gracefully handles exceptions without throwing or crashing',
+        () async {
       final throwingService = _ThrowingBatteryOptimizationService();
       final notifier = BatteryOptimizationNotifier(throwingService);
 
@@ -203,7 +220,8 @@ void main() {
   });
 
   group('BatteryOptimizationWarningBanner Widget Tests', () {
-    testWidgets('Banner is invisible when shouldShowWarning is false', (tester) async {
+    testWidgets('Banner is invisible when shouldShowWarning is false',
+        (tester) async {
       final container = ProviderContainer(
         overrides: [
           batteryOptimizationProvider.overrideWith(
@@ -235,7 +253,9 @@ void main() {
       expect(find.text('Fix Battery Settings'), findsNothing);
     });
 
-    testWidgets('Banner is visible and actionable when shouldShowWarning is true', (tester) async {
+    testWidgets(
+        'Banner is visible and actionable when shouldShowWarning is true',
+        (tester) async {
       final mockService = _MockBatteryOptimizationService()..isIgnoring = false;
       final container = ProviderContainer(
         overrides: [
@@ -265,7 +285,8 @@ void main() {
 
       expect(find.text('Background Location Warning'), findsOneWidget);
       expect(
-        find.textContaining('Battery optimization may limit background location'),
+        find.textContaining(
+            'Battery optimization may limit background location'),
         findsOneWidget,
       );
       expect(find.text('Fix Battery Settings'), findsOneWidget);
@@ -284,7 +305,8 @@ void main() {
       expect(container.read(batteryOptimizationProvider).isDismissed, isTrue);
     });
 
-    testWidgets('Banner responsive layout adjusts cleanly for narrow viewports', (tester) async {
+    testWidgets('Banner responsive layout adjusts cleanly for narrow viewports',
+        (tester) async {
       final container = ProviderContainer(
         overrides: [
           batteryOptimizationProvider.overrideWith(
@@ -325,14 +347,17 @@ void main() {
   });
 
   group('Tracking Session Start Battery Check Integration', () {
-    test('startTracking triggers checkStatus on batteryOptimizationProvider', () async {
-      final mockBatteryService = _MockBatteryOptimizationService()..isIgnoring = false;
+    test('startTracking triggers checkStatus on batteryOptimizationProvider',
+        () async {
+      final mockBatteryService = _MockBatteryOptimizationService()
+        ..isIgnoring = false;
       final fakeLocationService = _FakeLocationService();
       addTearDown(fakeLocationService.close);
 
       final container = ProviderContainer(
         overrides: [
-          batteryOptimizationServiceProvider.overrideWithValue(mockBatteryService),
+          batteryOptimizationServiceProvider
+              .overrideWithValue(mockBatteryService),
           locationServiceProvider.overrideWithValue(fakeLocationService),
           deliveryTrackingServiceProvider.overrideWithValue(
             DeliveryTrackingService(FakeFirebaseFirestore()),
@@ -351,7 +376,8 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final trackingNotifier = container.read(agentLiveLocationProvider.notifier);
+      final trackingNotifier =
+          container.read(agentLiveLocationProvider.notifier);
       expect(mockBatteryService.checkCount, equals(0));
 
       await trackingNotifier.startTracking();

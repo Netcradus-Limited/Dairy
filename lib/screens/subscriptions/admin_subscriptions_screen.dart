@@ -212,8 +212,7 @@ class _AdminSubscriptionsScreenState extends State<AdminSubscriptionsScreen> {
                         decoration: InputDecoration(
                           hintText:
                               'Search by customer, phone, product, or ID...',
-                          hintStyle:
-                              TextStyle(color: textMuted, fontSize: 13),
+                          hintStyle: TextStyle(color: textMuted, fontSize: 13),
                           prefixIcon: Icon(Icons.search,
                               size: 18, color: textSecondary),
                           isDense: true,
@@ -261,16 +260,13 @@ class _AdminSubscriptionsScreenState extends State<AdminSubscriptionsScreen> {
                         selectedColor: AppColors.primary,
                         labelStyle: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
-                          fontWeight: isSelected
-                              ? FontWeight.w700
-                              : FontWeight.w500,
+                          fontWeight:
+                              isSelected ? FontWeight.w700 : FontWeight.w500,
                           color: isSelected ? Colors.white : textPrimary,
                         ),
                         backgroundColor: AppColors.bgOf(context),
                         side: BorderSide(
-                          color: isSelected
-                              ? AppColors.primary
-                              : cardBorder,
+                          color: isSelected ? AppColors.primary : cardBorder,
                         ),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8)),
@@ -296,9 +292,8 @@ class _AdminSubscriptionsScreenState extends State<AdminSubscriptionsScreen> {
                         selectedColor: Colors.teal,
                         labelStyle: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
-                          fontWeight: isSelected
-                              ? FontWeight.w700
-                              : FontWeight.w500,
+                          fontWeight:
+                              isSelected ? FontWeight.w700 : FontWeight.w500,
                           color: isSelected ? Colors.white : textPrimary,
                         ),
                         backgroundColor: AppColors.bgOf(context),
@@ -424,8 +419,8 @@ class _AdminSubscriptionsScreenState extends State<AdminSubscriptionsScreen> {
       ),
       _KpiData(
         title: 'Est. Monthly Revenue',
-        value: currencyFormatter.format(
-            provider.estimatedMonthlySubscriptionRevenue),
+        value: currencyFormatter
+            .format(provider.estimatedMonthlySubscriptionRevenue),
         subtitle: 'From active subscribers',
         icon: Icons.account_balance_wallet_outlined,
         color: AppColors.revenueGreen,
@@ -434,7 +429,8 @@ class _AdminSubscriptionsScreenState extends State<AdminSubscriptionsScreen> {
     ];
 
     return LayoutBuilder(builder: (ctx, constraints) {
-      final crossAxisCount = isDesktop ? 3 : (constraints.maxWidth > 520 ? 2 : 1);
+      final crossAxisCount =
+          isDesktop ? 3 : (constraints.maxWidth > 520 ? 2 : 1);
       return GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),

@@ -207,7 +207,10 @@ class Subscription {
     final userId = (data['userId'] as String?) ?? (data['uid'] as String?);
 
     return Subscription(
-      id: id ?? (data['id'] as String?) ?? (data['subscriptionId'] as String?) ?? '',
+      id: id ??
+          (data['id'] as String?) ??
+          (data['subscriptionId'] as String?) ??
+          '',
       product: product,
       quantity: parsedQuantity,
       frequency: freq,

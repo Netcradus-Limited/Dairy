@@ -13,7 +13,7 @@ class ComplaintService {
 
   ComplaintService({
     FirebaseFirestore? firestore,
-  })  : _customFirestore = firestore;
+  }) : _customFirestore = firestore;
 
   CollectionReference<Map<String, dynamic>> get _complaintsRef =>
       _firestore.collection('complaints');
