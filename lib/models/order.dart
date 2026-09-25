@@ -71,6 +71,9 @@ class Order {
   final String paymentMethod;
   final String estimatedDeliveryTime;
   final String? assignedAgentId;
+  final String? assignedAgentName;
+  final DateTime? assignedAt;
+  final DateTime? approvedAt;
   final DateTime? acceptedAt;
   final String userId;
   final String? pickupLocation;
@@ -99,6 +102,9 @@ class Order {
     this.paymentMethod = 'Cash on Delivery',
     this.estimatedDeliveryTime = 'Today by 7:30 AM',
     this.assignedAgentId,
+    this.assignedAgentName,
+    this.assignedAt,
+    this.approvedAt,
     this.acceptedAt,
     this.userId = '',
     this.pickupLocation,
@@ -164,6 +170,9 @@ class Order {
     String? paymentMethod,
     String? estimatedDeliveryTime,
     String? assignedAgentId,
+    String? assignedAgentName,
+    DateTime? assignedAt,
+    DateTime? approvedAt,
     DateTime? acceptedAt,
     String? userId,
     String? pickupLocation,
@@ -193,6 +202,9 @@ class Order {
       estimatedDeliveryTime:
           estimatedDeliveryTime ?? this.estimatedDeliveryTime,
       assignedAgentId: assignedAgentId ?? this.assignedAgentId,
+      assignedAgentName: assignedAgentName ?? this.assignedAgentName,
+      assignedAt: assignedAt ?? this.assignedAt,
+      approvedAt: approvedAt ?? this.approvedAt,
       acceptedAt: acceptedAt ?? this.acceptedAt,
       userId: userId ?? this.userId,
       pickupLocation: pickupLocation ?? this.pickupLocation,
@@ -377,6 +389,21 @@ class Order {
             ? DateTime.tryParse(rawDeliveryDate)
             : null);
 
+    final assigned = data['assignedAt'];
+    final assignedAt = assigned is Timestamp
+        ? assigned.toDate()
+        : (assigned is String ? DateTime.tryParse(assigned) : null);
+
+    final approved = data['approvedAt'];
+    final approvedAt = approved is Timestamp
+        ? approved.toDate()
+        : (approved is String ? DateTime.tryParse(approved) : null);
+
+    final assignedAgentName = (data['assignedAgentName'] ??
+            data['deliveryAgentName'] ??
+            data['agentName'])
+        as String?;
+
     final accepted = data['acceptedAt'];
     final acceptedAt = accepted is Timestamp
         ? accepted.toDate()
@@ -534,7 +561,14 @@ class Order {
       deliveryAddress: deliveryAddress,
       paymentMethod: (data['paymentMethod'] as String?) ?? 'Cash on Delivery',
       estimatedDeliveryTime: (data['estimatedDeliveryTime'] as String?) ?? '',
-      assignedAgentId: (data['assignedAgentId'] as String?),
+      assignedAgentId: (data['assignedAgentId'] ??
+              data['deliveryAgentId'] ??
+              data['agentId'] ??
+              data['assignedDeliveryAgentId'] ??
+              data['assignedTo']) as String?,
+      assignedAgentName: assignedAgentName,
+      assignedAt: assignedAt,
+      approvedAt: approvedAt,
       acceptedAt: acceptedAt,
       userId: (data['userId'] as String?) ?? '',
       pickupLocation: pickupLocation,
@@ -595,7 +629,14 @@ class Order {
         'estimatedDeliveryTime': estimatedDeliveryTime,
         if (deliveryDate != null)
           'deliveryDate': Timestamp.fromDate(deliveryDate!),
-        if (assignedAgentId != null) 'assignedAgentId': assignedAgentId,
+        if (assignedAgentId != null && assignedAgentId!.trim().isNotEmpty)
+          'assignedAgentId': assignedAgentId!.trim(),
+        if (assignedAgentName != null && assignedAgentName!.trim().isNotEmpty)
+          'assignedAgentName': assignedAgentName!.trim(),
+        if (assignedAt != null)
+          'assignedAt': Timestamp.fromDate(assignedAt!),
+        if (approvedAt != null)
+          'approvedAt': Timestamp.fromDate(approvedAt!),
         if (acceptedAt != null) 'acceptedAt': acceptedAt,
         if (pickupLocation != null) 'pickupLocation': pickupLocation,
         if (pickupPhone != null) 'pickupPhone': pickupPhone,

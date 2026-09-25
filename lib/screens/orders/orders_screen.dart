@@ -684,16 +684,18 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                               () => isSubmitting = true);
                                           try {
                                             if (order.status == OrderStatus.pending) {
-                                              await provider.updateOrderStatus(
+                                              await provider.approveAndAssignOrder(
                                                 order.id,
-                                                OrderStatus.confirmed,
+                                                selectedAgentId!,
+                                                agentName: selectedRider?.name,
+                                              );
+                                            } else {
+                                              await provider.assignDeliveryAgent(
+                                                order.id,
+                                                selectedAgentId,
+                                                agentName: selectedRider?.name,
                                               );
                                             }
-                                            await provider.assignDeliveryAgent(
-                                              order.id,
-                                              selectedAgentId,
-                                              agentName: selectedRider?.name,
-                                            );
                                             if (dialogContext.mounted) {
                                               Navigator.of(dialogContext).pop();
                                             }

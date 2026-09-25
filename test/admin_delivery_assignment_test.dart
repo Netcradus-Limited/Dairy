@@ -46,6 +46,16 @@ class MockAdminProvider extends ChangeNotifier implements AdminProvider {
   }
 
   @override
+  Future<void> approveAndAssignOrder(
+    String orderId,
+    String agentId, {
+    String? agentName,
+  }) async {
+    await updateOrderStatus(orderId, OrderStatus.confirmed);
+    await assignDeliveryAgent(orderId, agentId, agentName: agentName);
+  }
+
+  @override
   Future<void> assignDeliveryAgent(
     String orderId,
     String? agentId, {

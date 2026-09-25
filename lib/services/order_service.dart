@@ -302,6 +302,8 @@ class OrderService {
         if (currentStatusStr != targetStatusStr) {
           await docRef.update({
             'status': orderStatusToString(status),
+            if (status == OrderStatus.confirmed && doc.data()?['approvedAt'] == null)
+              'approvedAt': FieldValue.serverTimestamp(),
             'updatedAt': FieldValue.serverTimestamp(),
           });
         }
@@ -533,6 +535,35 @@ class OrderService {
     });
   }
 
+  /// Approves an unconfirmed/pending order and assigns a delivery agent in sequence.
+  Future<void> approveAndAssignOrder(
+    String orderId,
+    String agentId, {
+    String? agentName,
+    String? adminUid,
+  }) async {
+    final cleanOrderId = orderId.trim();
+    final cleanAgentId = agentId.trim();
+    if (cleanOrderId.isEmpty) throw ArgumentError('orderId cannot be empty');
+    if (cleanAgentId.isEmpty) throw ArgumentError('agentId cannot be empty');
+
+    final docRef = _firestore.collection('orders').doc(cleanOrderId);
+    final snapshot = await docRef.get();
+    if (!snapshot.exists) {
+      throw StateError('Order not found: ');
+    }
+    final currentStatus = (snapshot.data()?['status'] as String?)?.toLowerCase() ?? '';
+    if (currentStatus == 'pending' || currentStatus == 'placed') {
+      await updateOrderStatus(cleanOrderId, OrderStatus.confirmed);
+    }
+    await assignDeliveryAgent(
+      cleanOrderId,
+      cleanAgentId,
+      agentName: agentName,
+      adminUid: adminUid,
+    );
+  }
+
   /// Assigns or unassigns a delivery agent to an order in Firestore.
   /// Enforces that an order MUST be confirmed/approved by Admin before assignment.
   /// Setting an agent transitions the order status to `assigned` and triggers
@@ -571,6 +602,8 @@ class OrderService {
             'assignedAgentId': cleanAgentId,
             'assignedAgentName': agentName,
             'assignedAt': FieldValue.serverTimestamp(),
+            if (data?['approvedAt'] == null)
+              'approvedAt': FieldValue.serverTimestamp(),
             'status': 'assigned',
             'updatedAt': FieldValue.serverTimestamp(),
           };

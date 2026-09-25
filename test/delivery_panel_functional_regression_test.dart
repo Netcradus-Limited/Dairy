@@ -132,8 +132,12 @@ void main() {
   // ─── Group 1: Order Lifecycle, Accept & Decline ────────────────────────────
 
   group('Order Lifecycle & Concurrency Guards', () {
-    test('Agent accepts a pending order successfully', () async {
-      await seedOrder(orderId: 'ORD_01', status: 'Pending');
+    test('Agent accepts an assigned order successfully', () async {
+      await seedOrder(
+        orderId: 'ORD_01',
+        status: 'assigned',
+        assignedAgentId: agent1Id,
+      );
 
       await orderService.acceptOrder('ORD_01', agent1Id);
 
@@ -143,10 +147,10 @@ void main() {
       expect(doc.data()?['acceptedAt'], isNotNull);
     });
 
-    test('Agent B cannot claim an order already claimed by Agent A', () async {
+    test('Agent B cannot claim an order assigned to Agent A', () async {
       await seedOrder(
         orderId: 'ORD_02',
-        status: 'accepted',
+        status: 'assigned',
         assignedAgentId: agent1Id,
       );
 
@@ -155,7 +159,7 @@ void main() {
         throwsA(isA<StateError>().having(
           (e) => e.message,
           'message',
-          contains('already claimed by another agent'),
+          contains('not assigned to delivery agent'),
         )),
       );
 
@@ -163,17 +167,17 @@ void main() {
       expect(doc.data()?['assignedAgentId'], equals(agent1Id));
     });
 
-    test('Agent declines order, returning it cleanly to Pending', () async {
+    test('Agent declines order, returning it cleanly to confirmed for Admin reassignment', () async {
       await seedOrder(
         orderId: 'ORD_03',
-        status: 'accepted',
+        status: 'assigned',
         assignedAgentId: agent1Id,
       );
 
       await orderService.declineOrder('ORD_03', agent1Id);
 
       final doc = await fakeFirestore.collection('orders').doc('ORD_03').get();
-      expect(doc.data()?['status'], equals('Pending'));
+      expect(doc.data()?['status'], equals('confirmed'));
       expect(doc.data()?['assignedAgentId'], isNull);
       expect(doc.data()?['acceptedAt'], isNull);
     });

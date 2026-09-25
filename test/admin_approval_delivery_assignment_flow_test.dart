@@ -436,5 +436,85 @@ void main() {
       expect(dispatchedNotifications.first['title'], equals('New Delivery Assignment'));
       expect(dispatchedNotifications.first['orderId'], equals('ord_101'));
     });
+
+    // 18. Admin reassignment updates visibility from old agent to new agent
+    test('18. Admin reassignment updates visibility from Agent A to Agent B', () {
+      final orders = <String, Order>{
+        'ord_101': createOrder(
+          id: 'ord_101',
+          status: OrderStatus.assigned,
+          assignedAgentId: 'agent_a',
+          assignedAgentName: 'Agent Alpha',
+        ),
+      };
+
+      List<Order> streamOrdersForAgent(String agentId) {
+        return orders.values.where((o) => o.assignedAgentId == agentId).toList();
+      }
+
+      // Initially Agent A sees it, Agent B does not
+      expect(streamOrdersForAgent('agent_a').length, equals(1));
+      expect(streamOrdersForAgent('agent_b'), isEmpty);
+
+      // Admin reassigns to Agent B
+      orders['ord_101'] = orders['ord_101']!.copyWith(
+        assignedAgentId: 'agent_b',
+        assignedAgentName: 'Agent Beta',
+      );
+
+      // Now Agent A does not see it, Agent B sees it
+      expect(streamOrdersForAgent('agent_a'), isEmpty);
+      expect(streamOrdersForAgent('agent_b').length, equals(1));
+      expect(streamOrdersForAgent('agent_b').first.id, equals('ord_101'));
+      expect(streamOrdersForAgent('agent_b').first.assignedAgentName, equals('Agent Beta'));
+    });
+
+    // 19. Assignment never automatically marks order as Delivered or Out for Delivery
+    test('19. Assignment never marks order as Delivered or Out for Delivery', () {
+      final orderAssigned = createOrder(
+        id: 'ord_102',
+        status: OrderStatus.assigned,
+        assignedAgentId: 'agent_a',
+      );
+
+      expect(orderAssigned.status, equals(OrderStatus.assigned));
+      expect(orderAssigned.status, isNot(equals(OrderStatus.delivered)));
+      expect(orderAssigned.status, isNot(equals(OrderStatus.outForDelivery)));
+      expect(orderAssigned.deliveredAt, isNull);
+
+      final deliveryOrder = deliveryOrderFromOrder(orderAssigned);
+      expect(deliveryOrder.status, equals(DeliveryOrderStatus.pendingAcceptance));
+      expect(deliveryOrder.status, isNot(equals(DeliveryOrderStatus.delivered)));
+      expect(deliveryOrder.status, isNot(equals(DeliveryOrderStatus.outForDelivery)));
+    });
+
+    // 20. Order schema serialization preserves assignedAgentId, assignedAgentName, assignedAt, approvedAt
+    test('20. Order fromFirestore and toFirestore properly preserve canonical assignment fields', () {
+      final now = DateTime.now();
+      final firestoreMap = {
+        'orderCode': 'ABC123',
+        'status': 'assigned',
+        'assignedAgentId': 'agent_a',
+        'assignedAgentName': 'Agent Alpha',
+        'assignedAt': now.toIso8601String(),
+        'approvedAt': now.toIso8601String(),
+        'userId': 'cust_123',
+        'items': [],
+        'subtotal': 100.0,
+        'totalAmount': 100.0,
+      };
+
+      final parsed = Order.fromFirestore(firestoreMap, 'doc_123');
+      expect(parsed.assignedAgentId, equals('agent_a'));
+      expect(parsed.assignedAgentName, equals('Agent Alpha'));
+      expect(parsed.assignedAt, isNotNull);
+      expect(parsed.approvedAt, isNotNull);
+
+      final serialized = parsed.toFirestore();
+      expect(serialized['assignedAgentId'], equals('agent_a'));
+      expect(serialized['assignedAgentName'], equals('Agent Alpha'));
+      expect(serialized['assignedAt'], isNotNull);
+      expect(serialized['approvedAt'], isNotNull);
+    });
   });
 }

@@ -259,7 +259,8 @@ void main() {
         deliveryAddress: testAddress,
       );
 
-      // 3. Driver accepts order
+      // 3. Admin approves and assigns order to Raghav, then Driver accepts order
+      await orderService.approveAndAssignOrder(genOrder.id, 'agent_raghav');
       await orderService.acceptOrder(genOrder.id, 'agent_raghav');
       var orderSnap =
           await fakeFirestore.collection('orders').doc(genOrder.id).get();

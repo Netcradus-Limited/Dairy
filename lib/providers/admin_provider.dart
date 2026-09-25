@@ -508,13 +508,15 @@ class AdminProvider extends ChangeNotifier {
         .join(', ');
 
     final agentId = o.assignedAgentId?.trim();
-    String? agentName;
-    if (agentId != null && agentId.isNotEmpty) {
-      final match = _riders.cast<DeliveryRider?>().firstWhere(
-            (r) => r?.id == agentId,
-            orElse: () => null,
-          );
-      agentName = match?.name;
+    String? agentName = o.assignedAgentName?.trim();
+    if (agentName == null || agentName.isEmpty) {
+      if (agentId != null && agentId.isNotEmpty) {
+        final match = _riders.cast<DeliveryRider?>().firstWhere(
+              (r) => r?.id == agentId,
+              orElse: () => null,
+            );
+        agentName = match?.name;
+      }
     }
 
     return DairyOrder(
@@ -575,6 +577,52 @@ class AdminProvider extends ChangeNotifier {
         return order.OrderStatus.delivered;
       case OrderStatus.cancelled:
         return order.OrderStatus.cancelled;
+    }
+  }
+
+  /// Approves a pending order and assigns a delivery agent in sequence.
+  Future<void> approveAndAssignOrder(
+    String orderId,
+    String agentId, {
+    String? agentName,
+  }) async {
+    final cleanOrderId = orderId.trim();
+    final cleanAgentId = agentId.trim();
+    final effectiveAgentId =
+        cleanAgentId.isNotEmpty ? cleanAgentId : null;
+
+    final resolvedAgentName = (agentName != null && agentName.trim().isNotEmpty)
+        ? agentName.trim()
+        : (effectiveAgentId != null
+            ? _riders
+                .cast<DeliveryRider?>()
+                .firstWhere((r) => r?.id == effectiveAgentId,
+                    orElse: () => null)
+                ?.name
+            : null);
+
+    try {
+      await _orderService.approveAndAssignOrder(
+        cleanOrderId,
+        cleanAgentId,
+        agentName: resolvedAgentName,
+      );
+
+      final idx = _orders.indexWhere((o) => o.id == cleanOrderId);
+      if (idx != -1) {
+        _orders[idx] = _orders[idx].copyWith(
+          assignedAgentId: effectiveAgentId,
+          assignedAgentName: resolvedAgentName,
+          status: OrderStatus.assigned,
+        );
+        notifyListeners();
+      }
+      _ordersError = null;
+    } catch (e) {
+      debugPrint('AdminProvider: Failed to approve & assign delivery agent: ');
+      _ordersError = 'Failed to approve & assign agent: ';
+      notifyListeners();
+      rethrow;
     }
   }
 
