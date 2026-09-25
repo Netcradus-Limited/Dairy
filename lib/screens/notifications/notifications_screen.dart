@@ -381,7 +381,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           body: body,
           type: NotificationType.promotional,
           targetUserIds: targetUids,
-          route: '/notifications',
+          route: '/shop',
           isActionable: true,
         );
       } else if (_selectedType == NotificationType.subscription) {
@@ -1320,7 +1320,7 @@ class _AdminNotifHistoryTile extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () async {
+            onTap: () async {
             if (isUnread && effectiveUid.isNotEmpty) {
               try {
                 await ref
@@ -1330,6 +1330,9 @@ class _AdminNotifHistoryTile extends ConsumerWidget {
                 debugPrint(
                     '[NOTIFICATION READ ERROR] HistoryTile markAsRead failed: $e');
               }
+            }
+            if (context.mounted) {
+              _showAdminDetailDialog(context);
             }
           },
           child: Padding(
@@ -1484,6 +1487,126 @@ class _AdminNotifHistoryTile extends ConsumerWidget {
                         ],
                       ),
                     ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAdminDetailDialog(BuildContext context) {
+    final typeColor = _typeColor(notif.type);
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.35),
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: AppColors.cardBgOf(context),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: typeColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(notif.type.icon, size: 20, color: typeColor),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            notif.type.value.toUpperCase(),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: typeColor,
+                            ),
+                          ),
+                          Text(
+                            _formatTimestamp(notif.timestamp),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              color: AppColors.textSecondaryOf(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 20),
+                      onPressed: () => Navigator.of(ctx).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  notif.title,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimaryOf(context),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.bgOf(context),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.cardBorderOf(context)),
+                  ),
+                  child: Text(
+                    notif.body.isNotEmpty
+                        ? notif.body
+                        : 'No additional details.',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      color: AppColors.textPrimaryOf(context),
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+                if (notif.orderId != null && notif.orderId!.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'Order ID: ${notif.orderId}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 18),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text('Close'),
                   ),
                 ),
               ],
