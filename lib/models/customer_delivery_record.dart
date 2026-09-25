@@ -21,7 +21,8 @@ class CustomerDeliveryRecord {
   final double unitPrice;
   final double totalAmount;
   final String deliverySlot;
-  final String deliveryStatus; // Delivered, Scheduled, Out for Delivery, Pending, Skipped, Cancelled, Failed
+  final String
+      deliveryStatus; // Delivered, Scheduled, Out for Delivery, Pending, Skipped, Cancelled, Failed
   final String paymentStatus; // Paid, Pending, COD, Wallet, Cancelled
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -47,12 +48,9 @@ class CustomerDeliveryRecord {
     this.updatedAt,
   });
 
-  bool get isDelivered =>
-      deliveryStatus.toLowerCase() == 'delivered';
-  bool get isSkipped =>
-      deliveryStatus.toLowerCase() == 'skipped';
-  bool get isCancelled =>
-      deliveryStatus.toLowerCase() == 'cancelled';
+  bool get isDelivered => deliveryStatus.toLowerCase() == 'delivered';
+  bool get isSkipped => deliveryStatus.toLowerCase() == 'skipped';
+  bool get isCancelled => deliveryStatus.toLowerCase() == 'cancelled';
   bool get isScheduled =>
       deliveryStatus.toLowerCase() == 'scheduled' ||
       deliveryStatus.toLowerCase() == 'pending' ||
@@ -61,7 +59,8 @@ class CustomerDeliveryRecord {
       deliveryStatus.toLowerCase() == 'out for delivery';
 
   String get formattedDate => DateFormat('dd MMM yyyy').format(date);
-  String get formattedTimeSlot => deliverySlot.isNotEmpty ? deliverySlot : 'Morning';
+  String get formattedTimeSlot =>
+      deliverySlot.isNotEmpty ? deliverySlot : 'Morning';
 
   CustomerDeliveryRecord copyWith({
     String? id,
@@ -117,11 +116,11 @@ class CustomerDeliveryRecord {
       return fallback ?? DateTime.now();
     }
 
-    final double uPrice =
-        (data['unitPrice'] is num) ? (data['unitPrice'] as num).toDouble() : 0.0;
-    final int qty = (data['quantity'] is num)
-        ? (data['quantity'] as num).toInt()
-        : 1;
+    final double uPrice = (data['unitPrice'] is num)
+        ? (data['unitPrice'] as num).toDouble()
+        : 0.0;
+    final int qty =
+        (data['quantity'] is num) ? (data['quantity'] as num).toInt() : 1;
     final double tAmount = (data['totalAmount'] is num)
         ? (data['totalAmount'] as num).toDouble()
         : (uPrice * qty);
@@ -143,12 +142,10 @@ class CustomerDeliveryRecord {
       deliverySlot: (data['deliverySlot'] as String?) ?? 'Morning',
       deliveryStatus: (data['deliveryStatus'] as String?) ?? 'Scheduled',
       paymentStatus: (data['paymentStatus'] as String?) ?? 'Pending',
-      createdAt: data['createdAt'] != null
-          ? parseDate(data['createdAt'])
-          : null,
-      updatedAt: data['updatedAt'] != null
-          ? parseDate(data['updatedAt'])
-          : null,
+      createdAt:
+          data['createdAt'] != null ? parseDate(data['createdAt']) : null,
+      updatedAt:
+          data['updatedAt'] != null ? parseDate(data['updatedAt']) : null,
     );
   }
 
@@ -180,14 +177,16 @@ class CustomerDeliveryRecord {
   static List<CustomerDeliveryRecord> fromOrder(Order order) {
     final orderDate = order.deliveryDate ?? order.orderDate;
     final String statusStr = _mapOrderStatus(order.status);
-    final String payStatus = (order.paymentMethod.toLowerCase().contains('cash') ||
-            order.paymentMethod.toLowerCase().contains('cod'))
-        ? (order.status == OrderStatus.delivered ? 'Paid' : 'COD')
-        : (order.status == OrderStatus.cancelled ? 'Cancelled' : 'Paid');
+    final String payStatus =
+        (order.paymentMethod.toLowerCase().contains('cash') ||
+                order.paymentMethod.toLowerCase().contains('cod'))
+            ? (order.status == OrderStatus.delivered ? 'Paid' : 'COD')
+            : (order.status == OrderStatus.cancelled ? 'Cancelled' : 'Paid');
 
-    final String slot = order.estimatedDeliveryTime.toLowerCase().contains('evening')
-        ? 'Evening'
-        : 'Morning';
+    final String slot =
+        order.estimatedDeliveryTime.toLowerCase().contains('evening')
+            ? 'Evening'
+            : 'Morning';
 
     if (order.items.isEmpty) {
       return [
@@ -244,17 +243,18 @@ class CustomerDeliveryRecord {
     List<DateTime> skippedDates = const [],
     DateTime? referenceDate,
   }) {
-    final normalizedTarget = DateTime(targetDate.year, targetDate.month, targetDate.day);
-    final normalizedStart = DateTime(
-        subscription.startDate.year, subscription.startDate.month, subscription.startDate.day);
+    final normalizedTarget =
+        DateTime(targetDate.year, targetDate.month, targetDate.day);
+    final normalizedStart = DateTime(subscription.startDate.year,
+        subscription.startDate.month, subscription.startDate.day);
 
     if (normalizedTarget.isBefore(normalizedStart)) {
       return null;
     }
 
     if (subscription.endDate != null) {
-      final normalizedEnd = DateTime(
-          subscription.endDate!.year, subscription.endDate!.month, subscription.endDate!.day);
+      final normalizedEnd = DateTime(subscription.endDate!.year,
+          subscription.endDate!.month, subscription.endDate!.day);
       if (normalizedTarget.isAfter(normalizedEnd)) {
         return null;
       }
@@ -271,7 +271,8 @@ class CustomerDeliveryRecord {
         isScheduledOnDate = (diffDays % 2 == 0);
         break;
       case SubscriptionFrequency.weekly:
-        isScheduledOnDate = (normalizedTarget.weekday == normalizedStart.weekday);
+        isScheduledOnDate =
+            (normalizedTarget.weekday == normalizedStart.weekday);
         break;
     }
 
@@ -279,7 +280,9 @@ class CustomerDeliveryRecord {
 
     // Check if skipped
     final isSkipped = skippedDates.any((d) =>
-        d.year == targetDate.year && d.month == targetDate.month && d.day == targetDate.day);
+        d.year == targetDate.year &&
+        d.month == targetDate.month &&
+        d.day == targetDate.day);
 
     final ref = referenceDate ?? DateTime.now();
     final today = DateTime(ref.year, ref.month, ref.day);
@@ -339,6 +342,8 @@ class CustomerDeliveryRecord {
       case OrderStatus.placed:
       case OrderStatus.confirmed:
         return 'Scheduled';
+      case OrderStatus.assigned:
+        return 'Assigned';
       case OrderStatus.preparing:
         return 'Preparing';
       case OrderStatus.outForDelivery:

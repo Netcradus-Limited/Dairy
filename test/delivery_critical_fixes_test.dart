@@ -82,7 +82,9 @@ void main() {
       mockOrderService = MockOrderServiceForDetail();
     });
 
-    testWidgets('pendingAcceptance renders Accept Order and Decline Order, NOT Start Pickup', (tester) async {
+    testWidgets(
+        'pendingAcceptance renders Accept Order and Decline Order, NOT Start Pickup',
+        (tester) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
@@ -147,7 +149,8 @@ void main() {
       expect(find.text('Decline Order'), findsNothing);
     });
 
-    testWidgets('Tapping Accept Order invokes orderServiceProvider.acceptOrder', (tester) async {
+    testWidgets('Tapping Accept Order invokes orderServiceProvider.acceptOrder',
+        (tester) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
@@ -180,7 +183,9 @@ void main() {
       expect(mockOrderService.lastAcceptedAgentId, equals('agent_999'));
     });
 
-    testWidgets('Tapping Decline Order invokes orderServiceProvider.declineOrder', (tester) async {
+    testWidgets(
+        'Tapping Decline Order invokes orderServiceProvider.declineOrder',
+        (tester) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
@@ -215,14 +220,24 @@ void main() {
   });
 
   group('Task 6.6 Fix 2: Dynamic Distance & ETA Calculation Tests', () {
-    test('calculateDistanceKm returns null when coordinates are invalid or null', () {
-      expect(DeliveryTrackingService.calculateDistanceKm(null, 75.8, 22.7, 75.8), isNull);
-      expect(DeliveryTrackingService.calculateDistanceKm(22.7, 75.8, 0.0, 0.0), isNull);
-      expect(DeliveryTrackingService.calculateDistanceKm(22.7, 75.8, 999.0, 75.8), isNull);
+    test(
+        'calculateDistanceKm returns null when coordinates are invalid or null',
+        () {
+      expect(
+          DeliveryTrackingService.calculateDistanceKm(null, 75.8, 22.7, 75.8),
+          isNull);
+      expect(DeliveryTrackingService.calculateDistanceKm(22.7, 75.8, 0.0, 0.0),
+          isNull);
+      expect(
+          DeliveryTrackingService.calculateDistanceKm(22.7, 75.8, 999.0, 75.8),
+          isNull);
     });
 
-    test('calculateDistanceKm and calculateEstimatedTime compute dynamic distance and ETA', () {
-      final dist = DeliveryTrackingService.calculateDistanceKm(22.7196, 75.8577, 22.7533, 75.8937);
+    test(
+        'calculateDistanceKm and calculateEstimatedTime compute dynamic distance and ETA',
+        () {
+      final dist = DeliveryTrackingService.calculateDistanceKm(
+          22.7196, 75.8577, 22.7533, 75.8937);
       expect(dist, isNotNull);
       expect(dist!, greaterThan(4.0));
       expect(dist, lessThan(6.5));
@@ -237,8 +252,11 @@ void main() {
   });
 
   group('Task 6.6 Fix 6: Notification Settings Persistence Tests', () {
-    test('SettingsNotifier updates and persists notificationsEnabled to SharedPreferences', () async {
-      SharedPreferences.setMockInitialValues({'settings_notifications_enabled': true});
+    test(
+        'SettingsNotifier updates and persists notificationsEnabled to SharedPreferences',
+        () async {
+      SharedPreferences.setMockInitialValues(
+          {'settings_notifications_enabled': true});
       final notifier = SettingsNotifier();
       await Future.delayed(const Duration(milliseconds: 50));
 
@@ -253,7 +271,9 @@ void main() {
   });
 
   group('Task 6.6 Fix 7 & 8: Earnings Real Calculation Tests', () {
-    test('Weekly earnings distribution computes real Monday to Sunday sums without mock fallback', () {
+    test(
+        'Weekly earnings distribution computes real Monday to Sunday sums without mock fallback',
+        () {
       final now = DateTime.now();
       final mondayOfThisWeek = DateTime(now.year, now.month, now.day)
           .subtract(Duration(days: now.weekday - 1));

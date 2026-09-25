@@ -378,7 +378,8 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
       color: AppColors.warning.withValues(alpha: 0.15),
       child: Row(
         children: [
-          const Icon(Icons.wifi_off_rounded, size: 16, color: AppColors.warning),
+          const Icon(Icons.wifi_off_rounded,
+              size: 16, color: AppColors.warning),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

@@ -7,7 +7,8 @@ class DairyPayment {
   final String customerName;
   final String orderOrWalletId;
   final double amount;
-  final String method; // 'Online (UPI)', 'Razorpay PG', 'Cash on Delivery', 'Prepaid Wallet'
+  final String
+      method; // 'Online (UPI)', 'Razorpay PG', 'Cash on Delivery', 'Prepaid Wallet'
   final String status; // 'Success', 'Pending', 'Failed', 'Cancelled'
   final String timestamp;
   final DateTime? createdAt;

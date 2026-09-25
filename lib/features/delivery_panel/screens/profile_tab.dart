@@ -74,8 +74,8 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
               ListTile(
                 leading: const Icon(Icons.camera_alt_rounded,
                     color: AppColors.primary),
-                title: Text('Take a Photo',
-                    style: GoogleFonts.plusJakartaSans()),
+                title:
+                    Text('Take a Photo', style: GoogleFonts.plusJakartaSans()),
                 onTap: () => Navigator.pop(ctx, ImageSource.camera),
               ),
             ],
@@ -105,10 +105,8 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
       final dotIndex = fileName.lastIndexOf('.');
       final ext =
           dotIndex != -1 ? fileName.substring(dotIndex).toLowerCase() : '';
-      final hasValidExt = ext == '.jpg' ||
-          ext == '.jpeg' ||
-          ext == '.png' ||
-          ext == '.webp';
+      final hasValidExt =
+          ext == '.jpg' || ext == '.jpeg' || ext == '.png' || ext == '.webp';
 
       if (!hasValidExt) {
         if (context.mounted) {
@@ -176,9 +174,8 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
         return;
       }
 
-      final detectedContentType = isPng
-          ? 'image/png'
-          : (isWebp ? 'image/webp' : 'image/jpeg');
+      final detectedContentType =
+          isPng ? 'image/png' : (isWebp ? 'image/webp' : 'image/jpeg');
 
       setState(() {
         _isUploadingPhoto = true;
@@ -376,8 +373,7 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
               }
               final normalizedPlate =
                   AppValidators.normalizeVehicleNumber(vehicleNumCtrl.text);
-              final normalizedName =
-                  AppValidators.normalizeName(nameCtrl.text);
+              final normalizedName = AppValidators.normalizeName(nameCtrl.text);
 
               Navigator.pop(ctx);
               try {
@@ -543,7 +539,9 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
                     ? agent.email!
                     : (agent.phone.isNotEmpty
                         ? agent.phone
-                        : (agent.name.isNotEmpty ? '' : tr('Delivery Partner'))),
+                        : (agent.name.isNotEmpty
+                            ? ''
+                            : tr('Delivery Partner'))),
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 14,
                   color: Colors.white.withValues(alpha: 0.8),

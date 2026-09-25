@@ -107,9 +107,8 @@ class BatteryOptimizationNotifier
 }
 
 /// Riverpod provider managing battery optimization state.
-final batteryOptimizationProvider =
-    StateNotifierProvider<BatteryOptimizationNotifier, BatteryOptimizationState>(
-        (ref) {
+final batteryOptimizationProvider = StateNotifierProvider<
+    BatteryOptimizationNotifier, BatteryOptimizationState>((ref) {
   final service = ref.watch(batteryOptimizationServiceProvider);
   return BatteryOptimizationNotifier(service);
 });

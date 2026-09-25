@@ -27,8 +27,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   // Contextual state
   String? _selectedOrderId;
-  String _deliveryTarget = 'orderCustomer'; // orderCustomer, assignedDriver, both, allFleet
-  String _audienceFilter = 'allUsers'; // allUsers, customersOnly, activeSubscribers, deliveryFleet
+  String _deliveryTarget =
+      'orderCustomer'; // orderCustomer, assignedDriver, both, allFleet
+  String _audienceFilter =
+      'allUsers'; // allUsers, customersOnly, activeSubscribers, deliveryFleet
   String _historyFilter = 'All'; // All, Unread, Read
 
   @override
@@ -228,7 +230,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       if (_selectedOrderId == null || _selectedOrderId!.trim().isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please select an order to send an order-specific notification.'),
+            content: Text(
+                'Please select an order to send an order-specific notification.'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -242,7 +245,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           (_selectedOrderId == null || _selectedOrderId!.trim().isEmpty)) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please select an order or choose "All Delivery Fleet".'),
+            content:
+                Text('Please select an order or choose "All Delivery Fleet".'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -266,9 +270,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       if (_selectedType == NotificationType.order) {
         // ── 1. Targeted 1-to-1 Order Notification ──
         final cleanOrderId = _selectedOrderId!.trim();
-        final fullOrder = await ref
-            .read(orderServiceProvider)
-            .getOrderById(cleanOrderId);
+        final fullOrder =
+            await ref.read(orderServiceProvider).getOrderById(cleanOrderId);
 
         if (fullOrder == null) {
           if (mounted) {
@@ -317,14 +320,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         } else if (_selectedOrderId != null &&
             _selectedOrderId!.trim().isNotEmpty) {
           final cleanOrderId = _selectedOrderId!.trim();
-          final fullOrder = await ref
-              .read(orderServiceProvider)
-              .getOrderById(cleanOrderId);
+          final fullOrder =
+              await ref.read(orderServiceProvider).getOrderById(cleanOrderId);
 
           if (fullOrder != null) {
             final customerUid = fullOrder.userId;
 
-            if (_deliveryTarget == 'orderCustomer' || _deliveryTarget == 'both') {
+            if (_deliveryTarget == 'orderCustomer' ||
+                _deliveryTarget == 'both') {
               if (customerUid.isNotEmpty) {
                 await repo.sendNotificationToUser(
                   targetUserId: customerUid,
@@ -603,13 +606,16 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
                 // ── Contextual Recipient Selector ──
                 if (_selectedType == NotificationType.order) ...[
-                  _buildOrderSelector(cardBg, cardBorder, textPrimary, textSecondary),
+                  _buildOrderSelector(
+                      cardBg, cardBorder, textPrimary, textSecondary),
                   const SizedBox(height: 16),
                 ] else if (_selectedType == NotificationType.delivery) ...[
-                  _buildDeliveryTargetSelector(cardBg, cardBorder, textPrimary, textSecondary),
+                  _buildDeliveryTargetSelector(
+                      cardBg, cardBorder, textPrimary, textSecondary),
                   const SizedBox(height: 16),
                 ] else ...[
-                  _buildAudienceSelector(cardBg, cardBorder, textPrimary, textSecondary),
+                  _buildAudienceSelector(
+                      cardBg, cardBorder, textPrimary, textSecondary),
                   const SizedBox(height: 16),
                 ],
 
@@ -636,7 +642,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                           color: AppColors.primary,
                         ),
                       ),
-                      backgroundColor: AppColors.primaryLight.withValues(alpha: 0.6),
+                      backgroundColor:
+                          AppColors.primaryLight.withValues(alpha: 0.6),
                       side: const BorderSide(color: AppColors.border),
                       onPressed: () => _applyTemplate(tmpl.title, tmpl.body),
                     );
@@ -831,8 +838,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                   }
                                 }
                               },
-                              icon: const Icon(Icons.done_all_rounded,
-                                  size: 16),
+                              icon:
+                                  const Icon(Icons.done_all_rounded, size: 16),
                               label: const Text('Mark all read'),
                               style: TextButton.styleFrom(
                                 foregroundColor: AppColors.primary,
@@ -859,8 +866,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                   }
                                 }
                               },
-                              icon: const Icon(Icons.clear_all_rounded,
-                                  size: 16),
+                              icon:
+                                  const Icon(Icons.clear_all_rounded, size: 16),
                               label: const Text('Clear all'),
                               style: TextButton.styleFrom(
                                 foregroundColor: AppColors.textSecondary,
@@ -1187,9 +1194,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
     if (_selectedType == NotificationType.promotional) {
       items = const [
-        DropdownMenuItem(value: 'allUsers', child: Text('All Registered Users')),
+        DropdownMenuItem(
+            value: 'allUsers', child: Text('All Registered Users')),
         DropdownMenuItem(value: 'customersOnly', child: Text('Customers Only')),
-        DropdownMenuItem(value: 'activeSubscribers', child: Text('Active Subscribers Only')),
+        DropdownMenuItem(
+            value: 'activeSubscribers', child: Text('Active Subscribers Only')),
       ];
     } else if (_selectedType == NotificationType.subscription) {
       items = const [
@@ -1202,8 +1211,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       ];
     } else {
       items = const [
-        DropdownMenuItem(value: 'allUsers', child: Text('All Registered Users')),
-        DropdownMenuItem(value: 'deliveryFleet', child: Text('Delivery Fleet Only')),
+        DropdownMenuItem(
+            value: 'allUsers', child: Text('All Registered Users')),
+        DropdownMenuItem(
+            value: 'deliveryFleet', child: Text('Delivery Fleet Only')),
         DropdownMenuItem(value: 'customersOnly', child: Text('Customers Only')),
       ];
     }
@@ -1296,14 +1307,11 @@ class _AdminNotifHistoryTile extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: isUnread
-            ? AppColors.primary.withValues(alpha: 0.04)
-            : cardBg,
+        color: isUnread ? AppColors.primary.withValues(alpha: 0.04) : cardBg,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isUnread
-              ? AppColors.primary.withValues(alpha: 0.3)
-              : cardBorder,
+          color:
+              isUnread ? AppColors.primary.withValues(alpha: 0.3) : cardBorder,
         ),
         boxShadow: AppColors.cardShadow,
       ),
@@ -1350,7 +1358,9 @@ class _AdminNotifHistoryTile extends ConsumerWidget {
                               notif.title,
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 13,
-                                fontWeight: isUnread ? FontWeight.w700 : FontWeight.w600,
+                                fontWeight: isUnread
+                                    ? FontWeight.w700
+                                    : FontWeight.w600,
                                 color: textPrimary,
                               ),
                               maxLines: 1,
@@ -1454,8 +1464,8 @@ class _AdminNotifHistoryTile extends ConsumerWidget {
                           IconButton(
                             tooltip: 'Dismiss',
                             padding: EdgeInsets.zero,
-                            constraints:
-                                const BoxConstraints(minWidth: 28, minHeight: 28),
+                            constraints: const BoxConstraints(
+                                minWidth: 28, minHeight: 28),
                             icon: Icon(Icons.delete_outline_rounded,
                                 size: 16, color: textSecondary),
                             onPressed: () async {

@@ -260,15 +260,14 @@ class _RequestsTabState extends ConsumerState<RequestsTab> {
                               color: const Color(0xFF6366F1)
                                   .withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                  color: const Color(0xFF6366F1)),
+                              border:
+                                  Border.all(color: const Color(0xFF6366F1)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Icon(Icons.repeat_rounded,
-                                    size: 11,
-                                    color: Color(0xFF6366F1)),
+                                    size: 11, color: Color(0xFF6366F1)),
                                 const SizedBox(width: 3),
                                 Text(
                                   'Subscription',
@@ -359,7 +358,8 @@ class _RequestsTabState extends ConsumerState<RequestsTab> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: isProcessing ? null : () => _handleDecline(request.id),
+                    onPressed:
+                        isProcessing ? null : () => _handleDecline(request.id),
                     icon: const Icon(Icons.close_rounded, size: 18),
                     label: const Text('Decline'),
                     style: OutlinedButton.styleFrom(
@@ -374,7 +374,8 @@ class _RequestsTabState extends ConsumerState<RequestsTab> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: isProcessing ? null : () => _handleAccept(request.id),
+                    onPressed:
+                        isProcessing ? null : () => _handleAccept(request.id),
                     icon: isProcessing
                         ? const SizedBox(
                             width: 18,

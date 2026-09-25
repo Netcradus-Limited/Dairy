@@ -238,7 +238,7 @@ class _AppTopAppBarState extends ConsumerState<AppTopAppBar> {
                     const BorderRadius.vertical(bottom: Radius.circular(20)),
                 child: InkWell(
                   borderRadius:
-                    const BorderRadius.vertical(bottom: Radius.circular(20)),
+                      const BorderRadius.vertical(bottom: Radius.circular(20)),
                   onTap: () {
                     Navigator.pop(ctx);
                     _showLogoutDialog(context);
@@ -959,7 +959,8 @@ class _AppTopAppBarState extends ConsumerState<AppTopAppBar> {
                 onTap: widget.onLocationTap,
                 borderRadius: BorderRadius.circular(12),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,

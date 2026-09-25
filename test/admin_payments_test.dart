@@ -5,7 +5,8 @@ import 'package:dairy_app/models/payment_model.dart';
 import 'package:dairy_app/providers/admin_provider.dart';
 import 'package:dairy_app/screens/payments/payments_screen.dart';
 
-class MockAdminPaymentsProvider extends ChangeNotifier implements AdminProvider {
+class MockAdminPaymentsProvider extends ChangeNotifier
+    implements AdminProvider {
   List<DairyPayment> _mockPayments = [];
   bool _mockLoading = false;
   String? _mockError;
@@ -135,7 +136,8 @@ void main() {
   }
 
   group('Admin Payments Screen Tests', () {
-    testWidgets('PaymentsScreen renders Header, KPIs, FilterBar and Loaded Payment records',
+    testWidgets(
+        'PaymentsScreen renders Header, KPIs, FilterBar and Loaded Payment records',
         (WidgetTester tester) async {
       final mockProvider = MockAdminPaymentsProvider()
         ..setMockPayments(samplePayments);
@@ -174,10 +176,12 @@ void main() {
       await tester.pumpWidget(createPaymentsScreenTestWidget(mockProvider));
       await tester.pumpAndSettle();
 
-      expect(find.text('No payments recorded in Firestore yet.'), findsOneWidget);
+      expect(
+          find.text('No payments recorded in Firestore yet.'), findsOneWidget);
     });
 
-    testWidgets('PaymentsScreen renders error state when Firestore stream fails',
+    testWidgets(
+        'PaymentsScreen renders error state when Firestore stream fails',
         (WidgetTester tester) async {
       final mockProvider = MockAdminPaymentsProvider()
         ..setError('Firestore permission-denied: insufficient permissions');

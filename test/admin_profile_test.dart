@@ -67,7 +67,8 @@ void main() {
   }
 
   group('Task 3 — Admin Profile & Account Management Tests', () {
-    testWidgets('1. Admin profile loads and displays authenticated admin details',
+    testWidgets(
+        '1. Admin profile loads and displays authenticated admin details',
         (tester) async {
       tester.view.physicalSize = const Size(1440, 900);
       tester.view.devicePixelRatio = 1.0;
@@ -78,7 +79,8 @@ void main() {
       addTearDown(container.dispose);
       await container.read(userProvider.notifier).setSession(testAdmin);
 
-      await tester.pumpWidget(createAdminProfileTestWidget(container: container));
+      await tester
+          .pumpWidget(createAdminProfileTestWidget(container: container));
       await tester.pumpAndSettle();
 
       // Verify title, admin name, email, and super admin badge
@@ -91,7 +93,8 @@ void main() {
       expect(find.text('Save Profile Changes'), findsOneWidget);
     });
 
-    testWidgets('2. Admin full name can be updated and syncs immediately to provider',
+    testWidgets(
+        '2. Admin full name can be updated and syncs immediately to provider',
         (tester) async {
       tester.view.physicalSize = const Size(1440, 900);
       tester.view.devicePixelRatio = 1.0;
@@ -102,7 +105,8 @@ void main() {
       addTearDown(container.dispose);
       await container.read(userProvider.notifier).setSession(testAdmin);
 
-      await tester.pumpWidget(createAdminProfileTestWidget(container: container));
+      await tester
+          .pumpWidget(createAdminProfileTestWidget(container: container));
       await tester.pumpAndSettle();
 
       // Clear existing name and enter updated name
@@ -132,10 +136,12 @@ void main() {
       addTearDown(container.dispose);
       await container.read(userProvider.notifier).setSession(testAdmin);
 
-      await tester.pumpWidget(createAdminProfileTestWidget(container: container));
+      await tester
+          .pumpWidget(createAdminProfileTestWidget(container: container));
       await tester.pumpAndSettle();
 
-      const newImageUrl = 'https://firebasestorage.googleapis.com/new_admin_avatar.png';
+      const newImageUrl =
+          'https://firebasestorage.googleapis.com/new_admin_avatar.png';
       await container.read(userProvider.notifier).updateProfile(
             profileImageUrl: newImageUrl,
           );
@@ -144,7 +150,8 @@ void main() {
       expect(container.read(userProvider).profileImageUrl, equals(newImageUrl));
     });
 
-    testWidgets('4. Admin role is strictly preserved and cannot be escalated/changed',
+    testWidgets(
+        '4. Admin role is strictly preserved and cannot be escalated/changed',
         (tester) async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
@@ -161,7 +168,8 @@ void main() {
       expect(updated.isCustomer, isFalse);
     });
 
-    testWidgets('5. Non-admin access to AdminMainShell is rejected with Access Denied',
+    testWidgets(
+        '5. Non-admin access to AdminMainShell is rejected with Access Denied',
         (tester) async {
       tester.view.physicalSize = const Size(1440, 900);
       tester.view.devicePixelRatio = 1.0;
@@ -185,7 +193,8 @@ void main() {
       expect(find.text('Return to Safe Screen'), findsOneWidget);
     });
 
-    testWidgets('6. AdminMainShell renders AdminProfileScreen on navigation index 11',
+    testWidgets(
+        '6. AdminMainShell renders AdminProfileScreen on navigation index 11',
         (tester) async {
       tester.view.physicalSize = const Size(1440, 900);
       tester.view.devicePixelRatio = 1.0;
@@ -209,7 +218,8 @@ void main() {
       expect(find.text('Admin Profile & Account'), findsOneWidget);
     });
 
-    testWidgets('7. Desktop viewport renders AdminProfileScreen without RenderFlex overflow',
+    testWidgets(
+        '7. Desktop viewport renders AdminProfileScreen without RenderFlex overflow',
         (tester) async {
       tester.view.physicalSize = const Size(1440, 900);
       tester.view.devicePixelRatio = 1.0;
@@ -220,14 +230,16 @@ void main() {
       addTearDown(container.dispose);
       await container.read(userProvider.notifier).setSession(testAdmin);
 
-      await tester.pumpWidget(createAdminProfileTestWidget(container: container));
+      await tester
+          .pumpWidget(createAdminProfileTestWidget(container: container));
       await tester.pumpAndSettle();
 
       expect(find.byType(AdminProfileScreen), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('8. Mobile viewport renders AdminProfileScreen without RenderFlex overflow',
+    testWidgets(
+        '8. Mobile viewport renders AdminProfileScreen without RenderFlex overflow',
         (tester) async {
       tester.view.physicalSize = const Size(375, 812);
       tester.view.devicePixelRatio = 1.0;
@@ -238,7 +250,8 @@ void main() {
       addTearDown(container.dispose);
       await container.read(userProvider.notifier).setSession(testAdmin);
 
-      await tester.pumpWidget(createAdminProfileTestWidget(container: container));
+      await tester
+          .pumpWidget(createAdminProfileTestWidget(container: container));
       await tester.pumpAndSettle();
 
       expect(find.byType(AdminProfileScreen), findsOneWidget);

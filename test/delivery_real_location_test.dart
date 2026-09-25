@@ -137,17 +137,79 @@ class _FakeHttpClientResponse implements HttpClientResponse {
       cancelOnError: cancelOnError,
     );
   }
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 final kTransparentPng = <int>[
-  0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
-  0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-  0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
-  0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
-  0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
-  0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+  0x89,
+  0x50,
+  0x4E,
+  0x47,
+  0x0D,
+  0x0A,
+  0x1A,
+  0x0A,
+  0x00,
+  0x00,
+  0x00,
+  0x0D,
+  0x49,
+  0x48,
+  0x44,
+  0x52,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x08,
+  0x06,
+  0x00,
+  0x00,
+  0x00,
+  0x1F,
+  0x15,
+  0xC4,
+  0x89,
+  0x00,
+  0x00,
+  0x00,
+  0x0A,
+  0x49,
+  0x44,
+  0x41,
+  0x54,
+  0x78,
+  0x9C,
+  0x63,
+  0x00,
+  0x01,
+  0x00,
+  0x00,
+  0x05,
+  0x00,
+  0x01,
+  0x0D,
+  0x0A,
+  0x2D,
+  0xB4,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x49,
+  0x45,
+  0x4E,
+  0x44,
+  0xAE,
+  0x42,
+  0x60,
+  0x82,
 ];
 
 void main() {
@@ -156,42 +218,60 @@ void main() {
   });
 
   group('Delivery Location & Coordinate Validation Tests', () {
-    test('isValidCoordinates correctly validates real geographic boundaries and rejects placeholders', () {
+    test(
+        'isValidCoordinates correctly validates real geographic boundaries and rejects placeholders',
+        () {
       // Valid coordinates
-      expect(DeliveryTrackingService.isValidCoordinates(22.7255, 75.8800), isTrue);
-      expect(DeliveryTrackingService.isValidCoordinates(28.6139, 77.2090), isTrue);
-      expect(DeliveryTrackingService.isValidCoordinates(-33.8688, 151.2093), isTrue);
+      expect(
+          DeliveryTrackingService.isValidCoordinates(22.7255, 75.8800), isTrue);
+      expect(
+          DeliveryTrackingService.isValidCoordinates(28.6139, 77.2090), isTrue);
+      expect(DeliveryTrackingService.isValidCoordinates(-33.8688, 151.2093),
+          isTrue);
       expect(DeliveryTrackingService.isValidCoordinates(90.0, 180.0), isTrue);
       expect(DeliveryTrackingService.isValidCoordinates(-90.0, -180.0), isTrue);
 
       // Null coordinates
-      expect(DeliveryTrackingService.isValidCoordinates(null, 75.8800), isFalse);
-      expect(DeliveryTrackingService.isValidCoordinates(22.7255, null), isFalse);
+      expect(
+          DeliveryTrackingService.isValidCoordinates(null, 75.8800), isFalse);
+      expect(
+          DeliveryTrackingService.isValidCoordinates(22.7255, null), isFalse);
       expect(DeliveryTrackingService.isValidCoordinates(null, null), isFalse);
 
       // Zero placeholder coordinates
       expect(DeliveryTrackingService.isValidCoordinates(0.0, 0.0), isFalse);
 
       // Out of bounds
-      expect(DeliveryTrackingService.isValidCoordinates(90.0001, 75.8800), isFalse);
-      expect(DeliveryTrackingService.isValidCoordinates(-90.0001, 75.8800), isFalse);
-      expect(DeliveryTrackingService.isValidCoordinates(22.7255, 180.0001), isFalse);
-      expect(DeliveryTrackingService.isValidCoordinates(22.7255, -180.0001), isFalse);
+      expect(DeliveryTrackingService.isValidCoordinates(90.0001, 75.8800),
+          isFalse);
+      expect(DeliveryTrackingService.isValidCoordinates(-90.0001, 75.8800),
+          isFalse);
+      expect(DeliveryTrackingService.isValidCoordinates(22.7255, 180.0001),
+          isFalse);
+      expect(DeliveryTrackingService.isValidCoordinates(22.7255, -180.0001),
+          isFalse);
 
       // NaN and Infinite
-      expect(DeliveryTrackingService.isValidCoordinates(double.nan, 75.8800), isFalse);
-      expect(DeliveryTrackingService.isValidCoordinates(double.infinity, 75.8800), isFalse);
+      expect(DeliveryTrackingService.isValidCoordinates(double.nan, 75.8800),
+          isFalse);
+      expect(
+          DeliveryTrackingService.isValidCoordinates(double.infinity, 75.8800),
+          isFalse);
     });
 
-    test('parseCoordinates parses diverse Firestore coordinate formats and rejects invalid values', () {
+    test(
+        'parseCoordinates parses diverse Firestore coordinate formats and rejects invalid values',
+        () {
       // List format
-      final listResult = DeliveryTrackingService.parseCoordinates([22.7255, 75.8800]);
+      final listResult =
+          DeliveryTrackingService.parseCoordinates([22.7255, 75.8800]);
       expect(listResult, isNotNull);
       expect(listResult!.latitude, 22.7255);
       expect(listResult.longitude, 75.8800);
 
       // GeoPoint format
-      final geoResult = DeliveryTrackingService.parseCoordinates(const GeoPoint(22.7255, 75.8800));
+      final geoResult = DeliveryTrackingService.parseCoordinates(
+          const GeoPoint(22.7255, 75.8800));
       expect(geoResult, isNotNull);
       expect(geoResult!.latitude, 22.7255);
       expect(geoResult.longitude, 75.8800);
@@ -216,10 +296,15 @@ void main() {
 
       // Invalid / zero coordinates
       expect(DeliveryTrackingService.parseCoordinates([0.0, 0.0]), isNull);
-      expect(DeliveryTrackingService.parseCoordinates(const GeoPoint(0.0, 0.0)), isNull);
-      expect(DeliveryTrackingService.parseCoordinates({'latitude': 999.0, 'longitude': 0.0}), isNull);
+      expect(DeliveryTrackingService.parseCoordinates(const GeoPoint(0.0, 0.0)),
+          isNull);
+      expect(
+          DeliveryTrackingService.parseCoordinates(
+              {'latitude': 999.0, 'longitude': 0.0}),
+          isNull);
       expect(DeliveryTrackingService.parseCoordinates(null), isNull);
-      expect(DeliveryTrackingService.parseCoordinates('invalid string'), isNull);
+      expect(
+          DeliveryTrackingService.parseCoordinates('invalid string'), isNull);
     });
 
     test('DeliveryOrder hasValidCoordinates works as expected', () {
@@ -266,11 +351,14 @@ void main() {
       );
       expect(nullOrder.hasValidCoordinates, isFalse);
 
-      final outOfBoundsOrder = validOrder.copyWith(latitude: 95.0, longitude: 200.0);
+      final outOfBoundsOrder =
+          validOrder.copyWith(latitude: 95.0, longitude: 200.0);
       expect(outOfBoundsOrder.hasValidCoordinates, isFalse);
     });
 
-    test('deliveryOrderFromOrder populates coordinates only when real and valid', () {
+    test(
+        'deliveryOrderFromOrder populates coordinates only when real and valid',
+        () {
       final realOrder = Order(
         id: 'real_ord_1',
         orderCode: 'REAL01',
@@ -301,7 +389,8 @@ void main() {
       expect(deliveryOrder.hasValidCoordinates, isTrue);
 
       final invalidCoordOrder = realOrder.copyWith(
-        deliveryAddress: realOrder.deliveryAddress.copyWith(latitude: 0.0, longitude: 0.0),
+        deliveryAddress:
+            realOrder.deliveryAddress.copyWith(latitude: 0.0, longitude: 0.0),
       );
       final invalidDeliveryOrder = deliveryOrderFromOrder(invalidCoordOrder);
       expect(invalidDeliveryOrder.latitude, isNull);
@@ -311,12 +400,16 @@ void main() {
   });
 
   group('DeliveryMapScreen Real Location UI Tests', () {
-    testWidgets('Renders location unavailable state when agent has no streamed location', (tester) async {
+    testWidgets(
+        'Renders location unavailable state when agent has no streamed location',
+        (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            deliveryAgentLocationStreamProvider.overrideWith((ref) => Stream.value(null)),
-            deliveryActiveOrdersStreamProvider.overrideWith((ref) => Stream.value([])),
+            deliveryAgentLocationStreamProvider
+                .overrideWith((ref) => Stream.value(null)),
+            deliveryActiveOrdersStreamProvider
+                .overrideWith((ref) => Stream.value([])),
             deliveryAgentProvider.overrideWith((ref) => MockDeliveryNotifier(
                   DeliveryAgent.empty('agent_test').copyWith(
                     name: 'Karan Sharma',
@@ -336,7 +429,9 @@ void main() {
 
       // Shows location unavailable indicator
       expect(find.text('NO GPS'), findsOneWidget);
-      expect(find.text('Agent location unavailable · Waiting for real GPS stream'), findsOneWidget);
+      expect(
+          find.text('Agent location unavailable · Waiting for real GPS stream'),
+          findsOneWidget);
 
       // Ensure no live marker exists on map
       final markerLayerFinder = find.byType(MarkerLayer);
@@ -345,21 +440,27 @@ void main() {
 
       // Only Hub marker exists, no demo agent marker
       expect(markerLayer.markers.length, equals(1));
-      expect(markerLayer.markers.first.point, equals(const LatLng(22.7255, 75.8800))); // Hub
+      expect(markerLayer.markers.first.point,
+          equals(const LatLng(22.7255, 75.8800))); // Hub
       // Old demo coordinate (22.7320, 75.8745) must NOT be present
-      expect(markerLayer.markers.any((m) => m.point.latitude == 22.7320), isFalse);
+      expect(
+          markerLayer.markers.any((m) => m.point.latitude == 22.7320), isFalse);
 
       await tester.pump(const Duration(seconds: 4));
     });
 
-    testWidgets('Renders real agent marker when valid real location is streamed from Firestore', (tester) async {
+    testWidgets(
+        'Renders real agent marker when valid real location is streamed from Firestore',
+        (tester) async {
       const realAgentPos = LatLng(28.6139, 77.2090);
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            deliveryAgentLocationStreamProvider.overrideWith((ref) => Stream.value(realAgentPos)),
-            deliveryActiveOrdersStreamProvider.overrideWith((ref) => Stream.value([])),
+            deliveryAgentLocationStreamProvider
+                .overrideWith((ref) => Stream.value(realAgentPos)),
+            deliveryActiveOrdersStreamProvider
+                .overrideWith((ref) => Stream.value([])),
             deliveryAgentProvider.overrideWith((ref) => MockDeliveryNotifier(
                   DeliveryAgent.empty('agent_test').copyWith(
                     name: 'Karan Sharma',
@@ -379,7 +480,9 @@ void main() {
 
       // Shows LIVE status badge
       expect(find.text('LIVE'), findsOneWidget);
-      expect(find.text('Agent location unavailable · Waiting for real GPS stream'), findsNothing);
+      expect(
+          find.text('Agent location unavailable · Waiting for real GPS stream'),
+          findsNothing);
 
       // Verifies agent marker is placed at the REAL position
       final markerLayerFinder = find.byType(MarkerLayer);
@@ -388,15 +491,22 @@ void main() {
 
       // 2 markers: Hub + Real Agent
       expect(markerLayer.markers.length, equals(2));
-      expect(markerLayer.markers.any((m) => m.point.latitude == realAgentPos.latitude && m.point.longitude == realAgentPos.longitude), isTrue);
+      expect(
+          markerLayer.markers.any((m) =>
+              m.point.latitude == realAgentPos.latitude &&
+              m.point.longitude == realAgentPos.longitude),
+          isTrue);
 
       // Old demo coordinate must NOT be present
-      expect(markerLayer.markers.any((m) => m.point.latitude == 22.7320), isFalse);
+      expect(
+          markerLayer.markers.any((m) => m.point.latitude == 22.7320), isFalse);
 
       await tester.pump(const Duration(seconds: 4));
     });
 
-    testWidgets('Selected order marker with highlighted badge renders without RenderFlex overflow', (tester) async {
+    testWidgets(
+        'Selected order marker with highlighted badge renders without RenderFlex overflow',
+        (tester) async {
       final activeOrder = DeliveryOrder(
         id: 'ord_active_1',
         orderId: 'ord_active_1',
@@ -420,8 +530,10 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            deliveryAgentLocationStreamProvider.overrideWith((ref) => Stream.value(const LatLng(22.7255, 75.8800))),
-            deliveryActiveOrdersStreamProvider.overrideWith((ref) => Stream.value([activeOrder])),
+            deliveryAgentLocationStreamProvider.overrideWith(
+                (ref) => Stream.value(const LatLng(22.7255, 75.8800))),
+            deliveryActiveOrdersStreamProvider
+                .overrideWith((ref) => Stream.value([activeOrder])),
             deliveryAgentProvider.overrideWith((ref) => MockDeliveryNotifier(
                   DeliveryAgent.empty('agent_test').copyWith(
                     name: 'Karan Sharma',

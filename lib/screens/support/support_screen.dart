@@ -940,8 +940,7 @@ class _SupportScreenState extends State<SupportScreen> {
                                                   color: textPrimary,
                                                 ),
                                                 maxLines: 1,
-                                                overflow:
-                                                    TextOverflow.ellipsis,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
                                             ],
                                             const SizedBox(height: 4),
@@ -953,8 +952,7 @@ class _SupportScreenState extends State<SupportScreen> {
                                                 color: textSecondary,
                                               ),
                                               maxLines: 2,
-                                              overflow:
-                                                  TextOverflow.ellipsis,
+                                              overflow: TextOverflow.ellipsis,
                                             ),
                                             const SizedBox(height: 8),
                                             // Bottom metadata Wrap + Manage link
@@ -972,17 +970,14 @@ class _SupportScreenState extends State<SupportScreen> {
                                                         Icons
                                                             .access_time_rounded,
                                                         size: 12,
-                                                        color:
-                                                            textSecondary),
+                                                        color: textSecondary),
                                                     const SizedBox(width: 3),
                                                     Text(
-                                                      ticket
-                                                          .formattedCreatedAt,
+                                                      ticket.formattedCreatedAt,
                                                       style: GoogleFonts
                                                           .plusJakartaSans(
                                                         fontSize: 11,
-                                                        color:
-                                                            textSecondary,
+                                                        color: textSecondary,
                                                       ),
                                                     ),
                                                   ],
@@ -992,52 +987,42 @@ class _SupportScreenState extends State<SupportScreen> {
                                                     mainAxisSize:
                                                         MainAxisSize.min,
                                                     children: [
-                                                      Icon(
-                                                          Icons
-                                                              .phone_outlined,
+                                                      Icon(Icons.phone_outlined,
                                                           size: 12,
-                                                          color:
-                                                              textSecondary),
+                                                          color: textSecondary),
                                                       const SizedBox(width: 3),
                                                       Text(
                                                         ticket.phone,
                                                         style: GoogleFonts
                                                             .plusJakartaSans(
                                                           fontSize: 11,
-                                                          color:
-                                                              textSecondary,
+                                                          color: textSecondary,
                                                         ),
                                                       ),
                                                     ],
                                                   ),
-                                                if (ticket.adminReply !=
-                                                        null &&
-                                                    ticket.adminReply!
-                                                        .isNotEmpty)
+                                                if (ticket.adminReply != null &&
+                                                    ticket
+                                                        .adminReply!.isNotEmpty)
                                                   Container(
-                                                    padding:
-                                                        const EdgeInsets
-                                                            .symmetric(
-                                                            horizontal: 6,
-                                                            vertical: 1),
-                                                    decoration:
-                                                        BoxDecoration(
-                                                      color: AppColors
-                                                          .success
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 1),
+                                                    decoration: BoxDecoration(
+                                                      color: AppColors.success
                                                           .withValues(
-                                                              alpha:
-                                                                  0.12),
+                                                              alpha: 0.12),
                                                       borderRadius:
-                                                          BorderRadius
-                                                              .circular(4),
+                                                          BorderRadius.circular(
+                                                              4),
                                                     ),
                                                     child: Row(
                                                       mainAxisSize:
                                                           MainAxisSize.min,
                                                       children: [
                                                         const Icon(
-                                                            Icons
-                                                                .reply_rounded,
+                                                            Icons.reply_rounded,
                                                             size: 11,
                                                             color: AppColors
                                                                 .success),
@@ -1049,8 +1034,7 @@ class _SupportScreenState extends State<SupportScreen> {
                                                               .plusJakartaSans(
                                                             fontSize: 10,
                                                             fontWeight:
-                                                                FontWeight
-                                                                    .w700,
+                                                                FontWeight.w700,
                                                             color: AppColors
                                                                 .success,
                                                           ),
@@ -1080,16 +1064,17 @@ class _SupportScreenState extends State<SupportScreen> {
                                               width: 44,
                                               height: 44,
                                               decoration: BoxDecoration(
-                                                color: _statusColor(
-                                                        ticket.status)
-                                                    .withValues(alpha: 0.12),
+                                                color:
+                                                    _statusColor(ticket.status)
+                                                        .withValues(
+                                                            alpha: 0.12),
                                                 borderRadius:
                                                     BorderRadius.circular(10),
                                               ),
                                               child: Icon(
                                                 _statusIcon(ticket.status),
-                                                color: _statusColor(
-                                                    ticket.status),
+                                                color:
+                                                    _statusColor(ticket.status),
                                                 size: 22,
                                               ),
                                             ),
@@ -1203,8 +1188,8 @@ class _SupportScreenState extends State<SupportScreen> {
                                                   const SizedBox(height: 4),
 
                                                   // Subject if provided
-                                                  if (ticket.subject
-                                                      .isNotEmpty) ...[
+                                                  if (ticket
+                                                      .subject.isNotEmpty) ...[
                                                     Text(
                                                       ticket.subject,
                                                       style: GoogleFonts

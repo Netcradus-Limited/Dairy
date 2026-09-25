@@ -170,8 +170,8 @@ class ProductsScreen extends StatelessWidget {
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                   ),
@@ -531,10 +531,10 @@ class ProductsScreen extends StatelessWidget {
           builder: (ctx, setDialogState) {
             final isNarrow = MediaQuery.sizeOf(ctx).width < 500;
             return AlertDialog(
-              insetPadding: const EdgeInsets.symmetric(
-                  horizontal: 16.0, vertical: 24.0),
-              shape:
-                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              insetPadding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               title: Text(
                 isEdit ? 'Edit Dairy Product' : 'Add Dairy Product',
                 style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
@@ -579,8 +579,7 @@ class ProductsScreen extends StatelessWidget {
                                       final bytes = await picked.readAsBytes();
 
                                       final downloadUrl =
-                                          await FirebaseStorageService
-                                              .instance
+                                          await FirebaseStorageService.instance
                                               .uploadProductImage(
                                                   productId: prodId,
                                                   bytes: bytes);
@@ -603,7 +602,8 @@ class ProductsScreen extends StatelessWidget {
                                           const SnackBar(
                                             content: Text(
                                                 'Product image uploaded successfully!'),
-                                            backgroundColor: AppColors.freshGreen,
+                                            backgroundColor:
+                                                AppColors.freshGreen,
                                           ),
                                         );
                                       }
@@ -635,7 +635,9 @@ class ProductsScreen extends StatelessWidget {
                                 : const Icon(Icons.cloud_upload_outlined,
                                     size: 16, color: AppColors.primary),
                             label: Text(
-                              isUploadingImage ? 'Uploading...' : 'Upload Image',
+                              isUploadingImage
+                                  ? 'Uploading...'
+                                  : 'Upload Image',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -674,8 +676,12 @@ class ProductsScreen extends StatelessWidget {
                       else if (selectedImageUrl.isNotEmpty) ...[
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: (selectedImageUrl.trim().startsWith('http://') ||
-                                  selectedImageUrl.trim().startsWith('https://'))
+                          child: (selectedImageUrl
+                                      .trim()
+                                      .startsWith('http://') ||
+                                  selectedImageUrl
+                                      .trim()
+                                      .startsWith('https://'))
                               ? AppNetworkImage(
                                   imageUrl: selectedImageUrl.trim(),
                                   height: 90,
@@ -850,8 +856,8 @@ class ProductsScreen extends StatelessWidget {
                               child: TextField(
                                 controller: priceCtrl,
                                 keyboardType: TextInputType.number,
-                                decoration:
-                                    const InputDecoration(labelText: 'Price (₹)'),
+                                decoration: const InputDecoration(
+                                    labelText: 'Price (₹)'),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -891,16 +897,16 @@ class ProductsScreen extends StatelessWidget {
                             Expanded(
                               child: TextField(
                                 controller: categoryCtrl,
-                                decoration:
-                                    const InputDecoration(labelText: 'Category'),
+                                decoration: const InputDecoration(
+                                    labelText: 'Category'),
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: TextField(
                                 controller: emojiCtrl,
-                                decoration:
-                                    const InputDecoration(labelText: 'Emoji Icon'),
+                                decoration: const InputDecoration(
+                                    labelText: 'Emoji Icon'),
                               ),
                             ),
                           ],
@@ -974,7 +980,8 @@ class ProductsScreen extends StatelessWidget {
                                   unit: unitCtrl.text.trim().isEmpty
                                       ? '1 Litre'
                                       : unitCtrl.text.trim(),
-                                  price: double.tryParse(priceCtrl.text) ?? 60.0,
+                                  price:
+                                      double.tryParse(priceCtrl.text) ?? 60.0,
                                   stockQuantity:
                                       int.tryParse(stockCtrl.text) ?? 100,
                                   fatContent: fatCtrl.text.trim().isEmpty
@@ -1046,8 +1053,8 @@ class ProductsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        insetPadding: const EdgeInsets.symmetric(
-            horizontal: 16.0, vertical: 24.0),
+        insetPadding:
+            const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [

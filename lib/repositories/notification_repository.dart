@@ -52,8 +52,7 @@ class NotificationRepository {
 
     try {
       return col.snapshots().map((snapshot) {
-        debugPrint(
-            '[NOTIFICATION DEBUG] snapshotDocs=${snapshot.docs.length}');
+        debugPrint('[NOTIFICATION DEBUG] snapshotDocs=${snapshot.docs.length}');
         final items = <NotificationItem>[];
         for (final doc in snapshot.docs) {
           try {
@@ -99,7 +98,8 @@ class NotificationRepository {
 
     final col = _notifCol(cleanUid);
     if (col == null) {
-      debugPrint('[NOTIFICATION READ ERROR] Firestore collection reference is null for path $firestorePath');
+      debugPrint(
+          '[NOTIFICATION READ ERROR] Firestore collection reference is null for path $firestorePath');
       return;
     }
 
@@ -133,7 +133,8 @@ class NotificationRepository {
 
     try {
       await _commitInChunks(operations);
-      debugPrint('[NOTIFICATION READ] markAllRead success for ${notifIds.length} items');
+      debugPrint(
+          '[NOTIFICATION READ] markAllRead success for ${notifIds.length} items');
     } catch (e) {
       debugPrint('[NOTIFICATION READ ERROR] markAllRead failed: $e');
       rethrow;
@@ -191,7 +192,8 @@ class NotificationRepository {
       'isActionable': isActionable,
       'createdBy': createdBy,
       'userId': cleanTargetUid,
-      if (orderId != null && orderId.trim().isNotEmpty) 'orderId': orderId.trim(),
+      if (orderId != null && orderId.trim().isNotEmpty)
+        'orderId': orderId.trim(),
       if (assignedAgentId != null && assignedAgentId.trim().isNotEmpty)
         'assignedAgentId': assignedAgentId.trim(),
       if (route != null && route.trim().isNotEmpty) 'route': route.trim(),
@@ -201,7 +203,9 @@ class NotificationRepository {
     await col.add(docData);
 
     // If sent by an admin to a customer/agent, track in admin's own notification history as read
-    if (trackInAdminHistory && createdBy.isNotEmpty && createdBy != cleanTargetUid) {
+    if (trackInAdminHistory &&
+        createdBy.isNotEmpty &&
+        createdBy != cleanTargetUid) {
       try {
         await _notifCol(createdBy)?.add({
           ...docData,
@@ -234,18 +238,15 @@ class NotificationRepository {
 
       // 1. Primary query: users where role in ['admin', 'owner', 'superadmin']
       try {
-        final snapshot = await fs
-            .collection('users')
-            .where('role', whereIn: [
-              'admin',
-              'Admin',
-              'ADMIN',
-              'owner',
-              'Owner',
-              'superadmin',
-              'Superadmin'
-            ])
-            .get();
+        final snapshot = await fs.collection('users').where('role', whereIn: [
+          'admin',
+          'Admin',
+          'ADMIN',
+          'owner',
+          'Owner',
+          'superadmin',
+          'Superadmin'
+        ]).get();
         for (final d in snapshot.docs) {
           uids.add(d.id);
         }
@@ -304,9 +305,8 @@ class NotificationRepository {
       return;
     }
 
-    final effectiveSender = (senderUid != null && senderUid.isNotEmpty)
-        ? senderUid
-        : 'system';
+    final effectiveSender =
+        (senderUid != null && senderUid.isNotEmpty) ? senderUid : 'system';
 
     for (final adminUid in adminUids) {
       final col = _notifCol(adminUid);
@@ -470,7 +470,8 @@ class NotificationRepository {
           'createdBy': adminUid,
           'userId': uid,
           'isBroadcast': true,
-          if (orderId != null && orderId.trim().isNotEmpty) 'orderId': orderId.trim(),
+          if (orderId != null && orderId.trim().isNotEmpty)
+            'orderId': orderId.trim(),
           if (assignedAgentId != null && assignedAgentId.trim().isNotEmpty)
             'assignedAgentId': assignedAgentId.trim(),
           if (route != null && route.trim().isNotEmpty) 'route': route.trim(),

@@ -52,7 +52,8 @@ void main() {
       joinedDate: '01 Jan 2026',
     );
 
-    test('1. CustomerDeliveryRecord.fromOrder converts Order items accurately', () {
+    test('1. CustomerDeliveryRecord.fromOrder converts Order items accurately',
+        () {
       final now = DateTime.now();
       final order = Order(
         id: 'ORD_999',
@@ -83,7 +84,9 @@ void main() {
       expect(records.first.isDelivered, isTrue);
     });
 
-    test('2. Subscription daily delivery schedule generates correctly across dates', () {
+    test(
+        '2. Subscription daily delivery schedule generates correctly across dates',
+        () {
       final startDate = DateTime(2026, 9, 1);
       final sub = Subscription(
         id: 'SUB_001',
@@ -157,7 +160,9 @@ void main() {
           isNotNull);
     });
 
-    test('4. Skipped delivery dates are marked as Skipped and excluded from monthly billing', () {
+    test(
+        '4. Skipped delivery dates are marked as Skipped and excluded from monthly billing',
+        () {
       final service = CustomerProfileService();
       final startDate = DateTime(2026, 9, 1);
       final sub = Subscription(
@@ -209,7 +214,9 @@ void main() {
       expect(monthlyTotal, 13 * 54.0);
     });
 
-    test('5. Customer Isolation: Records for Customer A do not appear for Customer B', () {
+    test(
+        '5. Customer Isolation: Records for Customer A do not appear for Customer B',
+        () {
       final service = CustomerProfileService();
       final orderCustA = Order(
         id: 'ORD_A',
@@ -249,7 +256,9 @@ void main() {
       expect(listCustA.any((r) => r.customerId == 'CUST_202'), isFalse);
     });
 
-    test('6. Specific date query answers "What did customer buy on a particular date?"', () {
+    test(
+        '6. Specific date query answers "What did customer buy on a particular date?"',
+        () {
       final service = CustomerProfileService();
       final targetDate = DateTime(2026, 9, 12);
 
@@ -290,7 +299,9 @@ void main() {
       expect(results.first.totalAmount, 180.0);
     });
 
-    test('7. Ledger summary computes purchases, paid, pending, and wallet balance', () {
+    test(
+        '7. Ledger summary computes purchases, paid, pending, and wallet balance',
+        () {
       final service = CustomerProfileService();
 
       final deliveredOrder = Order(
@@ -342,7 +353,9 @@ void main() {
       expect(ledger.walletBalance, 450.0);
     });
 
-    test('8. Zero payments in Firestore shows Total Paid ₹0 without fabricating records', () {
+    test(
+        '8. Zero payments in Firestore shows Total Paid ₹0 without fabricating records',
+        () {
       final service = CustomerProfileService();
 
       final order1 = Order(
@@ -369,7 +382,9 @@ void main() {
       expect(ledger.pendingAmount, 60.0);
     });
 
-    test('9. Full Data Consistency Scenario: Purchases, Monthly Delivered, Total Due, Paid Reconcile', () {
+    test(
+        '9. Full Data Consistency Scenario: Purchases, Monthly Delivered, Total Due, Paid Reconcile',
+        () {
       final service = CustomerProfileService();
 
       // Delivered order in current month (₹60)
@@ -424,7 +439,12 @@ void main() {
         userId: 'CUST_101',
       );
 
-      final allOrders = [ordDeliveredThisMonth, ordDeliveredPrevMonth, ordPending, ordCancelled];
+      final allOrders = [
+        ordDeliveredThisMonth,
+        ordDeliveredPrevMonth,
+        ordPending,
+        ordCancelled
+      ];
 
       // Total Purchases = 60 + 150 + 245 = 455.0 (cancelled excluded)
       final ledgerNoPayments = service.computeLedgerSummary(

@@ -131,8 +131,8 @@ class CustomersScreen extends StatelessWidget {
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                   ),
@@ -243,9 +243,9 @@ class CustomersScreen extends StatelessWidget {
                                       children: [
                                         CircleAvatar(
                                           radius: 22,
-                                          backgroundColor:
-                                              AppColors.primaryLight
-                                                  .withValues(alpha: 0.2),
+                                          backgroundColor: AppColors
+                                              .primaryLight
+                                              .withValues(alpha: 0.2),
                                           child: Text(
                                             customer.name.isNotEmpty
                                                 ? customer.name
@@ -334,7 +334,8 @@ class CustomersScreen extends StatelessWidget {
                                                     GoogleFonts.plusJakartaSans(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.w800,
-                                                  color: customer.walletBalance >=
+                                                  color: customer
+                                                              .walletBalance >=
                                                           0
                                                       ? AppColors.revenueGreen
                                                       : const Color(0xFFEF4444),
@@ -413,8 +414,8 @@ class CustomersScreen extends StatelessWidget {
                                                         .substring(0, 1)
                                                         .toUpperCase()
                                                     : 'C',
-                                                style: GoogleFonts
-                                                    .plusJakartaSans(
+                                                style:
+                                                    GoogleFonts.plusJakartaSans(
                                                   fontWeight: FontWeight.w800,
                                                   fontSize: 13,
                                                   color: AppColors.primary,
@@ -497,105 +498,104 @@ class CustomersScreen extends StatelessWidget {
                                             ),
                                           ),
                                         // Bottom Row: Wallet Balance & Actions
-                                         Wrap(
-                                           alignment:
-                                               WrapAlignment.spaceBetween,
-                                           crossAxisAlignment:
-                                               WrapCrossAlignment.center,
-                                           spacing: 8,
-                                           runSpacing: 6,
-                                           children: [
-                                             Row(
-                                               mainAxisSize: MainAxisSize.min,
-                                               children: [
-                                                 Text(
-                                                   'Wallet: ',
-                                                   style: GoogleFonts
-                                                       .plusJakartaSans(
-                                                     fontSize: 12,
-                                                     color: textSecondary,
-                                                   ),
-                                                 ),
-                                                 Text(
-                                                   currencyFormatter.format(
-                                                       customer.walletBalance),
-                                                   style: GoogleFonts
-                                                       .plusJakartaSans(
-                                                     fontSize: 13,
-                                                     fontWeight: FontWeight.w800,
-                                                     color: customer
-                                                                 .walletBalance >=
-                                                             0
-                                                         ? AppColors.revenueGreen
-                                                         : const Color(
-                                                             0xFFEF4444),
-                                                   ),
-                                                 ),
-                                               ],
-                                             ),
-                                             Row(
-                                               mainAxisSize: MainAxisSize.min,
-                                               children: [
-                                                 IconButton(
-                                                   icon: const Icon(
-                                                       Icons.visibility_outlined,
-                                                       size: 18,
-                                                       color: AppColors.primary),
-                                                   tooltip: 'View Profile',
-                                                   padding: EdgeInsets.zero,
-                                                   visualDensity:
-                                                       VisualDensity.compact,
-                                                   constraints:
-                                                       const BoxConstraints(
-                                                           minWidth: 32,
-                                                           minHeight: 32),
-                                                   onPressed: () => provider
-                                                       .selectCustomer(customer),
-                                                 ),
-                                                 IconButton(
-                                                   icon: const Icon(
-                                                       Icons.edit_outlined,
-                                                       size: 18,
-                                                       color:
-                                                           AppColors.ordersBlue),
-                                                   tooltip: 'Edit Customer',
-                                                   padding: EdgeInsets.zero,
-                                                   visualDensity:
-                                                       VisualDensity.compact,
-                                                   constraints:
-                                                       const BoxConstraints(
-                                                           minWidth: 32,
-                                                           minHeight: 32),
-                                                   onPressed: () =>
-                                                       _showCustomerDialog(
-                                                           context,
-                                                           provider,
-                                                           customer),
-                                                 ),
-                                                 IconButton(
-                                                   icon: const Icon(
-                                                       Icons
-                                                           .delete_outline_rounded,
-                                                       size: 18,
-                                                       color: Color(0xFFEF4444)),
-                                                   tooltip: 'Delete Customer',
-                                                   padding: EdgeInsets.zero,
-                                                   visualDensity:
-                                                       VisualDensity.compact,
-                                                   constraints:
-                                                       const BoxConstraints(
-                                                           minWidth: 32,
-                                                           minHeight: 32),
-                                                   onPressed: () =>
-                                                       _showDeleteConfirmation(
-                                                           context,
-                                                           provider,
-                                                           customer),
-                                                 ),
-                                               ],
-                                             ),
-                                           ],
-                                         ),
+                                        Wrap(
+                                          alignment: WrapAlignment.spaceBetween,
+                                          crossAxisAlignment:
+                                              WrapCrossAlignment.center,
+                                          spacing: 8,
+                                          runSpacing: 6,
+                                          children: [
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  'Wallet: ',
+                                                  style: GoogleFonts
+                                                      .plusJakartaSans(
+                                                    fontSize: 12,
+                                                    color: textSecondary,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  currencyFormatter.format(
+                                                      customer.walletBalance),
+                                                  style: GoogleFonts
+                                                      .plusJakartaSans(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: customer
+                                                                .walletBalance >=
+                                                            0
+                                                        ? AppColors.revenueGreen
+                                                        : const Color(
+                                                            0xFFEF4444),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                IconButton(
+                                                  icon: const Icon(
+                                                      Icons.visibility_outlined,
+                                                      size: 18,
+                                                      color: AppColors.primary),
+                                                  tooltip: 'View Profile',
+                                                  padding: EdgeInsets.zero,
+                                                  visualDensity:
+                                                      VisualDensity.compact,
+                                                  constraints:
+                                                      const BoxConstraints(
+                                                          minWidth: 32,
+                                                          minHeight: 32),
+                                                  onPressed: () => provider
+                                                      .selectCustomer(customer),
+                                                ),
+                                                IconButton(
+                                                  icon: const Icon(
+                                                      Icons.edit_outlined,
+                                                      size: 18,
+                                                      color:
+                                                          AppColors.ordersBlue),
+                                                  tooltip: 'Edit Customer',
+                                                  padding: EdgeInsets.zero,
+                                                  visualDensity:
+                                                      VisualDensity.compact,
+                                                  constraints:
+                                                      const BoxConstraints(
+                                                          minWidth: 32,
+                                                          minHeight: 32),
+                                                  onPressed: () =>
+                                                      _showCustomerDialog(
+                                                          context,
+                                                          provider,
+                                                          customer),
+                                                ),
+                                                IconButton(
+                                                  icon: const Icon(
+                                                      Icons
+                                                          .delete_outline_rounded,
+                                                      size: 18,
+                                                      color: Color(0xFFEF4444)),
+                                                  tooltip: 'Delete Customer',
+                                                  padding: EdgeInsets.zero,
+                                                  visualDensity:
+                                                      VisualDensity.compact,
+                                                  constraints:
+                                                      const BoxConstraints(
+                                                          minWidth: 32,
+                                                          minHeight: 32),
+                                                  onPressed: () =>
+                                                      _showDeleteConfirmation(
+                                                          context,
+                                                          provider,
+                                                          customer),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
                                       ],
                                     ),
                             ),
@@ -776,7 +776,8 @@ class CustomersScreen extends StatelessWidget {
                         milkPreference: milkCtrl.text.trim().isEmpty
                             ? 'Pure A2 Cow Milk'
                             : milkCtrl.text.trim(),
-                        walletBalance: double.tryParse(walletCtrl.text) ?? 500.0,
+                        walletBalance:
+                            double.tryParse(walletCtrl.text) ?? 500.0,
                         status: 'Active',
                         joinedDate:
                             DateFormat('dd MMM yyyy').format(DateTime.now()),

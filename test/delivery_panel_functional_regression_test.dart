@@ -132,8 +132,12 @@ void main() {
   // ─── Group 1: Order Lifecycle, Accept & Decline ────────────────────────────
 
   group('Order Lifecycle & Concurrency Guards', () {
-    test('Agent accepts a pending order successfully', () async {
-      await seedOrder(orderId: 'ORD_01', status: 'Pending');
+    test('Agent accepts an assigned order successfully', () async {
+      await seedOrder(
+        orderId: 'ORD_01',
+        status: 'assigned',
+        assignedAgentId: agent1Id,
+      );
 
       await orderService.acceptOrder('ORD_01', agent1Id);
 
@@ -143,10 +147,10 @@ void main() {
       expect(doc.data()?['acceptedAt'], isNotNull);
     });
 
-    test('Agent B cannot claim an order already claimed by Agent A', () async {
+    test('Agent B cannot claim an order assigned to Agent A', () async {
       await seedOrder(
         orderId: 'ORD_02',
-        status: 'accepted',
+        status: 'assigned',
         assignedAgentId: agent1Id,
       );
 
@@ -155,7 +159,7 @@ void main() {
         throwsA(isA<StateError>().having(
           (e) => e.message,
           'message',
-          contains('already claimed by another agent'),
+          contains('not assigned to delivery agent'),
         )),
       );
 
@@ -163,17 +167,17 @@ void main() {
       expect(doc.data()?['assignedAgentId'], equals(agent1Id));
     });
 
-    test('Agent declines order, returning it cleanly to Pending', () async {
+    test('Agent declines order, returning it cleanly to confirmed for Admin reassignment', () async {
       await seedOrder(
         orderId: 'ORD_03',
-        status: 'accepted',
+        status: 'assigned',
         assignedAgentId: agent1Id,
       );
 
       await orderService.declineOrder('ORD_03', agent1Id);
 
       final doc = await fakeFirestore.collection('orders').doc('ORD_03').get();
-      expect(doc.data()?['status'], equals('Pending'));
+      expect(doc.data()?['status'], equals('confirmed'));
       expect(doc.data()?['assignedAgentId'], isNull);
       expect(doc.data()?['acceptedAt'], isNull);
     });
@@ -223,7 +227,8 @@ void main() {
         assignedAgentId: agent1Id,
       );
 
-      await orderService.updateOrderStatus('ORD_06', OrderStatus.outForDelivery);
+      await orderService.updateOrderStatus(
+          'ORD_06', OrderStatus.outForDelivery);
 
       final doc = await fakeFirestore.collection('orders').doc('ORD_06').get();
       expect(doc.data()?['status'], equals('outForDelivery'));
@@ -277,7 +282,8 @@ void main() {
       expect(paymentDoc.data()?['paymentStatus'], equals('Cancelled'));
     });
 
-    test('failDelivery clears active tracking order in DeliveryTrackingService', () async {
+    test('failDelivery clears active tracking order in DeliveryTrackingService',
+        () async {
       await trackingService.updateAgentLocation(agent1Id, 22.7255, 75.8800,
           orderId: 'ORD_09');
 
@@ -328,7 +334,8 @@ void main() {
       expect(agent1Earnings.first.amountEarned, equals(50.0));
     });
 
-    test('getTotalEarnings calculates sum of amountEarned + tipAmount', () async {
+    test('getTotalEarnings calculates sum of amountEarned + tipAmount',
+        () async {
       await fakeFirestore.collection('earnings').doc('earn_calc_1').set({
         'id': 'earn_calc_1',
         'orderId': 'ORD_C1',
@@ -348,7 +355,9 @@ void main() {
   // ─── Group 5: Delivery Order Mapping & Fallbacks ──────────────────────────
 
   group('DeliveryOrder Mapping & Null Safety', () {
-    test('deliveryOrderFromOrder populates default fallbacks for missing address strings', () {
+    test(
+        'deliveryOrderFromOrder populates default fallbacks for missing address strings',
+        () {
       const emptyAddress = Address(
         id: '',
         fullName: '   ',
@@ -388,12 +397,14 @@ void main() {
       await liveNotifier.startTracking();
 
       expect(liveNotifier.state, isTrue);
-      expect(container.read(gpsTrackingStatusProvider), equals(GpsTrackingStatus.active));
+      expect(container.read(gpsTrackingStatusProvider),
+          equals(GpsTrackingStatus.active));
 
       liveNotifier.stopTracking();
 
       expect(liveNotifier.state, isFalse);
-      expect(container.read(gpsTrackingStatusProvider), equals(GpsTrackingStatus.idle));
+      expect(container.read(gpsTrackingStatusProvider),
+          equals(GpsTrackingStatus.idle));
     });
   });
 

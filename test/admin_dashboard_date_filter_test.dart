@@ -183,7 +183,8 @@ void main() {
 
     test('2. Yesterday excludes today orders', () {
       provider.setOrderStatusTimeFilter('Yesterday');
-      expect(provider.dashboardDateFilter, equals(DashboardDateFilter.yesterday));
+      expect(
+          provider.dashboardDateFilter, equals(DashboardDateFilter.yesterday));
       expect(provider.totalOrdersCount, equals(2));
       expect(
         provider.filteredDashboardOrders.map((o) => o.id).toList(),
@@ -197,7 +198,8 @@ void main() {
 
     test('3. Tomorrow excludes today and yesterday orders', () {
       provider.setOrderStatusTimeFilter('Tomorrow');
-      expect(provider.dashboardDateFilter, equals(DashboardDateFilter.tomorrow));
+      expect(
+          provider.dashboardDateFilter, equals(DashboardDateFilter.tomorrow));
       expect(provider.totalOrdersCount, equals(1));
       expect(
         provider.filteredDashboardOrders.map((o) => o.id).toList(),
@@ -292,7 +294,8 @@ void main() {
       expect(provider.totalOrdersCount, equals(2));
     });
 
-    test('9. Top-selling products are strictly derived from filtered orders', () {
+    test('9. Top-selling products are strictly derived from filtered orders',
+        () {
       // Today: Milk (2 units from ord_today_1 + 1 unit from ord_today_midnight = 3 units), Paneer (1 unit)
       provider.setOrderStatusTimeFilter('Today');
       final todayTop = provider.topSellingProducts;
@@ -310,7 +313,9 @@ void main() {
       expect(yestTop.first.ordersCount, equals(4));
     });
 
-    test('10. Switching filters updates immediately without retaining stale data', () {
+    test(
+        '10. Switching filters updates immediately without retaining stale data',
+        () {
       provider.setOrderStatusTimeFilter('Today');
       expect(provider.totalOrdersCount, equals(3));
 

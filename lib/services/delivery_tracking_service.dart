@@ -21,7 +21,8 @@ class DeliveryTrackingService {
   /// Validates that [lat] and [lng] form real, non-zero geographic coordinates.
   static bool isValidCoordinates(double? lat, double? lng) {
     if (lat == null || lng == null) return false;
-    if (lat.isNaN || lng.isNaN || lat.isInfinite || lng.isInfinite) return false;
+    if (lat.isNaN || lng.isNaN || lat.isInfinite || lng.isInfinite)
+      return false;
     if (lat < -90.0 || lat > 90.0) return false;
     if (lng < -180.0 || lng > 180.0) return false;
     // Reject zero placeholder coordinates (0.0, 0.0)

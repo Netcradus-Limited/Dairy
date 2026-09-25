@@ -26,6 +26,10 @@ class StatusBadge extends StatelessWidget {
         color = AppColors.statusConfirmed;
         bg = const Color(0xFFFFECE5);
         break;
+      case OrderStatus.assigned:
+        color = AppColors.deliveriesPurple;
+        bg = AppColors.deliveriesPurpleBg;
+        break;
       case OrderStatus.preparing:
         color = AppColors.statusPreparing;
         bg = const Color(0xFFF6EEFE);
@@ -65,6 +69,12 @@ class StatusBadge extends StatelessWidget {
         lower.contains('success')) {
       color = AppColors.statusDelivered;
       bg = const Color(0xFFE8FAF2);
+    } else if (lower.contains('assigned')) {
+      color = AppColors.deliveriesPurple;
+      bg = AppColors.deliveriesPurpleBg;
+    } else if (lower.contains('confirmed')) {
+      color = AppColors.statusConfirmed;
+      bg = const Color(0xFFFFECE5);
     } else if (lower.contains('pending') || lower.contains('low balance')) {
       color = AppColors.statusPending;
       bg = const Color(0xFFFFF4EC);

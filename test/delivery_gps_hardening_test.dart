@@ -98,7 +98,8 @@ class _TestUserNotifier extends StateNotifier<User> implements UserNotifier {
 }
 
 class _CapturingTrackingService extends DeliveryTrackingService {
-  final writes = <({String agentId, double lat, double lng, String? orderId})>[];
+  final writes =
+      <({String agentId, double lat, double lng, String? orderId})>[];
 
   _CapturingTrackingService() : super(FakeFirebaseFirestore());
 
@@ -109,8 +110,10 @@ class _CapturingTrackingService extends DeliveryTrackingService {
     double longitude, {
     String? orderId,
   }) async {
-    if (!DeliveryTrackingService.isValidCoordinates(latitude, longitude)) return;
-    writes.add((agentId: agentId, lat: latitude, lng: longitude, orderId: orderId));
+    if (!DeliveryTrackingService.isValidCoordinates(latitude, longitude))
+      return;
+    writes.add(
+        (agentId: agentId, lat: latitude, lng: longitude, orderId: orderId));
   }
 }
 
@@ -152,10 +155,12 @@ void main() {
   });
 
   group('GPS Permission & Availability State Machine Tests', () {
-    test('startTracking fails and sets servicesDisabled when device GPS is off', () async {
+    test('startTracking fails and sets servicesDisabled when device GPS is off',
+        () async {
       mockLocation.serviceEnabled = false;
 
-      final trackingNotifier = container.read(agentLiveLocationProvider.notifier);
+      final trackingNotifier =
+          container.read(agentLiveLocationProvider.notifier);
       await trackingNotifier.startTracking();
 
       expect(trackingNotifier.state, isFalse);
@@ -165,11 +170,14 @@ void main() {
       );
     });
 
-    test('startTracking fails and sets permissionDeniedForever when permanently denied', () async {
+    test(
+        'startTracking fails and sets permissionDeniedForever when permanently denied',
+        () async {
       mockLocation.serviceEnabled = true;
       mockLocation.permission = LocationPermission.deniedForever;
 
-      final trackingNotifier = container.read(agentLiveLocationProvider.notifier);
+      final trackingNotifier =
+          container.read(agentLiveLocationProvider.notifier);
       await trackingNotifier.startTracking();
 
       expect(trackingNotifier.state, isFalse);
@@ -179,11 +187,14 @@ void main() {
       );
     });
 
-    test('startTracking fails and sets permissionDenied when user denies permission', () async {
+    test(
+        'startTracking fails and sets permissionDenied when user denies permission',
+        () async {
       mockLocation.serviceEnabled = true;
       mockLocation.permission = LocationPermission.denied;
 
-      final trackingNotifier = container.read(agentLiveLocationProvider.notifier);
+      final trackingNotifier =
+          container.read(agentLiveLocationProvider.notifier);
       await trackingNotifier.startTracking();
 
       expect(trackingNotifier.state, isFalse);
@@ -193,11 +204,14 @@ void main() {
       );
     });
 
-    test('startTracking succeeds and sets active when permissions and GPS are granted', () async {
+    test(
+        'startTracking succeeds and sets active when permissions and GPS are granted',
+        () async {
       mockLocation.serviceEnabled = true;
       mockLocation.permission = LocationPermission.always;
 
-      final trackingNotifier = container.read(agentLiveLocationProvider.notifier);
+      final trackingNotifier =
+          container.read(agentLiveLocationProvider.notifier);
       await trackingNotifier.startTracking();
 
       expect(trackingNotifier.state, isTrue);
@@ -217,11 +231,13 @@ void main() {
   });
 
   group('Stream Error & Auto-Recovery Tests', () {
-    test('GPS service disabled mid-stream sets servicesDisabled status', () async {
+    test('GPS service disabled mid-stream sets servicesDisabled status',
+        () async {
       mockLocation.serviceEnabled = true;
       mockLocation.permission = LocationPermission.always;
 
-      final trackingNotifier = container.read(agentLiveLocationProvider.notifier);
+      final trackingNotifier =
+          container.read(agentLiveLocationProvider.notifier);
       await trackingNotifier.startTracking();
       expect(trackingNotifier.state, isTrue);
 
@@ -235,15 +251,19 @@ void main() {
       );
     });
 
-    test('refreshStatus recovers tracking when GPS is turned back on while on-duty', () async {
+    test(
+        'refreshStatus recovers tracking when GPS is turned back on while on-duty',
+        () async {
       // 1. Initial state: GPS was disabled
       mockLocation.serviceEnabled = false;
 
       // Set agent on-duty
-      container.read(deliveryAgentProvider.notifier).state =
-          container.read(deliveryAgentProvider).copyWith(status: DeliveryStatus.onDuty);
+      container.read(deliveryAgentProvider.notifier).state = container
+          .read(deliveryAgentProvider)
+          .copyWith(status: DeliveryStatus.onDuty);
 
-      final trackingNotifier = container.read(agentLiveLocationProvider.notifier);
+      final trackingNotifier =
+          container.read(agentLiveLocationProvider.notifier);
       await trackingNotifier.startTracking();
       expect(trackingNotifier.state, isFalse);
       expect(
@@ -265,11 +285,14 @@ void main() {
       );
     });
 
-    test('stopTracking cleans up subscription, buffers, and sets status to idle', () async {
+    test(
+        'stopTracking cleans up subscription, buffers, and sets status to idle',
+        () async {
       mockLocation.serviceEnabled = true;
       mockLocation.permission = LocationPermission.always;
 
-      final trackingNotifier = container.read(agentLiveLocationProvider.notifier);
+      final trackingNotifier =
+          container.read(agentLiveLocationProvider.notifier);
       await trackingNotifier.startTracking();
       expect(trackingNotifier.state, isTrue);
 
@@ -283,7 +306,9 @@ void main() {
   });
 
   group('GpsStatusWarningBanner Widget Tests', () {
-    testWidgets('Banner is invisible when agent is offline or GPS is active/idle', (tester) async {
+    testWidgets(
+        'Banner is invisible when agent is offline or GPS is active/idle',
+        (tester) async {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -300,11 +325,16 @@ void main() {
       expect(find.text('Location Permission Required'), findsNothing);
     });
 
-    testWidgets('Banner renders GPS is Turned Off and calls openLocationSettings on action', (tester) async {
+    testWidgets(
+        'Banner renders GPS is Turned Off and calls openLocationSettings on action',
+        (tester) async {
       // Set agent on duty
-      container.read(deliveryAgentProvider.notifier).state =
-          container.read(deliveryAgentProvider).copyWith(status: DeliveryStatus.onDuty);
-      container.read(gpsTrackingStatusProvider.notifier).setStatus(GpsTrackingStatus.servicesDisabled);
+      container.read(deliveryAgentProvider.notifier).state = container
+          .read(deliveryAgentProvider)
+          .copyWith(status: DeliveryStatus.onDuty);
+      container
+          .read(gpsTrackingStatusProvider.notifier)
+          .setStatus(GpsTrackingStatus.servicesDisabled);
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -330,10 +360,15 @@ void main() {
       expect(mockLocation.openLocationSettingsCount, equals(1));
     });
 
-    testWidgets('Banner renders Location Permission Disabled and calls openAppSettings', (tester) async {
-      container.read(deliveryAgentProvider.notifier).state =
-          container.read(deliveryAgentProvider).copyWith(status: DeliveryStatus.onDuty);
-      container.read(gpsTrackingStatusProvider.notifier).setStatus(GpsTrackingStatus.permissionDeniedForever);
+    testWidgets(
+        'Banner renders Location Permission Disabled and calls openAppSettings',
+        (tester) async {
+      container.read(deliveryAgentProvider.notifier).state = container
+          .read(deliveryAgentProvider)
+          .copyWith(status: DeliveryStatus.onDuty);
+      container
+          .read(gpsTrackingStatusProvider.notifier)
+          .setStatus(GpsTrackingStatus.permissionDeniedForever);
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -355,10 +390,14 @@ void main() {
       expect(mockLocation.openAppSettingsCount, equals(1));
     });
 
-    testWidgets('Dismiss button hides banner for current error state', (tester) async {
-      container.read(deliveryAgentProvider.notifier).state =
-          container.read(deliveryAgentProvider).copyWith(status: DeliveryStatus.onDuty);
-      container.read(gpsTrackingStatusProvider.notifier).setStatus(GpsTrackingStatus.servicesDisabled);
+    testWidgets('Dismiss button hides banner for current error state',
+        (tester) async {
+      container.read(deliveryAgentProvider.notifier).state = container
+          .read(deliveryAgentProvider)
+          .copyWith(status: DeliveryStatus.onDuty);
+      container
+          .read(gpsTrackingStatusProvider.notifier)
+          .setStatus(GpsTrackingStatus.servicesDisabled);
 
       await tester.pumpWidget(
         UncontrolledProviderScope(

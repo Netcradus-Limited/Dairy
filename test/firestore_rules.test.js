@@ -604,9 +604,13 @@ describe('Sawariya Dairy — Firestore Security Rules Unit Tests', function () {
       await assertFails(deleteDoc(doc(db, 'orders', 'order_cust1_pending')));
     });
 
-    it('Allows delivery agent to read pending unassigned orders and assigned orders', async () => {
+    it('Denies delivery agent from reading unassigned pending customer orders', async () => {
       const db = deliveryDb();
-      await assertSucceeds(getDoc(doc(db, 'orders', 'order_cust1_pending')));
+      await assertFails(getDoc(doc(db, 'orders', 'order_cust1_pending')));
+    });
+
+    it('Allows delivery agent to read ONLY orders assigned to themselves', async () => {
+      const db = deliveryDb();
       await assertSucceeds(getDoc(doc(db, 'orders', 'order_cust1_assigned')));
     });
 
@@ -615,9 +619,9 @@ describe('Sawariya Dairy — Firestore Security Rules Unit Tests', function () {
       await assertFails(getDoc(doc(db, 'orders', 'order_other_delivery')));
     });
 
-    it('Allows delivery agent to accept/claim an unassigned pending order', async () => {
+    it('Denies delivery agent from self-assigning or claiming an unassigned pending order', async () => {
       const db = deliveryDb();
-      await assertSucceeds(updateDoc(doc(db, 'orders', 'order_cust1_pending'), {
+      await assertFails(updateDoc(doc(db, 'orders', 'order_cust1_pending'), {
         assignedAgentId: 'delivery_uid',
         status: 'Out for Delivery',
         acceptedAt: new Date().toISOString(),
@@ -636,6 +640,35 @@ describe('Sawariya Dairy — Firestore Security Rules Unit Tests', function () {
       const db = deliveryDb();
       await assertFails(updateDoc(doc(db, 'orders', 'order_cust1_assigned'), {
         totalAmount: 9999,
+      }));
+    });
+
+    it('Allows Admin to approve a Pending order to Confirmed', async () => {
+      const db = adminDb();
+      await assertSucceeds(updateDoc(doc(db, 'orders', 'order_cust1_pending'), {
+        status: 'confirmed',
+      }));
+    });
+
+    it('Denies Admin from assigning an agent to an unapproved Pending order', async () => {
+      const db = adminDb();
+      await assertFails(updateDoc(doc(db, 'orders', 'order_cust1_pending'), {
+        assignedAgentId: 'delivery_uid',
+      }));
+    });
+
+    it('Allows Admin to assign an agent after order has been Confirmed', async () => {
+      // First confirm order
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await updateDoc(doc(context.firestore(), 'orders', 'order_cust1_pending'), {
+          status: 'confirmed',
+        });
+      });
+
+      const db = adminDb();
+      await assertSucceeds(updateDoc(doc(db, 'orders', 'order_cust1_pending'), {
+        assignedAgentId: 'delivery_uid',
+        status: 'assigned',
       }));
     });
 

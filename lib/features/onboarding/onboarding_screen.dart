@@ -683,23 +683,30 @@ class _MilkBottlePainter extends CustomPainter {
     bottlePath.moveTo(w * 0.36, h * 0.05);
     bottlePath.lineTo(w * 0.64, h * 0.05);
     bottlePath.lineTo(w * 0.64, h * 0.22);
-    bottlePath.cubicTo(w * 0.64, h * 0.30, w * 0.82, h * 0.36, w * 0.82, h * 0.48);
+    bottlePath.cubicTo(
+        w * 0.64, h * 0.30, w * 0.82, h * 0.36, w * 0.82, h * 0.48);
     bottlePath.lineTo(w * 0.82, h * 0.90);
-    bottlePath.cubicTo(w * 0.82, h * 0.96, w * 0.76, h * 0.96, w * 0.70, h * 0.96);
+    bottlePath.cubicTo(
+        w * 0.82, h * 0.96, w * 0.76, h * 0.96, w * 0.70, h * 0.96);
     bottlePath.lineTo(w * 0.30, h * 0.96);
-    bottlePath.cubicTo(w * 0.24, h * 0.96, w * 0.18, h * 0.96, w * 0.18, h * 0.90);
+    bottlePath.cubicTo(
+        w * 0.24, h * 0.96, w * 0.18, h * 0.96, w * 0.18, h * 0.90);
     bottlePath.lineTo(w * 0.18, h * 0.48);
-    bottlePath.cubicTo(w * 0.18, h * 0.36, w * 0.36, h * 0.30, w * 0.36, h * 0.22);
+    bottlePath.cubicTo(
+        w * 0.18, h * 0.36, w * 0.36, h * 0.30, w * 0.36, h * 0.22);
     bottlePath.close();
 
     // Milk fill inside bottle
     final milkPath = Path();
     milkPath.moveTo(w * 0.20, h * 0.46);
-    milkPath.cubicTo(w * 0.35, h * 0.42, w * 0.65, h * 0.48, w * 0.80, h * 0.46);
+    milkPath.cubicTo(
+        w * 0.35, h * 0.42, w * 0.65, h * 0.48, w * 0.80, h * 0.46);
     milkPath.lineTo(w * 0.80, h * 0.90);
-    milkPath.cubicTo(w * 0.80, h * 0.94, w * 0.74, h * 0.94, w * 0.68, h * 0.94);
+    milkPath.cubicTo(
+        w * 0.80, h * 0.94, w * 0.74, h * 0.94, w * 0.68, h * 0.94);
     milkPath.lineTo(w * 0.32, h * 0.94);
-    milkPath.cubicTo(w * 0.26, h * 0.94, w * 0.20, h * 0.94, w * 0.20, h * 0.90);
+    milkPath.cubicTo(
+        w * 0.26, h * 0.94, w * 0.20, h * 0.94, w * 0.20, h * 0.90);
     milkPath.close();
 
     canvas.drawPath(milkPath, fillPaint);
@@ -777,11 +784,14 @@ class _LassiGlassPainter extends CustomPainter {
     // Liquid fill inside glass
     final fillPath = Path();
     fillPath.moveTo(w * 0.25, h * 0.36);
-    fillPath.cubicTo(w * 0.40, h * 0.32, w * 0.60, h * 0.38, w * 0.75, h * 0.36);
+    fillPath.cubicTo(
+        w * 0.40, h * 0.32, w * 0.60, h * 0.38, w * 0.75, h * 0.36);
     fillPath.lineTo(w * 0.68, h * 0.90);
-    fillPath.cubicTo(w * 0.68, h * 0.94, w * 0.62, h * 0.94, w * 0.58, h * 0.94);
+    fillPath.cubicTo(
+        w * 0.68, h * 0.94, w * 0.62, h * 0.94, w * 0.58, h * 0.94);
     fillPath.lineTo(w * 0.42, h * 0.94);
-    fillPath.cubicTo(w * 0.38, h * 0.94, w * 0.32, h * 0.94, w * 0.32, h * 0.90);
+    fillPath.cubicTo(
+        w * 0.38, h * 0.94, w * 0.32, h * 0.94, w * 0.32, h * 0.90);
     fillPath.close();
 
     canvas.drawPath(
@@ -807,9 +817,11 @@ class _LassiGlassPainter extends CustomPainter {
     glassPath.moveTo(w * 0.20, h * 0.26);
     glassPath.lineTo(w * 0.80, h * 0.26);
     glassPath.lineTo(w * 0.70, h * 0.92);
-    glassPath.cubicTo(w * 0.70, h * 0.96, w * 0.64, h * 0.96, w * 0.58, h * 0.96);
+    glassPath.cubicTo(
+        w * 0.70, h * 0.96, w * 0.64, h * 0.96, w * 0.58, h * 0.96);
     glassPath.lineTo(w * 0.42, h * 0.96);
-    glassPath.cubicTo(w * 0.36, h * 0.96, w * 0.30, h * 0.96, w * 0.30, h * 0.92);
+    glassPath.cubicTo(
+        w * 0.36, h * 0.96, w * 0.30, h * 0.96, w * 0.30, h * 0.92);
     glassPath.close();
 
     canvas.drawPath(glassPath, strokePaint);
@@ -952,7 +964,11 @@ class _PaneerCubePainter extends CustomPainter {
       ..lineTo(centerP.dx, centerP.dy)
       ..lineTo(leftP.dx, leftP.dy)
       ..close();
-    canvas.drawPath(topFace, Paint()..color = topColor..style = PaintingStyle.fill);
+    canvas.drawPath(
+        topFace,
+        Paint()
+          ..color = topColor
+          ..style = PaintingStyle.fill);
 
     // Left Face
     final leftFace = Path()
@@ -961,7 +977,11 @@ class _PaneerCubePainter extends CustomPainter {
       ..lineTo(bottomP.dx, bottomP.dy)
       ..lineTo(bLeftP.dx, bLeftP.dy)
       ..close();
-    canvas.drawPath(leftFace, Paint()..color = leftColor..style = PaintingStyle.fill);
+    canvas.drawPath(
+        leftFace,
+        Paint()
+          ..color = leftColor
+          ..style = PaintingStyle.fill);
 
     // Right Face
     final rightFace = Path()
@@ -970,7 +990,11 @@ class _PaneerCubePainter extends CustomPainter {
       ..lineTo(bRightP.dx, bRightP.dy)
       ..lineTo(bottomP.dx, bottomP.dy)
       ..close();
-    canvas.drawPath(rightFace, Paint()..color = rightColor..style = PaintingStyle.fill);
+    canvas.drawPath(
+        rightFace,
+        Paint()
+          ..color = rightColor
+          ..style = PaintingStyle.fill);
 
     // Outlines & Creases
     canvas.drawPath(topFace, strokePaint);
@@ -978,8 +1002,10 @@ class _PaneerCubePainter extends CustomPainter {
     canvas.drawPath(rightFace, strokePaint);
 
     // Internal segment cuts
-    final midLeft = Offset((leftP.dx + centerP.dx) / 2, (leftP.dy + centerP.dy) / 2);
-    final midBottomLeft = Offset((bLeftP.dx + bottomP.dx) / 2, (bLeftP.dy + bottomP.dy) / 2);
+    final midLeft =
+        Offset((leftP.dx + centerP.dx) / 2, (leftP.dy + centerP.dy) / 2);
+    final midBottomLeft =
+        Offset((bLeftP.dx + bottomP.dx) / 2, (bLeftP.dy + bottomP.dy) / 2);
     canvas.drawLine(
       midLeft,
       midBottomLeft,
@@ -989,8 +1015,10 @@ class _PaneerCubePainter extends CustomPainter {
         ..strokeWidth = 1.0,
     );
 
-    final midRight = Offset((centerP.dx + rightP.dx) / 2, (centerP.dy + rightP.dy) / 2);
-    final midBottomRight = Offset((bottomP.dx + bRightP.dx) / 2, (bottomP.dy + bRightP.dy) / 2);
+    final midRight =
+        Offset((centerP.dx + rightP.dx) / 2, (centerP.dy + rightP.dy) / 2);
+    final midBottomRight =
+        Offset((bottomP.dx + bRightP.dx) / 2, (bottomP.dy + bRightP.dy) / 2);
     canvas.drawLine(
       midRight,
       midBottomRight,

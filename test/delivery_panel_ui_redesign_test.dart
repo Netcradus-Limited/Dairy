@@ -15,7 +15,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Task 6 — Delivery Panel UI Redesign Theme & Component Unit Tests', () {
-    test('DeliveryTheme color palette and tokens match reference green design', () {
+    test('DeliveryTheme color palette and tokens match reference green design',
+        () {
       expect(DeliveryTheme.primary, const Color(0xFF43A047));
       expect(DeliveryTheme.primaryLight, const Color(0xFF66BB6A));
       expect(DeliveryTheme.primaryDark, const Color(0xFF2E7D32));
@@ -59,7 +60,8 @@ void main() {
   });
 
   group('Task 6 — UI Redesign Widget Tests', () {
-    testWidgets('DeliveryStatusChip renders corresponding chip labels and colors',
+    testWidgets(
+        'DeliveryStatusChip renders corresponding chip labels and colors',
         (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -141,7 +143,8 @@ void main() {
       expect(find.byType(CustomPaint), findsWidgets);
     });
 
-    testWidgets('DeliveryOrderCard renders details and responds to interactions',
+    testWidgets(
+        'DeliveryOrderCard renders details and responds to interactions',
         (tester) async {
       final dummyOrder = DeliveryOrder(
         id: 'ord_101',
@@ -210,7 +213,8 @@ void main() {
       expect(selectedIdx, 3);
     });
 
-    testWidgets('DeliveryStandardHeader renders title, leading, and action buttons',
+    testWidgets(
+        'DeliveryStandardHeader renders title, leading, and action buttons',
         (tester) async {
       bool backPressed = false;
       await tester.pumpWidget(
@@ -240,7 +244,8 @@ void main() {
   });
 
   group('Task 6 — Responsive Layout & No RenderFlex Overflow Verification', () {
-    testWidgets('Summary cards render 2x2 grid cleanly on narrow viewport (320px)',
+    testWidgets(
+        'Summary cards render 2x2 grid cleanly on narrow viewport (320px)',
         (tester) async {
       tester.view.physicalSize = const Size(320 * 2, 640 * 2);
       tester.view.devicePixelRatio = 2.0;
@@ -317,7 +322,8 @@ void main() {
       expect(find.text('Pending'), findsOneWidget);
     });
 
-    testWidgets('DeliveryOrderCard renders on 320px narrow device without RenderFlex overflow',
+    testWidgets(
+        'DeliveryOrderCard renders on 320px narrow device without RenderFlex overflow',
         (tester) async {
       tester.view.physicalSize = const Size(320 * 2, 600 * 2);
       tester.view.devicePixelRatio = 2.0;
@@ -332,10 +338,15 @@ void main() {
         orderCode: 'SW-1234',
         customerName: 'Very Long Customer Name For Narrow Screen Testing',
         customerPhone: '+91 9999999999',
-        customerAddress: 'House 123, Sector 9, Very Long Street Address That Wraps Cleanly',
+        customerAddress:
+            'House 123, Sector 9, Very Long Street Address That Wraps Cleanly',
         pickupLocation: 'Sawariya Dairy Indore',
         pickupPhone: '+91 9826012345',
-        items: ['Farm Fresh Cow Milk 1L x 2', 'Paneer 500g x 1', 'Curd 1kg x 1'],
+        items: [
+          'Farm Fresh Cow Milk 1L x 2',
+          'Paneer 500g x 1',
+          'Curd 1kg x 1'
+        ],
         amount: 520.0,
         deliveryFee: 0.0,
         status: DeliveryOrderStatus.accepted,

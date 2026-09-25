@@ -435,7 +435,8 @@ class StaffMember {
     );
   }
 
-  factory StaffMember.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+  factory StaffMember.fromFirestore(
+      DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? {};
     final roleRaw = (data['role'] as String? ?? 'staff').toLowerCase().trim();
     final roleTitle = (data['roleTitle'] as String? ?? '').trim().isNotEmpty
@@ -481,9 +482,10 @@ class StaffMember {
       status: (data['status'] as String? ?? 'Active').trim(),
       permissions: perms,
       joinedDate: joinedStr,
-      profileImageUrl: (candidateImage is String && candidateImage.trim().isNotEmpty)
-          ? candidateImage.trim()
-          : null,
+      profileImageUrl:
+          (candidateImage is String && candidateImage.trim().isNotEmpty)
+              ? candidateImage.trim()
+              : null,
     );
   }
 

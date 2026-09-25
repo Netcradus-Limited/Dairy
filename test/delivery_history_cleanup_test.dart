@@ -12,7 +12,9 @@ import 'package:dairy_app/providers/delivery_provider.dart';
 
 void main() {
   group('Task 8: Delivery Panel History Cleanup', () {
-    test('deliveryHistoryStreamProvider includes completed & cancelled orders and excludes active & pending', () async {
+    test(
+        'deliveryHistoryStreamProvider includes completed & cancelled orders and excludes active & pending',
+        () async {
       final now = DateTime.now();
 
       final orders = [
@@ -124,7 +126,8 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          deliveryOrdersStreamProvider.overrideWith((ref) => Stream.value(orders)),
+          deliveryOrdersStreamProvider
+              .overrideWith((ref) => Stream.value(orders)),
         ],
       );
       addTearDown(container.dispose);
@@ -145,7 +148,8 @@ void main() {
       expect(codes, isNot(contains('DEL-106')));
     });
 
-    test('deliveryHistoryStreamProvider removes duplicates by orderId', () async {
+    test('deliveryHistoryStreamProvider removes duplicates by orderId',
+        () async {
       final now = DateTime.now();
       final duplicateOrders = [
         DeliveryOrder(
@@ -186,7 +190,8 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          deliveryOrdersStreamProvider.overrideWith((ref) => Stream.value(duplicateOrders)),
+          deliveryOrdersStreamProvider
+              .overrideWith((ref) => Stream.value(duplicateOrders)),
         ],
       );
       addTearDown(container.dispose);
@@ -198,7 +203,9 @@ void main() {
       expect(history.first.orderId, equals('ord_dup'));
     });
 
-    test('deliveryHistoryStreamProvider sorts descending by most relevant delivery date', () async {
+    test(
+        'deliveryHistoryStreamProvider sorts descending by most relevant delivery date',
+        () async {
       final now = DateTime.now();
 
       final oOldOrderDeliveredRecently = DeliveryOrder(
@@ -215,7 +222,8 @@ void main() {
         deliveryFee: 10.0,
         status: DeliveryOrderStatus.delivered,
         orderTime: now.subtract(const Duration(days: 3)), // Ordered 3 days ago
-        deliveredTime: now.subtract(const Duration(minutes: 10)), // Delivered 10 mins ago
+        deliveredTime:
+            now.subtract(const Duration(minutes: 10)), // Delivered 10 mins ago
         distance: '1 km',
         estimatedTime: '5 mins',
       );
@@ -234,7 +242,8 @@ void main() {
         deliveryFee: 10.0,
         status: DeliveryOrderStatus.delivered,
         orderTime: now.subtract(const Duration(days: 1)), // Ordered 1 day ago
-        deliveredTime: now.subtract(const Duration(hours: 5)), // Delivered 5 hours ago
+        deliveredTime:
+            now.subtract(const Duration(hours: 5)), // Delivered 5 hours ago
         distance: '1 km',
         estimatedTime: '5 mins',
       );
@@ -242,7 +251,8 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           deliveryOrdersStreamProvider.overrideWith(
-            (ref) => Stream.value([oNewOrderDeliveredEarlier, oOldOrderDeliveredRecently]),
+            (ref) => Stream.value(
+                [oNewOrderDeliveredEarlier, oOldOrderDeliveredRecently]),
           ),
         ],
       );
@@ -256,7 +266,8 @@ void main() {
       expect(history.last.orderCode, equals('OLDER-DELIVERY'));
     });
 
-    test('deliveryOrderFromOrder maps acceptedAt and deliveredAt correctly', () {
+    test('deliveryOrderFromOrder maps acceptedAt and deliveredAt correctly',
+        () {
       final now = DateTime.now();
       final accepted = now.subtract(const Duration(hours: 1));
       final delivered = now.subtract(const Duration(minutes: 15));
@@ -320,7 +331,9 @@ void main() {
       expect(deliveryOrder.assignedAgentId, equals('agent_123'));
     });
 
-    testWidgets('OrdersTab renders cancelled order with red status and cancellation reason', (tester) async {
+    testWidgets(
+        'OrdersTab renders cancelled order with red status and cancellation reason',
+        (tester) async {
       final cancelledOrder = DeliveryOrder(
         id: 'ord_cancel_view',
         orderId: 'ord_cancel_view',
@@ -359,10 +372,13 @@ void main() {
       expect(find.text('Order #CNC-555'), findsOneWidget);
       expect(find.text('Pooja Sharma'), findsOneWidget);
       expect(find.text('Cancelled'), findsOneWidget);
-      expect(find.text('Reason: Gate locked, customer not picking phone'), findsOneWidget);
+      expect(find.text('Reason: Gate locked, customer not picking phone'),
+          findsOneWidget);
     });
 
-    testWidgets('OrdersTab renders subscription badge and delivery slot on historical deliveries', (tester) async {
+    testWidgets(
+        'OrdersTab renders subscription badge and delivery slot on historical deliveries',
+        (tester) async {
       final subOrder = DeliveryOrder(
         id: 'ord_sub_history',
         orderId: 'ord_sub_history',
@@ -406,7 +422,9 @@ void main() {
       expect(find.text('Delivered'), findsOneWidget);
     });
 
-    testWidgets('OrdersTab renders empty state with correct messaging when history is empty', (tester) async {
+    testWidgets(
+        'OrdersTab renders empty state with correct messaging when history is empty',
+        (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -423,16 +441,19 @@ void main() {
       );
 
       expect(find.text('No Delivery History'), findsOneWidget);
-      expect(find.text('Completed deliveries will appear here'), findsOneWidget);
+      expect(
+          find.text('Completed deliveries will appear here'), findsOneWidget);
       expect(find.byIcon(Icons.history_rounded), findsOneWidget);
     });
 
-    testWidgets('OrdersTab renders error state when stream fails', (tester) async {
+    testWidgets('OrdersTab renders error state when stream fails',
+        (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             deliveryHistoryStreamProvider.overrideWithValue(
-              AsyncValue.error(Exception('Firestore connection timeout'), StackTrace.empty),
+              AsyncValue.error(
+                  Exception('Firestore connection timeout'), StackTrace.empty),
             ),
           ],
           child: const MaterialApp(
@@ -448,7 +469,9 @@ void main() {
       expect(find.byIcon(Icons.cloud_off_rounded), findsOneWidget);
     });
 
-    test('deliveryOrdersStreamProvider and deliveryHistoryStreamProvider isolate by agent ID', () async {
+    test(
+        'deliveryOrdersStreamProvider and deliveryHistoryStreamProvider isolate by agent ID',
+        () async {
       final now = DateTime.now();
       final allOrders = [
         DeliveryOrder(
@@ -473,7 +496,8 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          deliveryOrdersStreamProvider.overrideWith((ref) => Stream.value(allOrders)),
+          deliveryOrdersStreamProvider
+              .overrideWith((ref) => Stream.value(allOrders)),
         ],
       );
       addTearDown(container.dispose);
@@ -486,4 +510,3 @@ void main() {
     });
   });
 }
-

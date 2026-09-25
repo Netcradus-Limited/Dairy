@@ -145,7 +145,8 @@ class OrderHistoryScreen extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+                          color:
+                              const Color(0xFF6366F1).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: const Color(0xFF6366F1)),
                         ),

@@ -92,7 +92,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-
   /// Initiates Firebase OTP sending for Sign In
   Future<bool> startSignIn(String mobileNumber) async {
     state = state.copyWith(status: const AsyncLoading());
@@ -307,13 +306,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       final firebaseUser = userCredential.user;
       if (firebaseUser != null) {
-        final mobile = (state.mobileNumber != null && state.mobileNumber!.trim().isNotEmpty)
+        final mobile = (state.mobileNumber != null &&
+                state.mobileNumber!.trim().isNotEmpty)
             ? state.mobileNumber!.trim()
             : (firebaseUser.phoneNumber ?? '');
         final normalized = PhoneAuthUtils.normalize(mobile);
         final detectedRole = UserRole.fromPhoneAndRole(phone: mobile).value;
 
-        debugPrint('[AUTH ROLE DEBUG] Firebase phone number: ${firebaseUser.phoneNumber ?? mobile}');
+        debugPrint(
+            '[AUTH ROLE DEBUG] Firebase phone number: ${firebaseUser.phoneNumber ?? mobile}');
         debugPrint('[AUTH ROLE DEBUG] normalized phone number: $normalized');
         debugPrint('[AUTH ROLE DEBUG] detected role: $detectedRole');
         debugPrint('[AUTH ROLE DEBUG] authenticated UID: ${firebaseUser.uid}');

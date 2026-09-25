@@ -79,7 +79,8 @@ void main() {
       fakeEarningsService.dispose();
     });
 
-    test('1. EarningsService returns empty stream immediately for empty agent ID',
+    test(
+        '1. EarningsService returns empty stream immediately for empty agent ID',
         () async {
       final stream = fakeEarningsService.getAgentEarnings('');
       final result = await stream.first;
@@ -184,7 +185,8 @@ void main() {
       expect(earnings.first.total, 145.0);
       expect(earnings.first.baseEarnings, 120.0);
       expect(earnings.first.tips, 25.0);
-      expect(container.read(deliveryEarningsProvider.notifier).todayTotal, 145.0);
+      expect(
+          container.read(deliveryEarningsProvider.notifier).todayTotal, 145.0);
     });
 
     test('4. Cross-agent isolation: Agent A stream ignores Agent B emissions',
@@ -283,7 +285,8 @@ void main() {
       await pumpEventQueue();
 
       expect(container.read(deliveryEarningsProvider).length, 1);
-      expect(container.read(deliveryEarningsProvider.notifier).todayTotal, 75.0);
+      expect(
+          container.read(deliveryEarningsProvider.notifier).todayTotal, 75.0);
 
       // Trigger logout
       await userNotifier.clearSession();
@@ -292,11 +295,11 @@ void main() {
       // Earnings must be completely reset to empty
       final loggedOutEarnings = container.read(deliveryEarningsProvider);
       expect(loggedOutEarnings, isEmpty);
-      expect(
-          container.read(deliveryEarningsProvider.notifier).todayTotal, 0.0);
+      expect(container.read(deliveryEarningsProvider.notifier).todayTotal, 0.0);
     });
 
-    test('7. Agent switch: Agent A logout -> Agent B login rebinds earnings to Agent B',
+    test(
+        '7. Agent switch: Agent A logout -> Agent B login rebinds earnings to Agent B',
         () async {
       final userNotifier = TestUserNotifier(
         const User(
@@ -329,7 +332,8 @@ void main() {
         ),
       ]);
       await pumpEventQueue();
-      expect(container.read(deliveryEarningsProvider.notifier).todayTotal, 80.0);
+      expect(
+          container.read(deliveryEarningsProvider.notifier).todayTotal, 80.0);
 
       // Agent A logs out
       await userNotifier.clearSession();
@@ -364,7 +368,8 @@ void main() {
           container.read(deliveryEarningsProvider.notifier).todayTotal, 150.0);
     });
 
-    test('8. Stream error resets state to empty to prevent cross-agent or stale leakage',
+    test(
+        '8. Stream error resets state to empty to prevent cross-agent or stale leakage',
         () async {
       final container = ProviderContainer(
         overrides: [
@@ -407,7 +412,8 @@ void main() {
       expect(container.read(deliveryEarningsProvider), isEmpty);
     });
 
-    test('9. Local addEarnings accurately appends completed delivery and aggregates',
+    test(
+        '9. Local addEarnings accurately appends completed delivery and aggregates',
         () async {
       final container = ProviderContainer(
         overrides: [

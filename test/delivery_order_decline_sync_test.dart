@@ -167,7 +167,8 @@ void main() {
     isLoaded: true,
   );
 
-  group('Task 1: Delivery Order Decline Firestore Sync — Service & Logic Tests', () {
+  group('Task 1: Delivery Order Decline Firestore Sync — Service & Logic Tests',
+      () {
     late MockOrderService mockOrderService;
 
     setUp(() {
@@ -190,7 +191,9 @@ void main() {
       expect(updated.assignedAgentId, isNull);
     });
 
-    test('2. Decline assigned order successfully unassigns agent and resets status to Pending', () async {
+    test(
+        '2. Decline assigned order successfully unassigns agent and resets status to Pending',
+        () async {
       mockOrderService.orderStore['ord_101'] = {
         'status': 'placed',
         'assignedAgentId': 'agent_001',
@@ -208,7 +211,9 @@ void main() {
       expect(orderInStore['status'], equals('Pending'));
     });
 
-    test('3. Concurrency safety: declining order assigned to another agent throws StateError without modifying store', () async {
+    test(
+        '3. Concurrency safety: declining order assigned to another agent throws StateError without modifying store',
+        () async {
       mockOrderService.orderStore['ord_102'] = {
         'status': 'placed',
         'assignedAgentId': 'agent_002', // Reassigned to agent_002!
@@ -229,7 +234,8 @@ void main() {
       expect(orderInStore['assignedAgentId'], equals('agent_002'));
     });
 
-    test('4. Declining already unassigned order completes safely without error', () async {
+    test('4. Declining already unassigned order completes safely without error',
+        () async {
       mockOrderService.orderStore['ord_103'] = {
         'status': 'Pending',
         'assignedAgentId': null,
@@ -259,7 +265,9 @@ void main() {
     });
   });
 
-  group('Task 1: Delivery Panel Requests Tab — UI Decline Sync & Error Handling Tests', () {
+  group(
+      'Task 1: Delivery Panel Requests Tab — UI Decline Sync & Error Handling Tests',
+      () {
     late MockOrderService mockOrderService;
 
     setUp(() {
@@ -286,7 +294,9 @@ void main() {
       );
     }
 
-    testWidgets('6. Declining assigned order calls declineOrder and dismisses card on success', (tester) async {
+    testWidgets(
+        '6. Declining assigned order calls declineOrder and dismisses card on success',
+        (tester) async {
       final assignedDeliveryOrder = createTestDeliveryOrder(
         id: 'ord_201',
         orderCode: 'SWD201',
@@ -299,7 +309,8 @@ void main() {
         'acceptedAt': null,
       };
 
-      await tester.pumpWidget(createTestWidget(requests: [assignedDeliveryOrder]));
+      await tester
+          .pumpWidget(createTestWidget(requests: [assignedDeliveryOrder]));
       await tester.pumpAndSettle();
 
       // Card is visible
@@ -315,15 +326,19 @@ void main() {
       expect(mockOrderService.lastDeclinedAgentId, equals('agent_001'));
 
       // Verify Firestore order store was updated
-      expect(mockOrderService.orderStore['ord_201']!['assignedAgentId'], isNull);
-      expect(mockOrderService.orderStore['ord_201']!['status'], equals('Pending'));
+      expect(
+          mockOrderService.orderStore['ord_201']!['assignedAgentId'], isNull);
+      expect(
+          mockOrderService.orderStore['ord_201']!['status'], equals('Pending'));
 
       // Card is dismissed and success SnackBar is displayed
       expect(find.text('Order #SWD201'), findsNothing);
       expect(find.text('Order #SWD201 declined'), findsOneWidget);
     });
 
-    testWidgets('7. Firestore failure does NOT falsely dismiss the card locally', (tester) async {
+    testWidgets(
+        '7. Firestore failure does NOT falsely dismiss the card locally',
+        (tester) async {
       final assignedDeliveryOrder = createTestDeliveryOrder(
         id: 'ord_202',
         orderCode: 'SWD202',
@@ -337,7 +352,8 @@ void main() {
       // Simulate network or Firestore write failure
       mockOrderService.throwOnDecline = true;
 
-      await tester.pumpWidget(createTestWidget(requests: [assignedDeliveryOrder]));
+      await tester
+          .pumpWidget(createTestWidget(requests: [assignedDeliveryOrder]));
       await tester.pumpAndSettle();
 
       expect(find.text('Order #SWD202'), findsOneWidget);
@@ -351,10 +367,13 @@ void main() {
       expect(find.text('Order #SWD202'), findsOneWidget);
 
       // Error message is displayed
-      expect(find.text('Could not decline order. Please try again.'), findsOneWidget);
+      expect(find.text('Could not decline order. Please try again.'),
+          findsOneWidget);
     });
 
-    testWidgets('8. Concurrency failure does NOT falsely dismiss the card locally', (tester) async {
+    testWidgets(
+        '8. Concurrency failure does NOT falsely dismiss the card locally',
+        (tester) async {
       final assignedDeliveryOrder = createTestDeliveryOrder(
         id: 'ord_203',
         orderCode: 'SWD203',
@@ -367,7 +386,8 @@ void main() {
         'assignedAgentId': 'agent_002',
       };
 
-      await tester.pumpWidget(createTestWidget(requests: [assignedDeliveryOrder]));
+      await tester
+          .pumpWidget(createTestWidget(requests: [assignedDeliveryOrder]));
       await tester.pumpAndSettle();
 
       expect(find.text('Order #SWD203'), findsOneWidget);
@@ -380,7 +400,8 @@ void main() {
       expect(find.text('Order #SWD203'), findsOneWidget);
 
       // Error message is displayed
-      expect(find.text('Could not decline order. Please try again.'), findsOneWidget);
+      expect(find.text('Could not decline order. Please try again.'),
+          findsOneWidget);
     });
   });
 }

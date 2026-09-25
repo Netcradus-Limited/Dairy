@@ -93,8 +93,10 @@ class PaymentService {
       }
 
       // Query by orderId
-      final query =
-          await _paymentsRef.where('orderId', isEqualTo: cleanId).limit(1).get();
+      final query = await _paymentsRef
+          .where('orderId', isEqualTo: cleanId)
+          .limit(1)
+          .get();
       if (query.docs.isNotEmpty) {
         final match = query.docs.first;
         return DairyPayment.fromFirestore(match.data(), match.id);
@@ -108,7 +110,9 @@ class PaymentService {
 
   /// Creates or updates a payment record in Firestore.
   Future<void> createOrUpdatePayment(DairyPayment payment) async {
-    final docId = payment.id.isNotEmpty ? payment.id : 'PAY_${payment.orderId ?? DateTime.now().millisecondsSinceEpoch}';
+    final docId = payment.id.isNotEmpty
+        ? payment.id
+        : 'PAY_${payment.orderId ?? DateTime.now().millisecondsSinceEpoch}';
     await _paymentsRef.doc(docId).set(
           payment.toFirestore(),
           SetOptions(merge: true),

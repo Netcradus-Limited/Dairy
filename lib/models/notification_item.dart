@@ -157,8 +157,11 @@ class NotificationItem {
       parsedTime = DateTime.now();
     }
 
-    final rawType = (data['type'] ?? data['notificationType'] ?? data['category']) as String?;
-    final title = (data['title'] ?? data['subject'] ?? data['heading'] ?? '') as String;
+    final rawType = (data['type'] ??
+        data['notificationType'] ??
+        data['category']) as String?;
+    final title =
+        (data['title'] ?? data['subject'] ?? data['heading'] ?? '') as String;
     final body = (data['body'] ??
         data['message'] ??
         data['description'] ??
@@ -166,25 +169,39 @@ class NotificationItem {
         data['content'] ??
         '') as String;
 
-    final rawIsRead = data['isRead'] ?? data['read'] ?? data['is_read'] ?? data['seen'];
+    final rawIsRead =
+        data['isRead'] ?? data['read'] ?? data['is_read'] ?? data['seen'];
     final isRead = rawIsRead is bool
         ? rawIsRead
         : (rawIsRead is String ? rawIsRead.toLowerCase() == 'true' : false);
 
-    final rawActionable = data['isActionable'] ?? data['actionable'] ?? data['is_actionable'];
+    final rawActionable =
+        data['isActionable'] ?? data['actionable'] ?? data['is_actionable'];
     final isActionable = rawActionable is bool
         ? rawActionable
-        : (rawActionable is String ? rawActionable.toLowerCase() == 'true' : false);
+        : (rawActionable is String
+            ? rawActionable.toLowerCase() == 'true'
+            : false);
 
-    final orderId = (data['orderId'] ?? data['order_id'] ?? data['orderID'])?.toString();
+    final orderId =
+        (data['orderId'] ?? data['order_id'] ?? data['orderID'])?.toString();
     final assignedAgentId = (data['assignedAgentId'] ??
             data['assigned_agent_id'] ??
             data['agentId'] ??
             data['agent_id'])
         ?.toString();
-    final route = (data['route'] ?? data['targetRoute'] ?? data['path'])?.toString();
-    final createdBy = (data['createdBy'] ?? data['created_by'] ?? data['adminId'] ?? data['senderId'])?.toString();
-    final userId = (data['userId'] ?? data['uid'] ?? data['user_id'] ?? data['recipientId'])?.toString();
+    final route =
+        (data['route'] ?? data['targetRoute'] ?? data['path'])?.toString();
+    final createdBy = (data['createdBy'] ??
+            data['created_by'] ??
+            data['adminId'] ??
+            data['senderId'])
+        ?.toString();
+    final userId = (data['userId'] ??
+            data['uid'] ??
+            data['user_id'] ??
+            data['recipientId'])
+        ?.toString();
     final metadata = data['metadata'] as Map<String, dynamic>?;
 
     return NotificationItem(

@@ -164,7 +164,8 @@ class _GpsStatusWarningBannerState
                   fontSize: 11.5,
                   height: 1.35,
                   fontWeight: FontWeight.w500,
-                  color: isDark ? const Color(0xFFF3F4F6) : AppColors.textPrimary,
+                  color:
+                      isDark ? const Color(0xFFF3F4F6) : AppColors.textPrimary,
                 ),
               ),
             ],
@@ -179,7 +180,8 @@ class _GpsStatusWarningBannerState
                   backgroundColor: accentColor,
                   foregroundColor: Colors.white,
                   visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(6),
                   ),
@@ -225,7 +227,8 @@ class _GpsStatusWarningBannerState
                       tooltip: 'Dismiss',
                       color: isDark ? Colors.white70 : AppColors.textSecondary,
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                      constraints:
+                          const BoxConstraints(minWidth: 28, minHeight: 28),
                       onPressed: () {
                         setState(() {
                           _dismissed = true;
@@ -243,7 +246,8 @@ class _GpsStatusWarningBannerState
                       backgroundColor: accentColor,
                       foregroundColor: Colors.white,
                       visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(6),
                       ),

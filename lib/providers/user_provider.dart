@@ -125,8 +125,7 @@ class UserNotifier extends StateNotifier<User> {
     debugPrint('[AUTH ROLE DEBUG] Authenticated UID: $uid');
     debugPrint(
         '[AUTH ROLE DEBUG] Firebase phoneNumber: ${fbUser?.phoneNumber ?? effectivePhone}');
-    debugPrint(
-        '[AUTH ROLE DEBUG] Normalized phone number: $normalizedPhone');
+    debugPrint('[AUTH ROLE DEBUG] Normalized phone number: $normalizedPhone');
 
     // 1. Check phone-based role (historical & standard: 9999999999/8888888888 -> admin, 7777777777 -> delivery)
     final phoneRole = UserRole.fromPhone(effectivePhone);
@@ -138,7 +137,9 @@ class UserNotifier extends StateNotifier<User> {
     }
 
     if (firestore == null || uid.isEmpty) {
-      final safeRole = UserRole.fromPhoneAndRole(phone: effectivePhone, role: currentRole).value;
+      final safeRole =
+          UserRole.fromPhoneAndRole(phone: effectivePhone, role: currentRole)
+              .value;
       debugPrint(
           '[AUTH ROLE DEBUG] Admin lookup result: Firestore unavailable or empty UID. Falling back to: $safeRole');
       debugPrint('[AUTH ROLE DEBUG] Detected role: $safeRole');
@@ -147,7 +148,8 @@ class UserNotifier extends StateNotifier<User> {
 
     // 2. Check `admins` collection
     try {
-      Future<String> linkAdminMatch(Map<String, dynamic> data, String sourceDocId) async {
+      Future<String> linkAdminMatch(
+          Map<String, dynamic> data, String sourceDocId) async {
         final rawRole = (data['role'] as String?)?.trim() ?? 'admin';
         final resolvedRole = UserRole.sanitize(rawRole);
         final roleTitle = data['roleTitle'] as String? ??
@@ -191,15 +193,15 @@ class UserNotifier extends StateNotifier<User> {
             'updatedAt': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
         } catch (linkErr) {
-          debugPrint('[AUTH ROLE DEBUG] Error auto-linking admin doc: $linkErr');
+          debugPrint(
+              '[AUTH ROLE DEBUG] Error auto-linking admin doc: $linkErr');
         }
 
         return resolvedRole;
       }
 
       // 2a. Check by direct doc ID == uid
-      final adminDocByUid =
-          await firestore.collection('admins').doc(uid).get();
+      final adminDocByUid = await firestore.collection('admins').doc(uid).get();
       if (adminDocByUid.exists && adminDocByUid.data() != null) {
         final data = adminDocByUid.data()!;
         final resolvedRole = await linkAdminMatch(data, uid);
@@ -244,10 +246,8 @@ class UserNotifier extends StateNotifier<User> {
 
         // 2d. Check by doc ID == normalized phone
         if (normalizedPhone.isNotEmpty) {
-          final adminDocByPhone = await firestore
-              .collection('admins')
-              .doc(normalizedPhone)
-              .get();
+          final adminDocByPhone =
+              await firestore.collection('admins').doc(normalizedPhone).get();
           if (adminDocByPhone.exists && adminDocByPhone.data() != null) {
             final data = adminDocByPhone.data()!;
             final resolvedRole = await linkAdminMatch(data, adminDocByPhone.id);
@@ -496,8 +496,10 @@ class UserNotifier extends StateNotifier<User> {
                 }
 
                 // Verify the primary doc was updated before removing the orphan
-                final verifyDoc = await firestore.collection('users').doc(uid).get();
-                if (verifyDoc.exists && verifyDoc.data()?['role'] == cleanRole) {
+                final verifyDoc =
+                    await firestore.collection('users').doc(uid).get();
+                if (verifyDoc.exists &&
+                    verifyDoc.data()?['role'] == cleanRole) {
                   await firestore.collection('users').doc(sDoc.id).delete();
                   debugPrint(
                       '[AUTH ROLE DEBUG] Migration verified & orphaned doc ${sDoc.id} safely removed.');
@@ -544,7 +546,8 @@ class UserNotifier extends StateNotifier<User> {
           final rawRole = data['role'] as String?;
           final cleanRole = (rawRole != null && rawRole.trim().isNotEmpty)
               ? UserRole.sanitize(rawRole)
-              : UserRole.fromPhone(data['phone'] as String? ?? state.phone).value;
+              : UserRole.fromPhone(data['phone'] as String? ?? state.phone)
+                  .value;
 
           final rawPermissions = data['permissions'];
           List<String> perms = [];
@@ -631,7 +634,8 @@ class UserNotifier extends StateNotifier<User> {
         var loadedUser = User.fromMap(map);
 
         // Ensure restored session respects normalized phone role if stored as default customer
-        if (loadedUser.role == UserRole.customerValue && loadedUser.phone.isNotEmpty) {
+        if (loadedUser.role == UserRole.customerValue &&
+            loadedUser.phone.isNotEmpty) {
           final phoneRole = UserRole.fromPhone(loadedUser.phone);
           if (phoneRole != UserRole.customer) {
             loadedUser = User(
@@ -791,7 +795,8 @@ class UserNotifier extends StateNotifier<User> {
         final resolvedRole = await _resolveAuthoritativeRole(
           uid: user.id,
           phone: user.phone,
-          currentRole: doc.exists ? (doc.data()?['role'] as String?) : user.role,
+          currentRole:
+              doc.exists ? (doc.data()?['role'] as String?) : user.role,
         );
 
         if (doc.exists) {
@@ -813,13 +818,14 @@ class UserNotifier extends StateNotifier<User> {
             final roleTitle = data['roleTitle'] as String? ?? user.roleTitle;
             final status = (data['status'] as String? ?? user.status).trim();
 
-            final cleanName = (data['name'] as String?)?.trim().isNotEmpty == true
-                ? (data['name'] as String).trim()
-                : (user.name.trim().isNotEmpty &&
-                        user.name.trim() != 'Guest Customer' &&
-                        user.name.trim() != 'Sawariya Customer'
-                    ? user.name.trim()
-                    : '');
+            final cleanName =
+                (data['name'] as String?)?.trim().isNotEmpty == true
+                    ? (data['name'] as String).trim()
+                    : (user.name.trim().isNotEmpty &&
+                            user.name.trim() != 'Guest Customer' &&
+                            user.name.trim() != 'Sawariya Customer'
+                        ? user.name.trim()
+                        : '');
 
             user = User(
               id: user.id,
@@ -1137,9 +1143,15 @@ class UserNotifier extends StateNotifier<User> {
 
     final updatedUser = User(
       id: targetUid,
-      name: (trimmedName != null && trimmedName.isNotEmpty) ? trimmedName : state.name,
-      phone: (trimmedPhone != null && trimmedPhone.isNotEmpty) ? trimmedPhone : state.phone,
-      email: (trimmedEmail != null && trimmedEmail.isNotEmpty) ? trimmedEmail : state.email,
+      name: (trimmedName != null && trimmedName.isNotEmpty)
+          ? trimmedName
+          : state.name,
+      phone: (trimmedPhone != null && trimmedPhone.isNotEmpty)
+          ? trimmedPhone
+          : state.phone,
+      email: (trimmedEmail != null && trimmedEmail.isNotEmpty)
+          ? trimmedEmail
+          : state.email,
       profileImageUrl: (trimmedImage != null && trimmedImage.isNotEmpty)
           ? trimmedImage
           : state.profileImageUrl,
@@ -1154,12 +1166,18 @@ class UserNotifier extends StateNotifier<User> {
       final fieldsToUpdate = <String, dynamic>{
         'uid': targetUid,
         if (trimmedName != null && trimmedName.isNotEmpty) 'name': trimmedName,
-        if (trimmedPhone != null && trimmedPhone.isNotEmpty) 'phone': trimmedPhone,
-        if (trimmedEmail != null && trimmedEmail.isNotEmpty) 'email': trimmedEmail,
-        if (trimmedVehicle != null && trimmedVehicle.isNotEmpty) 'vehicle': trimmedVehicle,
-        if (trimmedVehicleType != null && trimmedVehicleType.isNotEmpty) 'vehicleType': trimmedVehicleType,
-        if (trimmedVehicleNum != null && trimmedVehicleNum.isNotEmpty) 'vehicleNumber': trimmedVehicleNum,
-        if (trimmedZone != null && trimmedZone.isNotEmpty) 'assignedZone': trimmedZone,
+        if (trimmedPhone != null && trimmedPhone.isNotEmpty)
+          'phone': trimmedPhone,
+        if (trimmedEmail != null && trimmedEmail.isNotEmpty)
+          'email': trimmedEmail,
+        if (trimmedVehicle != null && trimmedVehicle.isNotEmpty)
+          'vehicle': trimmedVehicle,
+        if (trimmedVehicleType != null && trimmedVehicleType.isNotEmpty)
+          'vehicleType': trimmedVehicleType,
+        if (trimmedVehicleNum != null && trimmedVehicleNum.isNotEmpty)
+          'vehicleNumber': trimmedVehicleNum,
+        if (trimmedZone != null && trimmedZone.isNotEmpty)
+          'assignedZone': trimmedZone,
         if (trimmedImage != null && trimmedImage.isNotEmpty) ...{
           'profileImageUrl': trimmedImage,
           'photoUrl': trimmedImage,

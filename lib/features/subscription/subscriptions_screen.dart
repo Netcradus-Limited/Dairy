@@ -78,8 +78,8 @@ class SubscriptionsScreen extends ConsumerWidget {
     }
 
     final activeCount = state.activeSubscriptions.length;
-    final totalMonthly = state.activeSubscriptions.fold<double>(
-        0.0, (acc, s) => acc + s.monthlyCost);
+    final totalMonthly = state.activeSubscriptions
+        .fold<double>(0.0, (acc, s) => acc + s.monthlyCost);
 
     return SingleChildScrollView(
       padding: EdgeInsets.symmetric(
@@ -352,7 +352,8 @@ class _SubscriptionCard extends ConsumerWidget {
                   ),
                   ElevatedButton(
                     onPressed: () => Navigator.pop(ctx, true),
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.error),
                     child: const Text('Cancel Subscription'),
                   ),
                 ],
@@ -361,9 +362,13 @@ class _SubscriptionCard extends ConsumerWidget {
             false;
       },
       onDismissed: (_) {
-        ref.read(subscriptionProvider.notifier).cancelSubscription(subscription.id);
+        ref
+            .read(subscriptionProvider.notifier)
+            .cancelSubscription(subscription.id);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${subscription.product.title} subscription cancelled')),
+          SnackBar(
+              content:
+                  Text('${subscription.product.title} subscription cancelled')),
         );
       },
       child: Container(

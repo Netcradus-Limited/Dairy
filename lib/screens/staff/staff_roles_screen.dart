@@ -414,8 +414,8 @@ class _StaffRolesScreenState extends State<StaffRolesScreen> {
         style: GoogleFonts.plusJakartaSans(fontSize: 13, color: textPrimary),
         decoration: InputDecoration(
           hintText: 'Search by name, email, phone, or role...',
-          hintStyle: GoogleFonts.plusJakartaSans(
-              fontSize: 12.5, color: textSecondary),
+          hintStyle:
+              GoogleFonts.plusJakartaSans(fontSize: 12.5, color: textSecondary),
           prefixIcon: const Icon(Icons.search_rounded, size: 18),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
@@ -1018,9 +1018,8 @@ class _StaffRolesScreenState extends State<StaffRolesScreen> {
                                       if (r != null) {
                                         setModalState(() {
                                           selectedRole = r;
-                                          selectedPermissions =
-                                              StaffRolePresets
-                                                  .getPermissionsForRole(r);
+                                          selectedPermissions = StaffRolePresets
+                                              .getPermissionsForRole(r);
                                         });
                                       }
                                     },
@@ -1130,7 +1129,8 @@ class _StaffRolesScreenState extends State<StaffRolesScreen> {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(
                                             SnackBar(
-                                              content: Text(existingStaff == null
+                                              content: Text(existingStaff ==
+                                                      null
                                                   ? 'Staff member "${nameCtrl.text.trim()}" onboarded successfully!'
                                                   : 'Staff member updated successfully!'),
                                               backgroundColor:
@@ -1194,8 +1194,7 @@ class _StaffRolesScreenState extends State<StaffRolesScreen> {
     );
   }
 
-  Widget _buildEmailField(
-      TextEditingController emailCtrl, Color textPrimary) {
+  Widget _buildEmailField(TextEditingController emailCtrl, Color textPrimary) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1233,8 +1232,7 @@ class _StaffRolesScreenState extends State<StaffRolesScreen> {
     );
   }
 
-  Widget _buildPhoneField(
-      TextEditingController phoneCtrl, Color textPrimary) {
+  Widget _buildPhoneField(TextEditingController phoneCtrl, Color textPrimary) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1263,8 +1261,8 @@ class _StaffRolesScreenState extends State<StaffRolesScreen> {
     );
   }
 
-  Widget _buildRoleField(String selectedRole, Color textPrimary,
-      ValueChanged<String?> onChanged) {
+  Widget _buildRoleField(
+      String selectedRole, Color textPrimary, ValueChanged<String?> onChanged) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1411,15 +1409,15 @@ class _StaffRolesScreenState extends State<StaffRolesScreen> {
                             ),
                           ),
                           IconButton(
-                            onPressed:
-                                isSaving ? null : () => Navigator.pop(dialogCtx),
+                            onPressed: isSaving
+                                ? null
+                                : () => Navigator.pop(dialogCtx),
                             icon: const Icon(Icons.close_rounded),
                             color: textSecondary,
                           ),
                         ],
                       ),
                       const Divider(height: 20),
-
                       Expanded(
                         child: SingleChildScrollView(
                           child: _buildPermissionsAccordion(
@@ -1435,7 +1433,6 @@ class _StaffRolesScreenState extends State<StaffRolesScreen> {
                         ),
                       ),
                       const Divider(height: 20),
-
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -1572,9 +1569,7 @@ class _StaffRolesScreenState extends State<StaffRolesScreen> {
                   : '$activeCount / ${perms.length} enabled',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 11.5,
-                color: activeCount > 0
-                    ? AppColors.primary
-                    : textSecondary,
+                color: activeCount > 0 ? AppColors.primary : textSecondary,
               ),
             ),
             trailing: isSuperAdmin

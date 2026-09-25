@@ -54,7 +54,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       if (_methodFilter != 'All') {
         final m = payment.method.toLowerCase();
         if (_methodFilter == 'Cash' && !m.contains('cash')) return false;
-        if (_methodFilter == 'Online' && (m.contains('cash') || m.contains('wallet'))) return false;
+        if (_methodFilter == 'Online' &&
+            (m.contains('cash') || m.contains('wallet'))) return false;
         if (_methodFilter == 'Wallet' && !m.contains('wallet')) return false;
       }
 
@@ -63,10 +64,16 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         final query = _searchQuery.toLowerCase().trim();
         final matchName = payment.customerName.toLowerCase().contains(query);
         final matchId = payment.id.toLowerCase().contains(query);
-        final matchOrder = payment.orderOrWalletId.toLowerCase().contains(query);
+        final matchOrder =
+            payment.orderOrWalletId.toLowerCase().contains(query);
         final matchMethod = payment.method.toLowerCase().contains(query);
-        final matchTxn = payment.transactionId?.toLowerCase().contains(query) ?? false;
-        if (!matchName && !matchId && !matchOrder && !matchMethod && !matchTxn) {
+        final matchTxn =
+            payment.transactionId?.toLowerCase().contains(query) ?? false;
+        if (!matchName &&
+            !matchId &&
+            !matchOrder &&
+            !matchMethod &&
+            !matchTxn) {
           return false;
         }
       }
@@ -210,7 +217,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           return Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6.0),
-              child: _buildKpiCard(kpi, cardBg, cardBorder, textPrimary, textSecondary),
+              child: _buildKpiCard(
+                  kpi, cardBg, cardBorder, textPrimary, textSecondary),
             ),
           );
         }).toList(),
@@ -229,7 +237,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           children: kpis.map((kpi) {
             return SizedBox(
               width: cardWidth,
-              child: _buildKpiCard(kpi, cardBg, cardBorder, textPrimary, textSecondary),
+              child: _buildKpiCard(
+                  kpi, cardBg, cardBorder, textPrimary, textSecondary),
             );
           }).toList(),
         );
@@ -315,7 +324,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         style: GoogleFonts.plusJakartaSans(fontSize: 13, color: textPrimary),
         decoration: InputDecoration(
           hintText: 'Search by customer, ID, or order...',
-          hintStyle: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: textSecondary),
+          hintStyle:
+              GoogleFonts.plusJakartaSans(fontSize: 12.5, color: textSecondary),
           prefixIcon: const Icon(Icons.search_rounded, size: 18),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
@@ -326,7 +336,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   },
                 )
               : null,
-          contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+          contentPadding:
+              const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
           filled: true,
           fillColor: AppColors.freshGreen.withValues(alpha: 0.04),
           border: OutlineInputBorder(
@@ -339,7 +350,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: AppColors.freshGreen, width: 1.5),
+            borderSide:
+                const BorderSide(color: AppColors.freshGreen, width: 1.5),
           ),
         ),
       ),
@@ -475,12 +487,14 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         child: Center(
           child: Column(
             children: [
-              const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 40),
+              const Icon(Icons.error_outline_rounded,
+                  color: AppColors.error, size: 40),
               const SizedBox(height: 8),
               Text(
                 provider.paymentsError!,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.plusJakartaSans(color: AppColors.error, fontSize: 13),
+                style: GoogleFonts.plusJakartaSans(
+                    color: AppColors.error, fontSize: 13),
               ),
             ],
           ),
@@ -501,7 +515,9 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                _searchQuery.isNotEmpty || _statusFilter != 'All' || _methodFilter != 'All'
+                _searchQuery.isNotEmpty ||
+                        _statusFilter != 'All' ||
+                        _methodFilter != 'All'
                     ? 'No matching payment records found.'
                     : 'No payments recorded in Firestore yet.',
                 style: GoogleFonts.plusJakartaSans(
@@ -683,7 +699,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                       payment.customerPhone!.isNotEmpty)
                     _buildModalRow('Customer Phone', payment.customerPhone!),
                   _buildModalRow('Payment Method', payment.method),
-                  _buildModalRow('Amount', '₹${payment.amount.toStringAsFixed(2)}'),
+                  _buildModalRow(
+                      'Amount', '₹${payment.amount.toStringAsFixed(2)}'),
                   if (payment.transactionId != null)
                     _buildModalRow('Transaction ID', payment.transactionId!),
                   _buildModalRow('Timestamp', payment.timestamp),
@@ -712,7 +729,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                                       color: Colors.white,
                                     ),
                                   )
-                                : const Icon(Icons.check_circle_outline, size: 18),
+                                : const Icon(Icons.check_circle_outline,
+                                    size: 18),
                             label: Text(
                               isUpdating
                                   ? 'Updating Status...'
@@ -775,8 +793,12 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: GoogleFonts.plusJakartaSans(color: Colors.grey[600], fontSize: 13)),
-          Text(value, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13)),
+          Text(label,
+              style: GoogleFonts.plusJakartaSans(
+                  color: Colors.grey[600], fontSize: 13)),
+          Text(value,
+              style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.w700, fontSize: 13)),
         ],
       ),
     );

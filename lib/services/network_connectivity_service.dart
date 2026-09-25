@@ -19,7 +19,8 @@ class NetworkConnectivityService {
 
   static Future<bool> _defaultChecker() async {
     try {
-      if (kIsWeb || Platform.environment.containsKey('FLUTTER_TEST')) return true;
+      if (kIsWeb || Platform.environment.containsKey('FLUTTER_TEST'))
+        return true;
       final result = await InternetAddress.lookup('8.8.8.8')
           .timeout(const Duration(seconds: 3));
       return result.isNotEmpty && result[0].rawAddress.isNotEmpty;

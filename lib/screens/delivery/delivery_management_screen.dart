@@ -121,8 +121,8 @@ class DeliveryManagementScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.error.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                    color: AppColors.error.withValues(alpha: 0.3)),
+                border:
+                    Border.all(color: AppColors.error.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -243,8 +243,8 @@ class DeliveryManagementScreen extends StatelessWidget {
                             icon: const Icon(Icons.edit_outlined, size: 16),
                             color: textMuted,
                             tooltip: 'Edit Corridor',
-                            onPressed: () => _showRouteDialog(
-                                context, provider, corridor),
+                            onPressed: () =>
+                                _showRouteDialog(context, provider, corridor),
                           ),
                         ],
                       ),
@@ -365,8 +365,8 @@ class DeliveryManagementScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.error.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                    color: AppColors.error.withValues(alpha: 0.3)),
+                border:
+                    Border.all(color: AppColors.error.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -647,12 +647,12 @@ class DeliveryManagementScreen extends StatelessWidget {
     final zoneCtrl = TextEditingController(text: existing?.zone ?? '');
     final subCtrl = TextEditingController(
         text: existing != null ? '${existing.subscribersCount}' : '0');
-    final timingCtrl = TextEditingController(
-        text: existing?.timing ?? '05:00 AM - 07:00 AM');
+    final timingCtrl =
+        TextEditingController(text: existing?.timing ?? '05:00 AM - 07:00 AM');
     final vehicleCtrl = TextEditingController(
         text: existing?.vehicleType ?? 'Delivery Vehicle');
-    final customRiderCtrl = TextEditingController(
-        text: existing?.riderName ?? '');
+    final customRiderCtrl =
+        TextEditingController(text: existing?.riderName ?? '');
 
     String? selectedAgentId = existing?.agentId;
     String selectedRiderName = existing?.riderName ?? 'Unassigned';
@@ -737,7 +737,8 @@ class DeliveryManagementScreen extends StatelessWidget {
                         items: [
                           const DropdownMenuItem<String>(
                             value: null,
-                            child: Text('Unassigned / Other', overflow: TextOverflow.ellipsis),
+                            child: Text('Unassigned / Other',
+                                overflow: TextOverflow.ellipsis),
                           ),
                           ...riders.map((r) => DropdownMenuItem<String>(
                                 value: r.id,
@@ -883,10 +884,8 @@ class DeliveryManagementScreen extends StatelessWidget {
                     zone: zone,
                     riderName: rName,
                     agentId: selectedAgentId,
-                    subscribersCount:
-                        int.tryParse(subCtrl.text.trim()) ?? 0,
-                    completedOrders:
-                        isEdit ? existing.completedOrders : 0,
+                    subscribersCount: int.tryParse(subCtrl.text.trim()) ?? 0,
+                    completedOrders: isEdit ? existing.completedOrders : 0,
                     timing: timingCtrl.text.trim().isNotEmpty
                         ? timingCtrl.text.trim()
                         : '05:00 AM - 07:00 AM',
@@ -1029,7 +1028,8 @@ class DeliveryManagementScreen extends StatelessWidget {
                         items: [
                           const DropdownMenuItem<String>(
                             value: null,
-                            child: Text('Unassigned / Other', overflow: TextOverflow.ellipsis),
+                            child: Text('Unassigned / Other',
+                                overflow: TextOverflow.ellipsis),
                           ),
                           ...riders.map((r) => DropdownMenuItem<String>(
                                 value: r.id,
@@ -1152,8 +1152,7 @@ class DeliveryManagementScreen extends StatelessWidget {
                   if (deliveryId.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content:
-                            Text('Please enter a Batch / Delivery ID'),
+                        content: Text('Please enter a Batch / Delivery ID'),
                         backgroundColor: AppColors.error,
                       ),
                     );
@@ -1175,8 +1174,7 @@ class DeliveryManagementScreen extends StatelessWidget {
                           ? customStaffCtrl.text.trim()
                           : selectedStaffName);
 
-                  final total =
-                      int.tryParse(totalOrdersCtrl.text.trim()) ?? 0;
+                  final total = int.tryParse(totalOrdersCtrl.text.trim()) ?? 0;
                   final completed =
                       int.tryParse(completedOrdersCtrl.text.trim()) ?? 0;
                   final pending = (total - completed).clamp(0, 999999);
@@ -1393,8 +1391,8 @@ class DeliveryManagementScreen extends StatelessWidget {
                       ],
                     ),
                     Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: (progress.completionPercentage >= 100.0 &&
                                 progress.total > 0)
@@ -1420,9 +1418,10 @@ class DeliveryManagementScreen extends StatelessWidget {
           LinearProgressIndicator(
             value: progress.progressFraction,
             backgroundColor: cardBorder,
-            color: (progress.completionPercentage >= 100.0 && progress.total > 0)
-                ? AppColors.revenueGreen
-                : AppColors.primary,
+            color:
+                (progress.completionPercentage >= 100.0 && progress.total > 0)
+                    ? AppColors.revenueGreen
+                    : AppColors.primary,
             borderRadius: BorderRadius.circular(4),
             minHeight: 8,
           ),

@@ -37,15 +37,16 @@ class DeliveryBottomNav extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItem(0, Icons.home_outlined, Icons.home_rounded, 'Home'),
+                _buildNavItem(
+                    0, Icons.home_outlined, Icons.home_rounded, 'Home'),
                 _buildNavItem(1, Icons.assignment_outlined,
                     Icons.assignment_rounded, 'My Orders'),
                 _buildNavItem(2, Icons.location_on_outlined,
                     Icons.location_on_rounded, 'Map'),
                 _buildNavItem(3, Icons.account_balance_wallet_outlined,
                     Icons.account_balance_wallet_rounded, 'Earnings'),
-                _buildNavItem(
-                    4, Icons.person_outline_rounded, Icons.person_rounded, 'Profile'),
+                _buildNavItem(4, Icons.person_outline_rounded,
+                    Icons.person_rounded, 'Profile'),
               ],
             ),
           ),
@@ -85,8 +86,8 @@ class DeliveryBottomNav extends StatelessWidget {
                   fontSize: 11,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   color: isSelected
-                      ? DeliveryTheme.primary
-                      : const Color(0xFF78909C),
+                    ? DeliveryTheme.primary
+                    : const Color(0xFF78909C),
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

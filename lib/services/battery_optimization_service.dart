@@ -37,7 +37,8 @@ class BatteryOptimizationService {
       // In unit test or unmocked channel environments, fail safe
       return true;
     } on PlatformException catch (e) {
-      debugPrint('BatteryOptimizationService: isIgnoringBatteryOptimizations failed: $e');
+      debugPrint(
+          'BatteryOptimizationService: isIgnoringBatteryOptimizations failed: $e');
       return true;
     } catch (e) {
       debugPrint('BatteryOptimizationService: unexpected error: $e');
@@ -68,7 +69,8 @@ class BatteryOptimizationService {
     } on MissingPluginException {
       return false;
     } on PlatformException catch (e) {
-      debugPrint('BatteryOptimizationService: openBatteryOptimizationSettings failed: $e');
+      debugPrint(
+          'BatteryOptimizationService: openBatteryOptimizationSettings failed: $e');
       return false;
     } catch (e) {
       debugPrint('BatteryOptimizationService: unexpected error: $e');

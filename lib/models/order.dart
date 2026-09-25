@@ -8,6 +8,7 @@ import 'product.dart';
 enum OrderStatus {
   placed,
   confirmed,
+  assigned,
   preparing,
   outForDelivery,
   delivered,
@@ -21,6 +22,8 @@ extension OrderStatusExtension on OrderStatus {
         return 'Order Placed';
       case OrderStatus.confirmed:
         return 'Confirmed';
+      case OrderStatus.assigned:
+        return 'Assigned';
       case OrderStatus.preparing:
         return 'Preparing Fresh';
       case OrderStatus.outForDelivery:
@@ -38,12 +41,14 @@ extension OrderStatusExtension on OrderStatus {
         return 0;
       case OrderStatus.confirmed:
         return 1;
-      case OrderStatus.preparing:
+      case OrderStatus.assigned:
         return 2;
-      case OrderStatus.outForDelivery:
+      case OrderStatus.preparing:
         return 3;
-      case OrderStatus.delivered:
+      case OrderStatus.outForDelivery:
         return 4;
+      case OrderStatus.delivered:
+        return 5;
       case OrderStatus.cancelled:
         return -1;
     }
@@ -66,6 +71,9 @@ class Order {
   final String paymentMethod;
   final String estimatedDeliveryTime;
   final String? assignedAgentId;
+  final String? assignedAgentName;
+  final DateTime? assignedAt;
+  final DateTime? approvedAt;
   final DateTime? acceptedAt;
   final String userId;
   final String? pickupLocation;
@@ -94,6 +102,9 @@ class Order {
     this.paymentMethod = 'Cash on Delivery',
     this.estimatedDeliveryTime = 'Today by 7:30 AM',
     this.assignedAgentId,
+    this.assignedAgentName,
+    this.assignedAt,
+    this.approvedAt,
     this.acceptedAt,
     this.userId = '',
     this.pickupLocation,
@@ -131,6 +142,7 @@ class Order {
   bool get isUpcoming =>
       status == OrderStatus.placed ||
       status == OrderStatus.confirmed ||
+      status == OrderStatus.assigned ||
       status == OrderStatus.preparing ||
       status == OrderStatus.outForDelivery;
 
@@ -139,7 +151,9 @@ class Order {
   bool get isCancelled => status == OrderStatus.cancelled;
 
   bool get canCancel =>
-      status == OrderStatus.placed || status == OrderStatus.confirmed;
+      status == OrderStatus.placed ||
+      status == OrderStatus.confirmed ||
+      status == OrderStatus.assigned;
 
   Order copyWith({
     String? id,
@@ -156,6 +170,9 @@ class Order {
     String? paymentMethod,
     String? estimatedDeliveryTime,
     String? assignedAgentId,
+    String? assignedAgentName,
+    DateTime? assignedAt,
+    DateTime? approvedAt,
     DateTime? acceptedAt,
     String? userId,
     String? pickupLocation,
@@ -185,6 +202,9 @@ class Order {
       estimatedDeliveryTime:
           estimatedDeliveryTime ?? this.estimatedDeliveryTime,
       assignedAgentId: assignedAgentId ?? this.assignedAgentId,
+      assignedAgentName: assignedAgentName ?? this.assignedAgentName,
+      assignedAt: assignedAt ?? this.assignedAt,
+      approvedAt: approvedAt ?? this.approvedAt,
       acceptedAt: acceptedAt ?? this.acceptedAt,
       userId: userId ?? this.userId,
       pickupLocation: pickupLocation ?? this.pickupLocation,
@@ -369,6 +389,21 @@ class Order {
             ? DateTime.tryParse(rawDeliveryDate)
             : null);
 
+    final assigned = data['assignedAt'];
+    final assignedAt = assigned is Timestamp
+        ? assigned.toDate()
+        : (assigned is String ? DateTime.tryParse(assigned) : null);
+
+    final approved = data['approvedAt'];
+    final approvedAt = approved is Timestamp
+        ? approved.toDate()
+        : (approved is String ? DateTime.tryParse(approved) : null);
+
+    final assignedAgentName = (data['assignedAgentName'] ??
+            data['deliveryAgentName'] ??
+            data['agentName'])
+        as String?;
+
     final accepted = data['acceptedAt'];
     final acceptedAt = accepted is Timestamp
         ? accepted.toDate()
@@ -398,16 +433,29 @@ class Order {
             : ((data['hub'] is Map) ? (data['hub'] as Map) : null));
 
     if (pickupMap != null) {
-      final loc = (pickupMap['address'] ?? pickupMap['location'] ?? pickupMap['name'] ?? pickupMap['title'])?.toString().trim();
+      final loc = (pickupMap['address'] ??
+              pickupMap['location'] ??
+              pickupMap['name'] ??
+              pickupMap['title'])
+          ?.toString()
+          .trim();
       if (loc != null && loc.isNotEmpty) {
         pickupLocation = loc;
       }
-      final phone = (pickupMap['phone'] ?? pickupMap['phoneNumber'] ?? pickupMap['mobile'])?.toString().trim();
+      final phone = (pickupMap['phone'] ??
+              pickupMap['phoneNumber'] ??
+              pickupMap['mobile'])
+          ?.toString()
+          .trim();
       if (phone != null && phone.isNotEmpty) {
         pickupPhone = phone;
       }
-      final lat = ((pickupMap['latitude'] ?? pickupMap['lat']) as num?)?.toDouble();
-      final lng = ((pickupMap['longitude'] ?? pickupMap['lng'] ?? pickupMap['lon']) as num?)?.toDouble();
+      final lat =
+          ((pickupMap['latitude'] ?? pickupMap['lat']) as num?)?.toDouble();
+      final lng = ((pickupMap['longitude'] ??
+              pickupMap['lng'] ??
+              pickupMap['lon']) as num?)
+          ?.toDouble();
       if (lat != null &&
           lng != null &&
           !lat.isNaN &&
@@ -425,16 +473,22 @@ class Order {
     // 2. Check top-level fields
     if (data['pickupLocation'] is Map) {
       final pMap = data['pickupLocation'] as Map;
-      final loc = (pMap['address'] ?? pMap['location'] ?? pMap['name'] ?? pMap['title'])?.toString().trim();
+      final loc =
+          (pMap['address'] ?? pMap['location'] ?? pMap['name'] ?? pMap['title'])
+              ?.toString()
+              .trim();
       if (loc != null && loc.isNotEmpty) {
         pickupLocation = loc;
       }
-      final phone = (pMap['phone'] ?? pMap['phoneNumber'] ?? pMap['mobile'])?.toString().trim();
+      final phone = (pMap['phone'] ?? pMap['phoneNumber'] ?? pMap['mobile'])
+          ?.toString()
+          .trim();
       if (phone != null && phone.isNotEmpty) {
         pickupPhone = phone;
       }
       final lat = ((pMap['latitude'] ?? pMap['lat']) as num?)?.toDouble();
-      final lng = ((pMap['longitude'] ?? pMap['lng'] ?? pMap['lon']) as num?)?.toDouble();
+      final lng = ((pMap['longitude'] ?? pMap['lng'] ?? pMap['lon']) as num?)
+          ?.toDouble();
       if (lat != null &&
           lng != null &&
           !lat.isNaN &&
@@ -465,15 +519,20 @@ class Order {
     }
 
     if (pickupPhone == null) {
-      final phone = (data['pickupPhone'] ?? data['storePhone'] ?? data['hubPhone']);
+      final phone =
+          (data['pickupPhone'] ?? data['storePhone'] ?? data['hubPhone']);
       if (phone is String) {
         pickupPhone = phone;
       }
     }
 
     if (pickupLatitude == null || pickupLongitude == null) {
-      final pLat = ((data['pickupLatitude'] ?? data['pickupLat']) as num?)?.toDouble();
-      final pLng = ((data['pickupLongitude'] ?? data['pickupLng'] ?? data['pickupLon']) as num?)?.toDouble();
+      final pLat =
+          ((data['pickupLatitude'] ?? data['pickupLat']) as num?)?.toDouble();
+      final pLng = ((data['pickupLongitude'] ??
+              data['pickupLng'] ??
+              data['pickupLon']) as num?)
+          ?.toDouble();
       if (pLat != null &&
           pLng != null &&
           !pLat.isNaN &&
@@ -502,7 +561,14 @@ class Order {
       deliveryAddress: deliveryAddress,
       paymentMethod: (data['paymentMethod'] as String?) ?? 'Cash on Delivery',
       estimatedDeliveryTime: (data['estimatedDeliveryTime'] as String?) ?? '',
-      assignedAgentId: (data['assignedAgentId'] as String?),
+      assignedAgentId: (data['assignedAgentId'] ??
+              data['deliveryAgentId'] ??
+              data['agentId'] ??
+              data['assignedDeliveryAgentId'] ??
+              data['assignedTo']) as String?,
+      assignedAgentName: assignedAgentName,
+      assignedAt: assignedAt,
+      approvedAt: approvedAt,
       acceptedAt: acceptedAt,
       userId: (data['userId'] as String?) ?? '',
       pickupLocation: pickupLocation,
@@ -531,8 +597,10 @@ class Order {
         if (subscriptionId != null) 'subscriptionId': subscriptionId,
         if (deliverySlot != null) 'deliverySlot': deliverySlot,
         if (paymentStatus != null) 'paymentStatus': paymentStatus,
-        if (deliveredAt != null) 'deliveredAt': Timestamp.fromDate(deliveredAt!),
-        if (cancellationReason != null) 'cancellationReason': cancellationReason,
+        if (deliveredAt != null)
+          'deliveredAt': Timestamp.fromDate(deliveredAt!),
+        if (cancellationReason != null)
+          'cancellationReason': cancellationReason,
         'items': items
             .map((item) => {
                   'productId': item.product.id,
@@ -561,7 +629,14 @@ class Order {
         'estimatedDeliveryTime': estimatedDeliveryTime,
         if (deliveryDate != null)
           'deliveryDate': Timestamp.fromDate(deliveryDate!),
-        if (assignedAgentId != null) 'assignedAgentId': assignedAgentId,
+        if (assignedAgentId != null && assignedAgentId!.trim().isNotEmpty)
+          'assignedAgentId': assignedAgentId!.trim(),
+        if (assignedAgentName != null && assignedAgentName!.trim().isNotEmpty)
+          'assignedAgentName': assignedAgentName!.trim(),
+        if (assignedAt != null)
+          'assignedAt': Timestamp.fromDate(assignedAt!),
+        if (approvedAt != null)
+          'approvedAt': Timestamp.fromDate(approvedAt!),
         if (acceptedAt != null) 'acceptedAt': acceptedAt,
         if (pickupLocation != null) 'pickupLocation': pickupLocation,
         if (pickupPhone != null) 'pickupPhone': pickupPhone,
@@ -576,8 +651,7 @@ class Order {
         'orderDate': orderDate.toIso8601String(),
         if (deliveryDate != null)
           'deliveryDate': Timestamp.fromDate(deliveryDate!),
-        if (deliveredAt != null)
-          'deliveredAt': deliveredAt!.toIso8601String(),
+        if (deliveredAt != null) 'deliveredAt': deliveredAt!.toIso8601String(),
       };
 
   factory Order.fromMap(Map<String, dynamic> map, String id) =>
@@ -590,10 +664,13 @@ OrderStatus orderStatusFromString(String status) {
     case 'pending':
     case 'placed':
       return OrderStatus.placed;
-    case 'accepted':
     case 'confirmed':
       return OrderStatus.confirmed;
+    case 'assigned':
+      return OrderStatus.assigned;
+    case 'accepted':
     case 'preparing':
+    case 'pickup':
       return OrderStatus.preparing;
     case 'out for delivery':
     case 'outfordelivery':
@@ -614,6 +691,8 @@ String orderStatusToString(OrderStatus status) {
       return 'Pending';
     case OrderStatus.confirmed:
       return 'confirmed';
+    case OrderStatus.assigned:
+      return 'assigned';
     case OrderStatus.preparing:
       return 'preparing';
     case OrderStatus.outForDelivery:

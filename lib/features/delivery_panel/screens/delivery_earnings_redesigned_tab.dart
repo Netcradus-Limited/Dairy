@@ -160,8 +160,8 @@ class _DeliveryEarningsRedesignedTabState
               onPressed: () {
                 Scaffold.maybeOf(context)?.openDrawer();
               },
-              icon: const Icon(Icons.menu_rounded,
-                  color: Colors.white, size: 24),
+              icon:
+                  const Icon(Icons.menu_rounded, color: Colors.white, size: 24),
             ),
             actions: [
               Padding(
@@ -312,9 +312,7 @@ class _DeliveryEarningsRedesignedTabState
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 Text(
-                                  val > 0
-                                      ? '₹${val.toStringAsFixed(0)}'
-                                      : '₹0',
+                                  val > 0 ? '₹${val.toStringAsFixed(0)}' : '₹0',
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 10,
                                     fontWeight: isHighlight

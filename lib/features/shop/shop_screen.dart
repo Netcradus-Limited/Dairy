@@ -101,7 +101,9 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
             'title': c.title,
             'image': c.resolvedImageUrl.isNotEmpty
                 ? c.resolvedImageUrl
-                : (c.imageUrl.isNotEmpty ? c.imageUrl : 'assets/images/doodh.png'),
+                : (c.imageUrl.isNotEmpty
+                    ? c.imageUrl
+                    : 'assets/images/doodh.png'),
             'description': c.subtitle.isNotEmpty
                 ? c.subtitle
                 : 'Fresh and premium ${c.title} products delivered daily.',
@@ -318,15 +320,13 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                                     borderRadius: BorderRadius.circular(20),
                                     color: getBgColor(cat['id']),
                                     border: Border.all(
-                                      color:
-                                          getBorderColor(cat['id']),
+                                      color: getBorderColor(cat['id']),
                                       width: isSelected ? 3.0 : 1.5,
                                     ),
                                     boxShadow: [
                                       if (isSelected)
                                         BoxShadow(
-                                          color: getBorderColor(
-                                                  cat['id'])
+                                          color: getBorderColor(cat['id'])
                                               .withOpacity(0.25),
                                           blurRadius: 8,
                                           offset: const Offset(0, 3),
@@ -344,11 +344,13 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                                       padding: const EdgeInsets.all(2),
                                       child: ClipRRect(
                                         borderRadius: BorderRadius.circular(16),
-                                        child: (cat['image'] ?? '').startsWith('http')
+                                        child: (cat['image'] ?? '')
+                                                .startsWith('http')
                                             ? Image.network(
                                                 cat['image'] ?? '',
                                                 fit: BoxFit.contain,
-                                                errorBuilder: (context, error, stackTrace) {
+                                                errorBuilder: (context, error,
+                                                    stackTrace) {
                                                   return const Icon(
                                                     Icons.grid_view_rounded,
                                                     color: AppColors.primary,
@@ -361,8 +363,8 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                                                 fit: cat['id'] == 'cat_all'
                                                     ? BoxFit.cover
                                                     : BoxFit.contain,
-                                                errorBuilder:
-                                                    (context, error, stackTrace) {
+                                                errorBuilder: (context, error,
+                                                    stackTrace) {
                                                   return const Icon(
                                                     Icons.grid_view_rounded,
                                                     color: AppColors.primary,

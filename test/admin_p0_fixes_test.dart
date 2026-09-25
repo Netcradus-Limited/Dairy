@@ -5,7 +5,9 @@ import 'package:dairy_app/services/payment_service.dart';
 
 void main() {
   group('P0 Fixes: Task 1 - Payment Error Handling', () {
-    test('PaymentService.updatePaymentStatus throws meaningful exception on missing firestore', () async {
+    test(
+        'PaymentService.updatePaymentStatus throws meaningful exception on missing firestore',
+        () async {
       final service = PaymentService();
       // When firestore instance is not initialized or invalid, updatePaymentStatus must throw / propagate
       expect(
@@ -15,17 +17,22 @@ void main() {
     });
   });
 
-  group('P0 Fixes: Task 3 - Staff Pre-Provisioning & Auth UID Reconciliation', () {
-    test('StaffRolePresets provides all required permissions for manager, dispatcher, and admin', () {
+  group('P0 Fixes: Task 3 - Staff Pre-Provisioning & Auth UID Reconciliation',
+      () {
+    test(
+        'StaffRolePresets provides all required permissions for manager, dispatcher, and admin',
+        () {
       final adminPerms = StaffRolePresets.getPermissionsForRole('admin');
       final managerPerms = StaffRolePresets.getPermissionsForRole('manager');
-      final dispatcherPerms = StaffRolePresets.getPermissionsForRole('dispatcher');
+      final dispatcherPerms =
+          StaffRolePresets.getPermissionsForRole('dispatcher');
       final staffPerms = StaffRolePresets.getPermissionsForRole('staff');
 
       expect(adminPerms.length, equals(33));
       expect(managerPerms.contains(StaffPermission.createProduct), isTrue);
       expect(managerPerms.contains(StaffPermission.editCustomer), isTrue);
-      expect(dispatcherPerms.contains(StaffPermission.assignDeliveryAgent), isTrue);
+      expect(dispatcherPerms.contains(StaffPermission.assignDeliveryAgent),
+          isTrue);
       expect(dispatcherPerms.contains(StaffPermission.viewOrders), isTrue);
       expect(staffPerms.contains(StaffPermission.viewOrders), isTrue);
     });

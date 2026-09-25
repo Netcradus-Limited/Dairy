@@ -51,12 +51,15 @@ void main() {
         'assets/images/milk.png',
       );
       expect(
-        AppAssets.normalizeAssetPath('assets/assets/assets/images/paneernew.png'),
+        AppAssets.normalizeAssetPath(
+            'assets/assets/assets/images/paneernew.png'),
         'assets/images/paneernew.png',
       );
     });
 
-    test('Remote URLs (http, https, gs) remain untouched without assets/ prefix', () {
+    test(
+        'Remote URLs (http, https, gs) remain untouched without assets/ prefix',
+        () {
       expect(
         AppAssets.normalizeAssetPath('https://example.com/ghee.png'),
         'https://example.com/ghee.png',
@@ -66,7 +69,8 @@ void main() {
         'http://example.com/images/milk.png',
       );
       expect(
-        AppAssets.normalizeAssetPath('gs://sawariya.appspot.com/products/ghee.png'),
+        AppAssets.normalizeAssetPath(
+            'gs://sawariya.appspot.com/products/ghee.png'),
         'gs://sawariya.appspot.com/products/ghee.png',
       );
     });
@@ -262,7 +266,8 @@ void main() {
       expect(AppAssets.waterCategory, 'assets/images/w3.png');
     });
 
-    test('AppAssets.productImage resolves legacy/unbundled asset names safely', () {
+    test('AppAssets.productImage resolves legacy/unbundled asset names safely',
+        () {
       expect(
         AppAssets.productImage(imageUrl: 'assets/images/gheen.png'),
         'assets/images/nng.png',
@@ -281,7 +286,8 @@ void main() {
       );
     });
 
-    test('AppAssets.productImage resolves correctly for titles and categories', () {
+    test('AppAssets.productImage resolves correctly for titles and categories',
+        () {
       expect(AppAssets.productImage(title: 'Pure Ghee 1 L'),
           'assets/images/nng.png');
       expect(AppAssets.productImage(categoryKey: 'cat_ghee'),

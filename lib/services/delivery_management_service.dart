@@ -56,6 +56,7 @@ class DeliveryManagementService {
           break;
         case OrderStatus.placed:
         case OrderStatus.confirmed:
+        case OrderStatus.assigned:
         case OrderStatus.preparing:
         case OrderStatus.outForDelivery:
           pending++;

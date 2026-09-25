@@ -73,7 +73,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         final pendingDest = ref.read(pendingNotificationDestinationProvider);
         if (pendingDest != null && path != '/splash') {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            ref.read(pendingNotificationDestinationProvider.notifier).state = null;
+            ref.read(pendingNotificationDestinationProvider.notifier).state =
+                null;
             if (pendingDest.notificationId != null && user.id.isNotEmpty) {
               try {
                 ref

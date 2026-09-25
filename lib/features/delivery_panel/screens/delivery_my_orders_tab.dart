@@ -59,9 +59,7 @@ class _DeliveryMyOrdersTabState extends ConsumerState<DeliveryMyOrdersTab>
     // 1. Today: All active + requests + today's history
     final todayHistoryOrders = historyOrders.where((o) {
       final dt = o.deliveredTime ?? o.orderTime;
-      return dt.year == now.year &&
-          dt.month == now.month &&
-          dt.day == now.day;
+      return dt.year == now.year && dt.month == now.month && dt.day == now.day;
     }).toList();
 
     final todayOrders = [
@@ -104,8 +102,8 @@ class _DeliveryMyOrdersTabState extends ConsumerState<DeliveryMyOrdersTab>
               onPressed: () {
                 Scaffold.maybeOf(context)?.openDrawer();
               },
-              icon: const Icon(Icons.menu_rounded,
-                  color: Colors.white, size: 24),
+              icon:
+                  const Icon(Icons.menu_rounded, color: Colors.white, size: 24),
             ),
             actions: [
               IconButton(

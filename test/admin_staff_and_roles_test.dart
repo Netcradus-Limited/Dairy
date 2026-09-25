@@ -39,7 +39,8 @@ void main() {
 
       final dispatcherPerms =
           StaffRolePresets.getPermissionsForRole('dispatcher');
-      expect(dispatcherPerms.contains(StaffPermission.assignDeliveryAgent), isTrue);
+      expect(dispatcherPerms.contains(StaffPermission.assignDeliveryAgent),
+          isTrue);
       expect(dispatcherPerms.contains(StaffPermission.manageDelivery), isTrue);
       expect(dispatcherPerms.contains(StaffPermission.manageStaff), isFalse);
 
@@ -48,7 +49,9 @@ void main() {
       expect(staffPerms.contains(StaffPermission.deleteCustomer), isFalse);
     });
 
-    test('StaffMember hasPermission logic respects Super Admin override and custom perms', () {
+    test(
+        'StaffMember hasPermission logic respects Super Admin override and custom perms',
+        () {
       const superAdmin = StaffMember(
         id: 'staff_admin_1',
         name: 'Ramesh Admin',
@@ -77,7 +80,8 @@ void main() {
       );
 
       expect(dispatcher.isSuperAdmin, isFalse);
-      expect(dispatcher.hasPermission(StaffPermission.assignDeliveryAgent), isTrue);
+      expect(dispatcher.hasPermission(StaffPermission.assignDeliveryAgent),
+          isTrue);
       expect(dispatcher.hasPermission(StaffPermission.deleteProduct), isFalse);
       expect(dispatcher.hasPermission(StaffPermission.manageStaff), isFalse);
     });
@@ -91,7 +95,10 @@ void main() {
         role: 'manager',
         roleTitle: 'Operations Manager',
         status: 'Active',
-        permissions: [StaffPermission.viewDashboard, StaffPermission.viewOrders],
+        permissions: [
+          StaffPermission.viewDashboard,
+          StaffPermission.viewOrders
+        ],
       );
 
       final map = staff.toFirestore();
@@ -106,7 +113,8 @@ void main() {
   });
 
   group('Staff & Roles UI Widget & Layout Tests', () {
-    testWidgets('StaffRolesScreen renders header, KPI cards, search and filters',
+    testWidgets(
+        'StaffRolesScreen renders header, KPI cards, search and filters',
         (tester) async {
       tester.view.physicalSize = const Size(1366, 768);
       tester.view.devicePixelRatio = 1.0;
@@ -135,7 +143,8 @@ void main() {
       expect(find.byType(TextField), findsOneWidget);
     });
 
-    testWidgets('StaffRolesScreen renders without overflows across mobile (360px)',
+    testWidgets(
+        'StaffRolesScreen renders without overflows across mobile (360px)',
         (tester) async {
       tester.view.physicalSize = const Size(360, 640);
       tester.view.devicePixelRatio = 1.0;
@@ -159,7 +168,8 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('StaffRolesScreen opens Add Staff dialog with permission matrix',
+    testWidgets(
+        'StaffRolesScreen opens Add Staff dialog with permission matrix',
         (tester) async {
       tester.view.physicalSize = const Size(1366, 768);
       tester.view.devicePixelRatio = 1.0;

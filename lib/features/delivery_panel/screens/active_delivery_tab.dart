@@ -289,7 +289,8 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
                     ),
                   ),
                   Text(
-                    (order.estimatedTime.isNotEmpty && order.estimatedTime != '—')
+                    (order.estimatedTime.isNotEmpty &&
+                            order.estimatedTime != '—')
                         ? '${order.distance} · ${order.estimatedTime}'
                         : order.distance,
                     style: GoogleFonts.plusJakartaSans(
@@ -746,7 +747,8 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
                   _buildDetailRow('Phone', order.pickupPhone),
                   if (order.distance.isNotEmpty && order.distance != '—')
                     _buildDetailRow('Distance', order.distance),
-                  if (order.estimatedTime.isNotEmpty && order.estimatedTime != '—')
+                  if (order.estimatedTime.isNotEmpty &&
+                      order.estimatedTime != '—')
                     _buildDetailRow('ETA', order.estimatedTime),
                 ],
               ),
@@ -1028,7 +1030,8 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
         return StatefulBuilder(
           builder: (dContext, setDialogState) => AlertDialog(
             title: Text('Confirm Delivery',
-                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
+                style:
+                    GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
             content: Text('Mark order #${order.displayCode} as delivered?',
                 style: GoogleFonts.plusJakartaSans()),
             actions: [
@@ -1047,14 +1050,16 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
                         try {
                           final agentId = ref.read(deliveryAgentProvider).id;
                           if (order.isSubscription) {
-                            await SubscriptionService().completeSubscriptionDelivery(
+                            await SubscriptionService()
+                                .completeSubscriptionDelivery(
                               order.id,
                               agentId: agentId.isNotEmpty ? agentId : null,
                             );
                           } else {
                             await ref
                                 .read(orderServiceProvider)
-                                .updateOrderStatus(order.id, OrderStatus.delivered);
+                                .updateOrderStatus(
+                                    order.id, OrderStatus.delivered);
                           }
 
                           // Clear the agent's active orderId in Firestore & stop location tracking for that order
@@ -1065,7 +1070,8 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
                           }
                         } catch (e) {
                           if (mounted) {
-                            setState(() => _processingOrderIds.remove(order.id));
+                            setState(
+                                () => _processingOrderIds.remove(order.id));
                             navigator.pop();
                             messenger.showSnackBar(
                               const SnackBar(
@@ -1098,7 +1104,8 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
                         // Update agent earnings
                         final agent = ref.read(deliveryAgentProvider);
                         ref.read(deliveryAgentProvider.notifier).updateStats(
-                              completedDeliveries: agent.completedDeliveriesToday + 1,
+                              completedDeliveries:
+                                  agent.completedDeliveriesToday + 1,
                               earnings: agent.earningsToday + order.deliveryFee,
                             );
                         // Add earnings record
@@ -1116,13 +1123,15 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
                           navigator.pop();
                           messenger.showSnackBar(
                             SnackBar(
-                              content: Text('Order #${order.displayCode} delivered!'),
+                              content: Text(
+                                  'Order #${order.displayCode} delivered!'),
                               backgroundColor: AppColors.success,
                             ),
                           );
                         }
                       },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success),
                 child: isSubmitting
                     ? const SizedBox(
                         width: 16,

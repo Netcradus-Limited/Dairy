@@ -55,7 +55,9 @@ void main() {
       expect(payment.createdAt, isNull);
     });
 
-    test('Correctly handles COD payment with null transactionId and Pending status', () {
+    test(
+        'Correctly handles COD payment with null transactionId and Pending status',
+        () {
       final rawData = {
         'id': 'PAY_ORD_COD_01',
         'orderId': 'ORD_COD_01',
@@ -88,7 +90,8 @@ void main() {
         'transactionId': 'pay_MNO8392019',
       };
 
-      final payment = DairyPayment.fromFirestore(rawData, 'PAY_ORD_RAZORPAY_01');
+      final payment =
+          DairyPayment.fromFirestore(rawData, 'PAY_ORD_RAZORPAY_01');
 
       expect(payment.method, equals('Razorpay PG'));
       expect(payment.status, equals('Success')); // Normalized from 'Paid'
@@ -140,7 +143,9 @@ void main() {
       expect(map['createdAt'], isA<Timestamp>());
     });
 
-    test('Checkout order-creation path generates compliant payment document for COD', () {
+    test(
+        'Checkout order-creation path generates compliant payment document for COD',
+        () {
       const orderDocId = 'ORDER_DOC_9812';
       const orderCode = 'ABC123';
       const userId = 'cust_uid_456';
@@ -165,7 +170,8 @@ void main() {
         'transactionId': isCash ? null : 'TXN_$orderDocId',
       };
 
-      final payment = DairyPayment.fromFirestore(paymentData, 'PAY_$orderDocId');
+      final payment =
+          DairyPayment.fromFirestore(paymentData, 'PAY_$orderDocId');
 
       expect(payment.id, equals('PAY_ORDER_DOC_9812'));
       expect(payment.orderId, equals('ORDER_DOC_9812'));
@@ -179,7 +185,9 @@ void main() {
       expect(payment.transactionId, isNull);
     });
 
-    test('Checkout order-creation path generates compliant payment document for Online Payment', () {
+    test(
+        'Checkout order-creation path generates compliant payment document for Online Payment',
+        () {
       const orderDocId = 'ORDER_DOC_9813';
       const orderCode = 'XYZ789';
       const userId = 'cust_uid_789';
@@ -204,7 +212,8 @@ void main() {
         'transactionId': isCash ? null : 'TXN_$orderDocId',
       };
 
-      final payment = DairyPayment.fromFirestore(paymentData, 'PAY_$orderDocId');
+      final payment =
+          DairyPayment.fromFirestore(paymentData, 'PAY_$orderDocId');
 
       expect(payment.id, equals('PAY_ORDER_DOC_9813'));
       expect(payment.orderId, equals('ORDER_DOC_9813'));

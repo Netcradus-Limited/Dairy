@@ -3,6 +3,10 @@ abstract class AppStrings {
   static const String appName = 'Sawariya Dairy';
   static const String appTagline = 'Fresh & Pure Dairy Delivered Daily';
 
+  // Support & Contact
+  static const String supportEmail = 'support@sawariyasdairy.com';
+  static const String supportEmailSubject = 'Sawariya Dairy Customer Support';
+
   // Navigation
   static const String navHome = 'Home';
   static const String navShop = 'Shop';
