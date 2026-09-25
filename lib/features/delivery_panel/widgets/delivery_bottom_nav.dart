@@ -30,21 +30,24 @@ class DeliveryBottomNav extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(0, Icons.home_outlined, Icons.home_rounded, 'Home'),
-              _buildNavItem(1, Icons.assignment_outlined,
-                  Icons.assignment_rounded, 'My Orders'),
-              _buildNavItem(2, Icons.location_on_outlined,
-                  Icons.location_on_rounded, 'Map'),
-              _buildNavItem(3, Icons.account_balance_wallet_outlined,
-                  Icons.account_balance_wallet_rounded, 'Earnings'),
-              _buildNavItem(
-                  4, Icons.person_outline_rounded, Icons.person_rounded, 'Profile'),
-            ],
+        child: Material(
+          color: Colors.transparent,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(0, Icons.home_outlined, Icons.home_rounded, 'Home'),
+                _buildNavItem(1, Icons.assignment_outlined,
+                    Icons.assignment_rounded, 'My Orders'),
+                _buildNavItem(2, Icons.location_on_outlined,
+                    Icons.location_on_rounded, 'Map'),
+                _buildNavItem(3, Icons.account_balance_wallet_outlined,
+                    Icons.account_balance_wallet_rounded, 'Earnings'),
+                _buildNavItem(
+                    4, Icons.person_outline_rounded, Icons.person_rounded, 'Profile'),
+              ],
+            ),
           ),
         ),
       ),

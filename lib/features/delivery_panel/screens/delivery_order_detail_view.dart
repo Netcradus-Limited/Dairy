@@ -581,7 +581,8 @@ class _DeliveryOrderDetailViewState
                             icon: const Icon(Icons.phone_forwarded_rounded,
                                 color: DeliveryTheme.primary, size: 20),
                             padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
+                            constraints: const BoxConstraints(
+                                minWidth: 36, minHeight: 36),
                           ),
                         ],
                       ),

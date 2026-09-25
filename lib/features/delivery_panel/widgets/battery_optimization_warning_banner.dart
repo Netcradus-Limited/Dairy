@@ -30,11 +30,11 @@ class BatteryOptimizationWarningBanner extends ConsumerWidget {
 
     return Container(
       width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: bgColor,
-        border: Border(
-          bottom: BorderSide(color: borderColor, width: 1.0),
-        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor, width: 1.0),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: LayoutBuilder(

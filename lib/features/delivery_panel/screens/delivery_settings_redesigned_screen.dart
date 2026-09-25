@@ -203,7 +203,12 @@ class _DeliverySettingsRedesignedScreenState
               children: [
                 Container(
                   decoration: DeliveryTheme.cardDecoration(),
-                  child: Column(
+                  child: Material(
+                    color: DeliveryTheme.cardBg,
+                    borderRadius:
+                        BorderRadius.circular(DeliveryTheme.cardRadius),
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
                     children: [
                       // 1. Notifications toggle (Persisted via SettingsProvider)
                       _buildSwitchTile(
@@ -313,6 +318,7 @@ class _DeliverySettingsRedesignedScreenState
                     ],
                   ),
                 ),
+              ),
                 const SizedBox(height: 36),
 
                 // Bottom Branding matching Screen 8: "Delivering Freshness Always ♡"

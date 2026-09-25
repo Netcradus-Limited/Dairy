@@ -90,10 +90,6 @@ class _DeliveryHomeTabState extends ConsumerState<DeliveryHomeTab> {
             },
           ),
 
-          // Warnings: Battery Optimization & GPS
-          const GpsStatusWarningBanner(),
-          const BatteryOptimizationWarningBanner(),
-
           // Main Scrollable Area
           Expanded(
             child: RefreshIndicator(
@@ -106,6 +102,10 @@ class _DeliveryHomeTabState extends ConsumerState<DeliveryHomeTab> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 children: [
+                  // Warnings: Battery Optimization & GPS
+                  const GpsStatusWarningBanner(),
+                  const BatteryOptimizationWarningBanner(),
+
                   // Offline prompt if offline
                   if (!isOnline) _buildOfflineNotice(context),
 

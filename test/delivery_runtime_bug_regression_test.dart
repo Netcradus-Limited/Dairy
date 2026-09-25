@@ -10,6 +10,27 @@ import 'package:dairy_app/models/product.dart';
 import 'package:dairy_app/models/user.dart';
 import 'package:dairy_app/providers/user_provider.dart';
 import 'package:dairy_app/screens/notifications/notifications_screen.dart';
+import 'package:dairy_app/features/delivery_panel/screens/delivery_home_tab.dart';
+import 'package:dairy_app/features/delivery_panel/screens/delivery_map_tab.dart';
+import 'package:dairy_app/features/delivery_panel/widgets/gps_status_warning_banner.dart';
+import 'package:dairy_app/features/delivery_panel/widgets/battery_optimization_warning_banner.dart';
+import 'package:dairy_app/providers/delivery_live_location_provider.dart';
+import 'package:dairy_app/providers/delivery_provider.dart';
+import 'package:dairy_app/providers/battery_optimization_provider.dart';
+import 'package:dairy_app/services/battery_optimization_service.dart';
+
+class _MockDeliveryNotifier extends StateNotifier<DeliveryAgent>
+    implements DeliveryNotifier {
+  _MockDeliveryNotifier(super.state);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _MockBatteryOptimizationService extends BatteryOptimizationService {
+  @override
+  Future<bool> isIgnoringBatteryOptimizations() async => false;
+}
 
 void main() {
   group('Delivery Panel Runtime Bug Regression Tests', () {
@@ -258,6 +279,123 @@ void main() {
 
       expect(customerUser.isDelivery, isFalse);
       expect(customerUser.canAccessAdminPortal, isFalse);
+    });
+
+    // 11. GPS and battery warning banners render without RenderFlex overflow
+    testWidgets(
+        '11. DeliveryHomeTab renders warning banners inside scrollable area without RenderFlex overflow',
+        (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final container = ProviderContainer(
+        overrides: [
+          deliveryAgentProvider.overrideWith(
+            (ref) => _MockDeliveryNotifier(
+              DeliveryAgent.empty('agent_test_1').copyWith(
+                name: 'Karl Rider',
+                phone: '+919876543210',
+                vehicle: 'Pulsar',
+                status: DeliveryStatus.onDuty,
+              ),
+            ),
+          ),
+          gpsTrackingStatusProvider.overrideWith(
+            (ref) => GpsTrackingStatusNotifier(GpsTrackingStatus.servicesDisabled),
+          ),
+          batteryOptimizationProvider.overrideWith(
+            (ref) => BatteryOptimizationNotifier(
+              _MockBatteryOptimizationService(),
+              initial: const BatteryOptimizationState(
+                isRestricted: true,
+                isDismissed: false,
+              ),
+            ),
+          ),
+          deliveryActiveOrdersStreamProvider.overrideWith(
+            (ref) => Stream.value(<DeliveryOrder>[]),
+          ),
+          deliveryRequestsStreamProvider.overrideWithValue(
+            <DeliveryOrder>[],
+          ),
+          deliveryHistoryStreamProvider.overrideWithValue(
+            const AsyncValue.data(<DeliveryOrder>[]),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: DeliveryHomeTab(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify no RenderFlex overflow exception
+      expect(tester.takeException(), isNull);
+
+      // Verify exactly ONE GPS warning banner and ONE battery optimization warning banner
+      expect(find.byType(GpsStatusWarningBanner), findsOneWidget);
+      expect(find.byType(BatteryOptimizationWarningBanner), findsOneWidget);
+      expect(find.text('GPS is Turned Off'), findsOneWidget);
+      expect(find.text('Background Location Warning'), findsOneWidget);
+    });
+
+    // 12. Delivery map tab displays "GPS Unavailable" when location is disabled
+    testWidgets(
+        '12. DeliveryMapTab displays GPS Unavailable and waiting for location when GPS is off',
+        (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          deliveryActiveOrdersStreamProvider.overrideWith(
+            (ref) => Stream.value([
+              DeliveryOrder(
+                id: 'order_gps_test',
+                orderId: 'order_gps_test',
+                orderCode: 'ORD-1234',
+                customerName: 'Test Customer',
+                customerAddress: 'Vijay Nagar, Indore',
+                customerPhone: '+919876543210',
+                pickupLocation: 'Sawariya Dairy Hub',
+                pickupPhone: '+91 731 400 5000',
+                amount: 250,
+                deliveryFee: 30.0,
+                status: DeliveryOrderStatus.outForDelivery,
+                items: const ['Milk 1L'],
+                latitude: 22.7533,
+                longitude: 75.8937,
+                orderTime: DateTime.now(),
+                distance: '2.5 km',
+                estimatedTime: '15 mins',
+              ),
+            ]),
+          ),
+          deliveryAgentLocationStreamProvider.overrideWith(
+            (ref) => Stream.value(null),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: DeliveryMapTab(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('GPS Unavailable'), findsOneWidget);
+      expect(find.text('Waiting for location'), findsOneWidget);
     });
   });
 }

@@ -411,58 +411,64 @@ class _DeliveryProfileRedesignedTabState
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Container(
                   decoration: DeliveryTheme.cardDecoration(),
-                  child: Column(
-                    children: [
-                      _buildMenuTile(
-                        icon: Icons.person_outline_rounded,
-                        title: 'My Profile',
-                        onTap: () => _showAgentDetailsDialog(agent),
-                      ),
-                      const Divider(
-                          height: 1, indent: 54, color: Color(0xFFECEFF1)),
-                      _buildMenuTile(
-                        icon: Icons.assignment_outlined,
-                        title: 'Delivery History',
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  const DeliveryHistoryRedesignedScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      const Divider(
-                          height: 1, indent: 54, color: Color(0xFFECEFF1)),
-                      _buildMenuTile(
-                        icon: Icons.account_balance_wallet_outlined,
-                        title: 'Earnings',
-                        onTap: () {
-                          ref.read(deliveryPanelTabProvider.notifier).setTab(3);
-                        },
-                      ),
-                      const Divider(
-                          height: 1, indent: 54, color: Color(0xFFECEFF1)),
-                      _buildMenuTile(
-                        icon: Icons.help_outline_rounded,
-                        title: 'Help & Support',
-                        onTap: _showSupportDialog,
-                      ),
-                      const Divider(
-                          height: 1, indent: 54, color: Color(0xFFECEFF1)),
-                      _buildMenuTile(
-                        icon: Icons.settings_outlined,
-                        title: 'Settings',
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  const DeliverySettingsRedesignedScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                  child: Material(
+                    color: DeliveryTheme.cardBg,
+                    borderRadius:
+                        BorderRadius.circular(DeliveryTheme.cardRadius),
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      children: [
+                        _buildMenuTile(
+                          icon: Icons.person_outline_rounded,
+                          title: 'My Profile',
+                          onTap: () => _showAgentDetailsDialog(agent),
+                        ),
+                        const Divider(
+                            height: 1, indent: 54, color: Color(0xFFECEFF1)),
+                        _buildMenuTile(
+                          icon: Icons.assignment_outlined,
+                          title: 'Delivery History',
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const DeliveryHistoryRedesignedScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        const Divider(
+                            height: 1, indent: 54, color: Color(0xFFECEFF1)),
+                        _buildMenuTile(
+                          icon: Icons.account_balance_wallet_outlined,
+                          title: 'Earnings',
+                          onTap: () {
+                            ref.read(deliveryPanelTabProvider.notifier).setTab(3);
+                          },
+                        ),
+                        const Divider(
+                            height: 1, indent: 54, color: Color(0xFFECEFF1)),
+                        _buildMenuTile(
+                          icon: Icons.help_outline_rounded,
+                          title: 'Help & Support',
+                          onTap: _showSupportDialog,
+                        ),
+                        const Divider(
+                            height: 1, indent: 54, color: Color(0xFFECEFF1)),
+                        _buildMenuTile(
+                          icon: Icons.settings_outlined,
+                          title: 'Settings',
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const DeliverySettingsRedesignedScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

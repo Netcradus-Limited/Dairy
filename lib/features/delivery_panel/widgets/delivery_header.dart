@@ -81,7 +81,8 @@ class DeliveryHomeHeader extends ConsumerWidget {
                         icon: const Icon(Icons.menu_rounded,
                             color: Colors.white, size: 26),
                         padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
+                        constraints:
+                            const BoxConstraints(minWidth: 40, minHeight: 40),
                       ),
                       // Notification bell with unread badge
                       Stack(
@@ -98,7 +99,8 @@ class DeliveryHomeHeader extends ConsumerWidget {
                             icon: const Icon(Icons.notifications_none_rounded,
                                 color: Colors.white, size: 26),
                             padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
+                            constraints: const BoxConstraints(
+                                minWidth: 40, minHeight: 40),
                           ),
                           if (unreadCount > 0)
                             Positioned(

@@ -90,52 +90,96 @@ class DeliveryTodaySummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: DeliverySummaryCard(
-            count: '$totalOrders',
-            label: "Today's Orders",
-            icon: Icons.inventory_2_outlined,
-            iconColor: DeliveryTheme.metricOrdersIcon,
-            iconBgColor: DeliveryTheme.metricOrdersBg,
-            onTap: () => onCardTap?.call(0),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: DeliverySummaryCard(
-            count: '$deliveredCount',
-            label: 'Delivered',
-            icon: Icons.check_circle_outline_rounded,
-            iconColor: DeliveryTheme.metricDeliveredIcon,
-            iconBgColor: DeliveryTheme.metricDeliveredBg,
-            onTap: () => onCardTap?.call(1),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: DeliverySummaryCard(
-            count: '$inProgressCount',
-            label: 'In Progress',
-            icon: Icons.access_time_rounded,
-            iconColor: DeliveryTheme.metricProgressIcon,
-            iconBgColor: DeliveryTheme.metricProgressBg,
-            onTap: () => onCardTap?.call(2),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: DeliverySummaryCard(
-            count: '$pendingCount',
-            label: 'Pending',
-            icon: Icons.error_outline_rounded,
-            iconColor: DeliveryTheme.metricPendingIcon,
-            iconBgColor: DeliveryTheme.metricPendingBg,
-            onTap: () => onCardTap?.call(3),
-          ),
-        ),
-      ],
+    // Use LayoutBuilder to give each card a minimum sensible width.
+    // On small screens the row becomes horizontally scrollable.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Minimum card width: 72px, ideal is equal split.
+        const double minCardWidth = 72.0;
+        const double gap = 8.0;
+        const int cardCount = 4;
+        final double availableWidth = constraints.maxWidth;
+        final double equalWidth =
+            (availableWidth - gap * (cardCount - 1)) / cardCount;
+        final bool needsScroll = equalWidth < minCardWidth;
+
+        Widget row = Row(
+          mainAxisSize: needsScroll ? MainAxisSize.min : MainAxisSize.max,
+          children: [
+            _card(
+              count: '$totalOrders',
+              label: "Today's Orders",
+              icon: Icons.inventory_2_outlined,
+              iconColor: DeliveryTheme.metricOrdersIcon,
+              iconBgColor: DeliveryTheme.metricOrdersBg,
+              width: needsScroll ? minCardWidth + 8 : null,
+              onTap: () => onCardTap?.call(0),
+            ),
+            const SizedBox(width: gap),
+            _card(
+              count: '$deliveredCount',
+              label: 'Delivered',
+              icon: Icons.check_circle_outline_rounded,
+              iconColor: DeliveryTheme.metricDeliveredIcon,
+              iconBgColor: DeliveryTheme.metricDeliveredBg,
+              width: needsScroll ? minCardWidth + 8 : null,
+              onTap: () => onCardTap?.call(1),
+            ),
+            const SizedBox(width: gap),
+            _card(
+              count: '$inProgressCount',
+              label: 'In Progress',
+              icon: Icons.access_time_rounded,
+              iconColor: DeliveryTheme.metricProgressIcon,
+              iconBgColor: DeliveryTheme.metricProgressBg,
+              width: needsScroll ? minCardWidth + 8 : null,
+              onTap: () => onCardTap?.call(2),
+            ),
+            const SizedBox(width: gap),
+            _card(
+              count: '$pendingCount',
+              label: 'Pending',
+              icon: Icons.error_outline_rounded,
+              iconColor: DeliveryTheme.metricPendingIcon,
+              iconBgColor: DeliveryTheme.metricPendingBg,
+              width: needsScroll ? minCardWidth + 8 : null,
+              onTap: () => onCardTap?.call(3),
+            ),
+          ],
+        );
+
+        if (needsScroll) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: row,
+          );
+        }
+        return row;
+      },
     );
   }
+
+  Widget _card({
+    required String count,
+    required String label,
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBgColor,
+    required VoidCallback? onTap,
+    double? width,
+  }) {
+    final card = DeliverySummaryCard(
+      count: count,
+      label: label,
+      icon: icon,
+      iconColor: iconColor,
+      iconBgColor: iconBgColor,
+      onTap: onTap,
+    );
+    if (width != null) {
+      return SizedBox(width: width, child: card);
+    }
+    return Expanded(child: card);
+  }
+
 }

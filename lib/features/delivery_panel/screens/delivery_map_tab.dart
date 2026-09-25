@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../models/delivery_boy_model.dart';
 import '../../../providers/delivery_provider.dart';
 import '../../../services/delivery_tracking_service.dart';
+import '../../../services/location_service.dart';
 import '../theme/delivery_theme.dart';
 import '../widgets/delivery_header.dart';
 
@@ -115,31 +116,45 @@ class _DeliveryMapTabState extends ConsumerState<DeliveryMapTab> {
     final String formattedEta = distanceKm != null
         ? DeliveryTrackingService.calculateEstimatedTime(distanceKm,
             fallbackSlot: activeOrder?.estimatedTime)
-        : (activeOrder?.estimatedTime.isNotEmpty == true
-            ? activeOrder!.estimatedTime
-            : '—');
+        : (hasRealAgentGps
+            ? (activeOrder?.estimatedTime.isNotEmpty == true
+                ? activeOrder!.estimatedTime
+                : '—')
+            : 'Waiting for GPS');
 
-    // Auto-center once coordinates arrive
-    if (!_hasCentered && agentLocationAsync.valueOrNull != null) {
+    // Auto-center once real coordinates arrive
+    if (!_hasCentered && hasRealAgentGps) {
       _hasCentered = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _reCenter(agentPos);
       });
     }
 
-    // Route polyline points (only if real customer destination exists)
-    final routePoints =
-        customerPos != null ? [agentPos, customerPos] : <LatLng>[];
+    // Route polyline points (only if BOTH real agent GPS and customer destination exist)
+    final routePoints = (hasRealAgentGps && customerPos != null)
+        ? [agentPos, customerPos]
+        : <LatLng>[];
 
     return Scaffold(
       backgroundColor: DeliveryTheme.background,
-      body: Stack(
-        children: [
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Dynamically compute FAB offset so it always sits above the delivery card.
+          // Bottom card: 24px margin + ~170px height = ~194px from screen bottom.
+          // FAB sits 10px above the card = 204px.
+          const double fabBottomWithCard = 204.0;
+          const double fabBottomNoCard = 90.0;
+          final double fabBottom =
+              activeOrder != null ? fabBottomWithCard : fabBottomNoCard;
+          return Stack(
+            children: [
           // 1. flutter_map with OpenStreetMap Tiles
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: agentPos,
+              initialCenter: hasRealAgentGps
+                  ? agentPos
+                  : (customerPos ?? agentPos),
               initialZoom: 14.5,
               maxZoom: 18.0,
               minZoom: 4.0,
@@ -150,7 +165,7 @@ class _DeliveryMapTabState extends ConsumerState<DeliveryMapTab> {
                 userAgentPackageName: 'com.sawariyadairy.app',
                 maxZoom: 19,
               ),
-              // Route polyline in bold green (only if customer pin available)
+              // Route polyline in bold green (only if customer pin and real GPS available)
               if (routePoints.length >= 2)
                 PolylineLayer(
                   polylines: [
@@ -164,66 +179,88 @@ class _DeliveryMapTabState extends ConsumerState<DeliveryMapTab> {
               // Markers Layer
               MarkerLayer(
                 markers: [
-                  // Agent marker (green circle with delivery scooter/house icon)
-                  Marker(
-                    point: agentPos,
-                    width: 50,
-                    height: 50,
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color(0x33000000),
-                            blurRadius: 8,
-                            offset: Offset(0, 3),
-                          ),
-                        ],
-                      ),
+                  // Agent marker: only rendered when real GPS or last known position is available
+                  if (hasRealAgentGps)
+                    Marker(
+                      point: agentPos,
+                      width: 50,
+                      height: 50,
                       child: Container(
+                        padding: const EdgeInsets.all(3),
                         decoration: const BoxDecoration(
-                          color: DeliveryTheme.primary,
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0x33000000),
+                              blurRadius: 8,
+                              offset: Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            color: DeliveryTheme.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.local_shipping_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    )
+                  else if (rawAgentLocation != null)
+                    Marker(
+                      point: rawAgentLocation,
+                      width: 44,
+                      height: 44,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(
+                          color: Colors.white70,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
-                          Icons.local_shipping_rounded,
-                          color: Colors.white,
-                          size: 24,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF9E9E9E),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.history_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
                       ),
                     ),
-                  ),
                   // Destination marker (red pin) — only when customerPos is valid
                   if (customerPos != null)
                     Marker(
                       point: customerPos,
                       width: 44,
                       height: 44,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFE53935),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Color(0x44E53935),
-                                  blurRadius: 6,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.location_on_rounded,
-                              color: Colors.white,
-                              size: 20,
-                            ),
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFE53935),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Color(0x44E53935),
+                                blurRadius: 6,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
                           ),
-                        ],
+                          child: const Icon(
+                            Icons.location_on_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
                       ),
                     ),
                 ],
@@ -257,72 +294,138 @@ class _DeliveryMapTabState extends ConsumerState<DeliveryMapTab> {
             ),
           ),
 
-          // 3. Floating Route Info Badge (Dynamic ETA • Distance)
+          // 3. Floating Route Info Badge (Dynamic ETA • Distance or GPS Status)
           if (activeOrder != null)
             Positioned(
               top: 130,
               left: 0,
               right: 0,
               child: Center(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x1F000000),
-                        blurRadius: 10,
-                        offset: Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.timer_outlined,
-                          size: 16, color: DeliveryTheme.primary),
-                      const SizedBox(width: 6),
-                      Text(
-                        formattedEta,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: DeliveryTheme.textDark,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                  onTap: hasRealAgentGps
+                      ? null
+                      : () async {
+                          await ref
+                              .read(locationServiceProvider)
+                              .openLocationSettings();
+                        },
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x1F000000),
+                          blurRadius: 10,
+                          offset: Offset(0, 3),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        width: 4,
-                        height: 4,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFB0BEC5),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        formattedDistance,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: DeliveryTheme.textSecondary,
-                        ),
-                      ),
-                    ],
+                      ],
+                      border: hasRealAgentGps
+                          ? null
+                          : Border.all(
+                              color: const Color(0xFFFDE68A), width: 1.2),
+                    ),
+                    child: hasRealAgentGps
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.timer_outlined,
+                                  size: 16, color: DeliveryTheme.primary),
+                              const SizedBox(width: 6),
+                              Text(
+                                formattedEta,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: DeliveryTheme.textDark,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                width: 4,
+                                height: 4,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFB0BEC5),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                formattedDistance,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: DeliveryTheme.textSecondary,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.location_off_rounded,
+                                  size: 16, color: Color(0xFFD97706)),
+                              const SizedBox(width: 6),
+                              Text(
+                                'GPS Unavailable',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFFB45309),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                width: 4,
+                                height: 4,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFB0BEC5),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Waiting for location',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: DeliveryTheme.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
                   ),
                 ),
               ),
             ),
+          ),
 
           // 4. Floating GPS Target / Re-center Button
           Positioned(
             right: 16,
-            bottom: activeOrder != null ? 220 : 90,
+            bottom: fabBottom,
             child: FloatingActionButton.small(
               heroTag: 'map_recenter_fab',
-              onPressed: () => _reCenter(agentPos),
+              onPressed: () {
+                if (hasRealAgentGps) {
+                  _reCenter(agentPos);
+                } else if (customerPos != null) {
+                  _reCenter(customerPos);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          'GPS is turned off. Please enable device location.'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
               backgroundColor: Colors.white,
               foregroundColor: DeliveryTheme.primary,
               shape: RoundedRectangleBorder(
@@ -435,40 +538,40 @@ class _DeliveryMapTabState extends ConsumerState<DeliveryMapTab> {
                     ),
                     const Divider(height: 20, color: Color(0xFFECEFF1)),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.access_time_rounded,
-                                size: 18, color: DeliveryTheme.primary),
-                            const SizedBox(width: 6),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Estimated Arrival',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w500,
-                                    color: DeliveryTheme.textMuted,
-                                  ),
+                        const Icon(Icons.access_time_rounded,
+                            size: 18, color: DeliveryTheme.primary),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Estimated Arrival',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                  color: DeliveryTheme.textMuted,
                                 ),
-                                Text(
-                                  activeOrder.estimatedTime.isNotEmpty
-                                      ? activeOrder.estimatedTime
-                                      : (formattedEta != '—'
-                                          ? formattedEta
-                                          : 'Pending'),
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w800,
-                                    color: DeliveryTheme.textDark,
-                                  ),
+                              ),
+                              Text(
+                                activeOrder.estimatedTime.isNotEmpty
+                                    ? activeOrder.estimatedTime
+                                    : (formattedEta != '—'
+                                        ? formattedEta
+                                        : 'Pending'),
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: DeliveryTheme.textDark,
                                 ),
-                              ],
-                            ),
-                          ],
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
@@ -496,8 +599,10 @@ class _DeliveryMapTabState extends ConsumerState<DeliveryMapTab> {
                 ),
               ),
             ),
-        ],
-      ),
+            ], // Stack children end
+          ); // Stack end
+        }, // LayoutBuilder builder end
+      ), // LayoutBuilder end
     );
   }
 }

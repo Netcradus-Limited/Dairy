@@ -41,27 +41,30 @@ class _DeliveryEarningsRedesignedTabState
               ),
               const SizedBox(height: 12),
               ...['Today', 'This Week', 'This Month'].map(
-                (filter) => ListTile(
-                  title: Text(
-                    filter,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 14,
-                      fontWeight: _selectedFilter == filter
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                      color: _selectedFilter == filter
-                          ? DeliveryTheme.primary
-                          : DeliveryTheme.textDark,
+                (filter) => Material(
+                  color: Colors.transparent,
+                  child: ListTile(
+                    title: Text(
+                      filter,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        fontWeight: _selectedFilter == filter
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                        color: _selectedFilter == filter
+                            ? DeliveryTheme.primary
+                            : DeliveryTheme.textDark,
+                      ),
                     ),
+                    trailing: _selectedFilter == filter
+                        ? const Icon(Icons.check_rounded,
+                            color: DeliveryTheme.primary)
+                        : null,
+                    onTap: () {
+                      setState(() => _selectedFilter = filter);
+                      Navigator.pop(ctx);
+                    },
                   ),
-                  trailing: _selectedFilter == filter
-                      ? const Icon(Icons.check_rounded,
-                          color: DeliveryTheme.primary)
-                      : null,
-                  onTap: () {
-                    setState(() => _selectedFilter = filter);
-                    Navigator.pop(ctx);
-                  },
                 ),
               ),
             ],
@@ -432,8 +435,10 @@ class _DeliveryEarningsRedesignedTabState
   }
 
   Widget _buildOptionRow(IconData icon, String title, VoidCallback onTap) {
-    return ListTile(
-      onTap: onTap,
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        onTap: onTap,
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
@@ -455,6 +460,7 @@ class _DeliveryEarningsRedesignedTabState
         color: Color(0xFFB0BEC5),
         size: 20,
       ),
-    );
+    ),
+  );
   }
 }

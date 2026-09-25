@@ -22,10 +22,8 @@ import 'screens/delivery_profile_redesigned_tab.dart';
 import 'screens/delivery_history_redesigned_screen.dart';
 import 'screens/delivery_settings_redesigned_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide User;
-import 'widgets/battery_optimization_warning_banner.dart';
 import 'widgets/delivery_agent_avatar.dart';
 import 'widgets/delivery_bottom_nav.dart';
-import 'widgets/gps_status_warning_banner.dart';
 
 class _BottomNavItem {
   final IconData icon;
@@ -50,7 +48,6 @@ class DeliveryPanelScreen extends ConsumerStatefulWidget {
 
 class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
     with WidgetsBindingObserver {
-  final Set<int> _loadedTabs = {};
 
   static const List<_BottomNavItem> _navItems = [
     _BottomNavItem(
@@ -146,23 +143,13 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
     final currentIndex = ref.watch(deliveryPanelTabProvider);
     final isNetworkOnline = ref.watch(networkConnectivityProvider);
 
-    // Lazily mark current tab as loaded so unvisited tabs (e.g. Map) don't mount eagerly
-    _loadedTabs.add(currentIndex);
-
     final bodyContent = Column(
       children: [
         if (!isNetworkOnline) _buildOfflineBanner(context),
-        const GpsStatusWarningBanner(),
-        const BatteryOptimizationWarningBanner(),
         Expanded(
           child: IndexedStack(
             index: currentIndex,
-            children: List<Widget>.generate(
-              _pages.length,
-              (i) => _loadedTabs.contains(i)
-                  ? _pages[i]
-                  : const SizedBox.shrink(),
-            ),
+            children: _pages,
           ),
         ),
       ],
@@ -200,8 +187,11 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
   Widget _buildAppDrawer(BuildContext context) {
     final agent = ref.watch(deliveryAgentProvider);
     return Drawer(
-      child: Column(
-        children: [
+      child: Material(
+        color: Colors.white,
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
           UserAccountsDrawerHeader(
             decoration: const BoxDecoration(
               gradient: DeliveryTheme.headerGradient,
@@ -300,25 +290,25 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
               );
             },
           ),
-          const Spacer(),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.logout_rounded,
-                color: DeliveryTheme.statusCancelledText),
-            title: Text(
-              'Logout',
-              style: GoogleFonts.plusJakartaSans(
-                color: DeliveryTheme.statusCancelledText,
-                fontWeight: FontWeight.w700,
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout_rounded,
+                  color: DeliveryTheme.statusCancelledText),
+              title: Text(
+                'Logout',
+                style: GoogleFonts.plusJakartaSans(
+                  color: DeliveryTheme.statusCancelledText,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
+              onTap: () {
+                Navigator.pop(context);
+                _confirmLogout();
+              },
             ),
-            onTap: () {
-              Navigator.pop(context);
-              _confirmLogout();
-            },
-          ),
-          const SizedBox(height: 12),
-        ],
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }
