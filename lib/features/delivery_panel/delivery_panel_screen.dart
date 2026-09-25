@@ -158,6 +158,7 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
     if (isDesktop) {
       return Scaffold(
         body: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildDesktopSidebar(currentIndex),
             Expanded(
@@ -424,24 +425,70 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
     final cardBorder = AppColors.cardBorderOf(context);
 
     return Container(
-      width: 280,
-      color: cardBg,
+      width: 260,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        color: cardBg,
+        border: Border(right: BorderSide(color: cardBorder)),
+      ),
       child: Column(
         children: [
           Container(
-            height: 140,
-            padding: const EdgeInsets.all(24),
+            height: 120,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
               color: cardBg,
               border: Border(bottom: BorderSide(color: cardBorder)),
             ),
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.end,
+            child: Row(
               children: [
-                CircleAvatar(
-                  radius: 32,
-                  backgroundColor: Colors.transparent,
-                  backgroundImage: AssetImage('assets/images/nicon.png'),
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: cardBorder),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Image.asset(
+                    'assets/images/newlogo.png',
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.local_shipping_rounded,
+                      color: DeliveryTheme.primary,
+                      size: 26,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Sawariya Dairy',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'Delivery Partner',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: DeliveryTheme.primary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

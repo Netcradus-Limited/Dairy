@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/responsive/responsive_layout.dart';
 import '../../../models/delivery_boy_model.dart';
 import '../../../providers/delivery_provider.dart';
 import '../../../services/delivery_tracking_service.dart';
@@ -135,474 +136,530 @@ class _DeliveryMapTabState extends ConsumerState<DeliveryMapTab> {
         ? [agentPos, customerPos]
         : <LatLng>[];
 
+    final isDesktop = ResponsiveLayout.isDesktop(context);
+
     return Scaffold(
       backgroundColor: DeliveryTheme.background,
       body: LayoutBuilder(
         builder: (context, constraints) {
-          // Dynamically compute FAB offset so it always sits above the delivery card.
-          // Bottom card: 24px margin + ~170px height = ~194px from screen bottom.
-          // FAB sits 10px above the card = 204px.
-          const double fabBottomWithCard = 204.0;
-          const double fabBottomNoCard = 90.0;
+          final double cardMaxWidth = constraints.maxWidth > 640
+              ? 540.0
+              : (constraints.maxWidth - 32.0).clamp(260.0, 600.0);
+          const double cardBottom = 16.0;
+          final double cardEstimatedHeight = activeOrder != null ? 142.0 : 0.0;
           final double fabBottom =
-              activeOrder != null ? fabBottomWithCard : fabBottomNoCard;
+              activeOrder != null ? (cardBottom + cardEstimatedHeight + 12.0) : 80.0;
+
           return Stack(
             children: [
-          // 1. flutter_map with OpenStreetMap Tiles
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter: hasRealAgentGps
-                  ? agentPos
-                  : (customerPos ?? agentPos),
-              initialZoom: 14.5,
-              maxZoom: 18.0,
-              minZoom: 4.0,
-            ),
-            children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.sawariyadairy.app',
-                maxZoom: 19,
-              ),
-              // Route polyline in bold green (only if customer pin and real GPS available)
-              if (routePoints.length >= 2)
-                PolylineLayer(
-                  polylines: [
-                    Polyline(
-                      points: routePoints,
-                      strokeWidth: 4.5,
-                      color: DeliveryTheme.primary,
-                    ),
-                  ],
+              // 1. flutter_map with OpenStreetMap Tiles
+              FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: hasRealAgentGps
+                      ? agentPos
+                      : (customerPos ?? agentPos),
+                  initialZoom: 14.5,
+                  maxZoom: 18.0,
+                  minZoom: 4.0,
                 ),
-              // Markers Layer
-              MarkerLayer(
-                markers: [
-                  // Agent marker: only rendered when real GPS or last known position is available
-                  if (hasRealAgentGps)
-                    Marker(
-                      point: agentPos,
-                      width: 50,
-                      height: 50,
-                      child: Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0x33000000),
-                              blurRadius: 8,
-                              offset: Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            color: DeliveryTheme.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.local_shipping_rounded,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                    )
-                  else if (rawAgentLocation != null)
-                    Marker(
-                      point: rawAgentLocation,
-                      width: 44,
-                      height: 44,
-                      child: Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: const BoxDecoration(
-                          color: Colors.white70,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF9E9E9E),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.history_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ),
-                  // Destination marker (red pin) — only when customerPos is valid
-                  if (customerPos != null)
-                    Marker(
-                      point: customerPos,
-                      width: 44,
-                      height: 44,
-                      child: Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFE53935),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Color(0x44E53935),
-                                blurRadius: 6,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.location_on_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          ),
-
-          // 2. Top Header ("On the Way")
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: DeliveryStandardHeader(
-              title: 'On the Way',
-              leading: IconButton(
-                onPressed: () {
-                  ref.read(deliveryPanelTabProvider.notifier).setTab(0);
-                },
-                icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                    color: Colors.white, size: 20),
-              ),
-              actions: [
-                if (activeOrder != null)
-                  IconButton(
-                    onPressed: () =>
-                        _makePhoneCall(activeOrder!.customerPhone),
-                    icon: const Icon(Icons.phone_outlined,
-                        color: Colors.white, size: 22),
+                children: [
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.sawariyadairy.app',
+                    maxZoom: 19,
                   ),
-              ],
-            ),
-          ),
-
-          // 3. Floating Route Info Badge (Dynamic ETA • Distance or GPS Status)
-          if (activeOrder != null)
-            Positioned(
-              top: 130,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                  onTap: hasRealAgentGps
-                      ? null
-                      : () async {
-                          await ref
-                              .read(locationServiceProvider)
-                              .openLocationSettings();
-                        },
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x1F000000),
-                          blurRadius: 10,
-                          offset: Offset(0, 3),
+                  // Route polyline in bold green (only if customer pin and real GPS available)
+                  if (routePoints.length >= 2)
+                    PolylineLayer(
+                      polylines: [
+                        Polyline(
+                          points: routePoints,
+                          strokeWidth: 4.5,
+                          color: DeliveryTheme.primary,
                         ),
                       ],
-                      border: hasRealAgentGps
-                          ? null
-                          : Border.all(
-                              color: const Color(0xFFFDE68A), width: 1.2),
                     ),
-                    child: hasRealAgentGps
-                        ? Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.timer_outlined,
-                                  size: 16, color: DeliveryTheme.primary),
-                              const SizedBox(width: 6),
-                              Text(
-                                formattedEta,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
-                                  color: DeliveryTheme.textDark,
+                  // Markers Layer
+                  MarkerLayer(
+                    markers: [
+                      // Agent marker: only rendered when real GPS or last known position is available
+                      if (hasRealAgentGps)
+                        Marker(
+                          point: agentPos,
+                          width: 50,
+                          height: 50,
+                          child: Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Color(0x33000000),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 3),
                                 ),
+                              ],
+                            ),
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                color: DeliveryTheme.primary,
+                                shape: BoxShape.circle,
                               ),
-                              const SizedBox(width: 6),
-                              Container(
-                                width: 4,
-                                height: 4,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFB0BEC5),
-                                  shape: BoxShape.circle,
-                                ),
+                              child: const Icon(
+                                Icons.local_shipping_rounded,
+                                color: Colors.white,
+                                size: 24,
                               ),
-                              const SizedBox(width: 6),
-                              Text(
-                                formattedDistance,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: DeliveryTheme.textSecondary,
-                                ),
-                              ),
-                            ],
-                          )
-                        : Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.location_off_rounded,
-                                  size: 16, color: Color(0xFFD97706)),
-                              const SizedBox(width: 6),
-                              Text(
-                                'GPS Unavailable',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
-                                  color: const Color(0xFFB45309),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                width: 4,
-                                height: 4,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFB0BEC5),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Waiting for location',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: DeliveryTheme.textSecondary,
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // 4. Floating GPS Target / Re-center Button
-          Positioned(
-            right: 16,
-            bottom: fabBottom,
-            child: FloatingActionButton.small(
-              heroTag: 'map_recenter_fab',
-              onPressed: () {
-                if (hasRealAgentGps) {
-                  _reCenter(agentPos);
-                } else if (customerPos != null) {
-                  _reCenter(customerPos);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                          'GPS is turned off. Please enable device location.'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                }
-              },
-              backgroundColor: Colors.white,
-              foregroundColor: DeliveryTheme.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.my_location_rounded, size: 20),
-            ),
-          ),
-
-          // 5. Bottom Floating Delivery Card matching reference
-          if (activeOrder != null)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 24,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x1F000000),
-                      blurRadius: 16,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Delivering to',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: DeliveryTheme.textMuted,
-                                ),
+                        )
+                      else if (rawAgentLocation != null)
+                        Marker(
+                          point: rawAgentLocation,
+                          width: 44,
+                          height: 44,
+                          child: Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: const BoxDecoration(
+                              color: Colors.white70,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF9E9E9E),
+                                shape: BoxShape.circle,
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                activeOrder.customerName,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  color: DeliveryTheme.textDark,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                              child: const Icon(
+                                Icons.history_rounded,
+                                color: Colors.white,
+                                size: 20,
                               ),
-                              const SizedBox(height: 3),
-                              Row(
-                                children: [
-                                  const Icon(Icons.location_on_outlined,
-                                      size: 14,
-                                      color: DeliveryTheme.textMuted),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      activeOrder.customerAddress,
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: DeliveryTheme.textSecondary,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                            ),
+                          ),
+                        ),
+                      // Destination marker (red pin) — only when customerPos is valid
+                      if (customerPos != null)
+                        Marker(
+                          point: customerPos,
+                          width: 44,
+                          height: 44,
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFE53935),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Color(0x44E53935),
+                                    blurRadius: 6,
+                                    offset: Offset(0, 2),
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        // Green Directions button
-                        ElevatedButton.icon(
-                          onPressed: () => _openExternalDirections(
-                            customerPos?.latitude,
-                            customerPos?.longitude,
-                            activeOrder!.customerAddress,
-                          ),
-                          icon: const Icon(Icons.near_me_rounded, size: 16),
-                          label: Text(
-                            'Directions',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: DeliveryTheme.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              child: const Icon(
+                                Icons.location_on_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
                             ),
                           ),
                         ),
-                      ],
+                    ],
+                  ),
+                ],
+              ),
+
+              // 2. Top Header (only on mobile/tablet — desktop has top bar)
+              if (!isDesktop)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: DeliveryStandardHeader(
+                    title: 'On the Way',
+                    leading: IconButton(
+                      onPressed: () {
+                        ref.read(deliveryPanelTabProvider.notifier).setTab(0);
+                      },
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white, size: 20),
                     ),
-                    const Divider(height: 20, color: Color(0xFFECEFF1)),
-                    Row(
-                      children: [
-                        const Icon(Icons.access_time_rounded,
-                            size: 18, color: DeliveryTheme.primary),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Estimated Arrival',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w500,
-                                  color: DeliveryTheme.textMuted,
-                                ),
-                              ),
-                              Text(
-                                activeOrder.estimatedTime.isNotEmpty
-                                    ? activeOrder.estimatedTime
-                                    : (formattedEta != '—'
-                                        ? formattedEta
-                                        : 'Pending'),
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
-                                  color: DeliveryTheme.textDark,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                    actions: [
+                      if (activeOrder != null)
+                        IconButton(
+                          onPressed: () =>
+                              _makePhoneCall(activeOrder!.customerPhone),
+                          icon: const Icon(Icons.phone_outlined,
+                              color: Colors.white, size: 22),
+                        ),
+                    ],
+                  ),
+                ),
+
+              // 3. Floating Route Info Badge (Dynamic ETA • Distance or GPS Status)
+              if (activeOrder != null)
+                Positioned(
+                  top: isDesktop ? 20 : 100,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: hasRealAgentGps
+                            ? null
+                            : () async {
+                                await ref
+                                    .read(locationServiceProvider)
+                                    .openLocationSettings();
+                              },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x1F000000),
+                                blurRadius: 10,
+                                offset: Offset(0, 3),
                               ),
                             ],
+                            border: hasRealAgentGps
+                                ? null
+                                : Border.all(
+                                    color: const Color(0xFFFDE68A), width: 1.2),
+                          ),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: hasRealAgentGps
+                                ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.timer_outlined,
+                                          size: 16, color: DeliveryTheme.primary),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        formattedEta,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w800,
+                                          color: DeliveryTheme.textDark,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        width: 4,
+                                        height: 4,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFFB0BEC5),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        formattedDistance,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: DeliveryTheme.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.location_off_rounded,
+                                          size: 16, color: Color(0xFFD97706)),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'GPS Unavailable',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w800,
+                                          color: const Color(0xFFB45309),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        width: 4,
+                                        height: 4,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFFB0BEC5),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Waiting for location',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: DeliveryTheme.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              formattedDistance,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: DeliveryTheme.textSecondary,
-                              ),
-                            ),
-                            Text(
-                              formattedEta,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: DeliveryTheme.primaryDark,
-                              ),
+                      ),
+                    ),
+                  ),
+                ),
+
+              // 4. Floating GPS Target / Re-center Button
+              Positioned(
+                right: 16,
+                bottom: fabBottom,
+                child: FloatingActionButton.small(
+                  heroTag: 'map_recenter_fab',
+                  onPressed: () {
+                    if (hasRealAgentGps) {
+                      _reCenter(agentPos);
+                    } else if (customerPos != null) {
+                      _reCenter(customerPos);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                              'GPS is turned off. Please enable device location.'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  },
+                  backgroundColor: Colors.white,
+                  foregroundColor: DeliveryTheme.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.my_location_rounded, size: 20),
+                ),
+              ),
+
+              // 5. Bottom Floating Delivery Card matching reference
+              if (activeOrder != null)
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: cardBottom,
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: cardMaxWidth),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x1F000000),
+                              blurRadius: 16,
+                              offset: Offset(0, 4),
                             ),
                           ],
                         ),
-                      ],
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Header Row: Dedicated "Delivering to" badge + Directions Action
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Flexible(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: const BoxDecoration(
+                                          color: DeliveryTheme.primary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          'Delivering to',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: DeliveryTheme.primary,
+                                            letterSpacing: 0.2,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                InkWell(
+                                  onTap: () => _openExternalDirections(
+                                    customerPos?.latitude,
+                                    customerPos?.longitude,
+                                    activeOrder!.customerAddress,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: DeliveryTheme.primary,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.near_me_rounded,
+                                            size: 14, color: Colors.white),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Directions',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 11,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            // Customer Name
+                            Text(
+                              activeOrder.customerName,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: DeliveryTheme.textDark,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            // Customer Address
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on_outlined,
+                                    size: 14, color: DeliveryTheme.textMuted),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    activeOrder.customerAddress,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: DeliveryTheme.textSecondary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Divider(height: 16, color: Color(0xFFECEFF1)),
+                            // Estimated Arrival & Distance Row
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Flexible(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.access_time_rounded,
+                                          size: 16, color: DeliveryTheme.primary),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              'Estimated Arrival',
+                                              style: GoogleFonts.plusJakartaSans(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w500,
+                                                color: DeliveryTheme.textMuted,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            Text(
+                                              activeOrder.estimatedTime.isNotEmpty
+                                                  ? activeOrder.estimatedTime
+                                                  : (formattedEta != '—'
+                                                      ? formattedEta
+                                                      : 'Pending'),
+                                              style: GoogleFonts.plusJakartaSans(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w800,
+                                                color: DeliveryTheme.textDark,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        formattedDistance,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: DeliveryTheme.textSecondary,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        formattedEta,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w800,
+                                          color: DeliveryTheme.primaryDark,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-            ], // Stack children end
-          ); // Stack end
-        }, // LayoutBuilder builder end
-      ), // LayoutBuilder end
+            ],
+          );
+        },
+      ),
     );
   }
 }

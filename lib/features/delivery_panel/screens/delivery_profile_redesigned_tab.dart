@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/app_assets.dart';
+import '../../../core/responsive/responsive_layout.dart';
 import '../../../models/delivery_boy_model.dart';
 import '../../../providers/delivery_provider.dart';
 import '../../../services/firebase_storage_service.dart';
@@ -212,308 +213,356 @@ class _DeliveryProfileRedesignedTabState
   Widget build(BuildContext context) {
     final agent = ref.watch(deliveryAgentProvider);
     final isOnline = agent.status == DeliveryStatus.onDuty;
+    final isDesktop = ResponsiveLayout.isDesktop(context);
+    final isTablet = ResponsiveLayout.isTablet(context);
 
     return Scaffold(
       backgroundColor: DeliveryTheme.background,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // 1. Curved Green Top Banner with Leaves
-            Container(
-              width: double.infinity,
-              height: 140,
-              decoration: const BoxDecoration(
-                gradient: DeliveryTheme.headerGradient,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(32),
-                  bottomRight: Radius.circular(32),
-                ),
-              ),
-              child: Stack(
-                children: [
-                  const Positioned(
-                    top: 0,
-                    right: 0,
-                    width: 140,
-                    height: 100,
-                    child: CustomPaint(
-                      painter: BotanicalLeafPainter(
-                        leafColor: Color(0x28FFFFFF),
-                        isRightAligned: true,
-                      ),
-                    ),
-                  ),
-                  SafeArea(
-                    bottom: false,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final double maxContentWidth = isDesktop
+              ? 640.0
+              : (isTablet ? 560.0 : double.infinity);
+          final double bannerHeight = isDesktop ? 120.0 : 140.0;
+          const double avatarRadius = 46.0;
+          const double avatarDiameter = avatarRadius * 2; // 92
+          const double avatarOverlap = 42.0;
+
+          return Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxContentWidth),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // 1. Header Banner with Overlapping Avatar in true layout space
+                    SizedBox(
+                      height: bannerHeight + (avatarDiameter - avatarOverlap),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        alignment: Alignment.topCenter,
                         children: [
-                          IconButton(
-                            onPressed: () {
-                              Scaffold.maybeOf(context)?.openDrawer();
-                            },
-                            icon: const Icon(Icons.menu_rounded,
-                                color: Colors.white, size: 26),
-                          ),
-                          IconButton(
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      const DeliverySettingsRedesignedScreen(),
+                          // Curved Green Top Banner with Leaves
+                          Container(
+                            width: double.infinity,
+                            height: bannerHeight,
+                            decoration: const BoxDecoration(
+                              gradient: DeliveryTheme.headerGradient,
+                              borderRadius: BorderRadius.only(
+                                bottomLeft: Radius.circular(32),
+                                bottomRight: Radius.circular(32),
+                              ),
+                            ),
+                            child: Stack(
+                              children: [
+                                const Positioned(
+                                  top: 0,
+                                  right: 0,
+                                  width: 140,
+                                  height: 100,
+                                  child: CustomPaint(
+                                    painter: BotanicalLeafPainter(
+                                      leafColor: Color(0x28FFFFFF),
+                                      isRightAligned: true,
+                                    ),
+                                  ),
                                 ),
-                              );
-                            },
-                            icon: const Icon(Icons.settings_outlined,
-                                color: Colors.white, size: 24),
+                                SafeArea(
+                                  bottom: false,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 8),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        if (!isDesktop)
+                                          IconButton(
+                                            onPressed: () {
+                                              Scaffold.maybeOf(context)
+                                                  ?.openDrawer();
+                                            },
+                                            icon: const Icon(
+                                                Icons.menu_rounded,
+                                                color: Colors.white,
+                                                size: 26),
+                                          )
+                                        else
+                                          const SizedBox(width: 48),
+                                        IconButton(
+                                          onPressed: () {
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    const DeliverySettingsRedesignedScreen(),
+                                              ),
+                                            );
+                                          },
+                                          icon: const Icon(
+                                              Icons.settings_outlined,
+                                              color: Colors.white,
+                                              size: 24),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Overlapping Circular Avatar
+                          Positioned(
+                            bottom: 0,
+                            child: Stack(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Color(0x1F000000),
+                                        blurRadius: 12,
+                                        offset: Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: DeliveryAgentAvatar(
+                                    radius: avatarRadius,
+                                    imageUrl: agent.profileImageUrl,
+                                    iconSize: 48,
+                                  ),
+                                ),
+                                Positioned(
+                                  bottom: 2,
+                                  right: 2,
+                                  child: InkWell(
+                                    onTap: _isUploadingPhoto
+                                        ? null
+                                        : _pickAndUploadPhoto,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: const BoxDecoration(
+                                        color: DeliveryTheme.primary,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: _isUploadingPhoto
+                                          ? const SizedBox(
+                                              width: 14,
+                                              height: 14,
+                                              child:
+                                                  CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Colors.white,
+                                              ),
+                                            )
+                                          : const Icon(
+                                              Icons.camera_alt_rounded,
+                                              color: Colors.white,
+                                              size: 14),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
 
-            // 2. Overlapping Circular Avatar + Name + Online Pill
-            Transform.translate(
-              offset: const Offset(0, -50),
-              child: Column(
-                children: [
-                  Stack(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0x1F000000),
-                              blurRadius: 12,
-                              offset: Offset(0, 4),
+                    // 2. Name + Title + Online/Offline Pill
+                    const SizedBox(height: 10),
+                    Text(
+                      agent.name.isNotEmpty
+                          ? agent.name
+                          : 'Delivery Partner',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: DeliveryTheme.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Delivery Partner',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: DeliveryTheme.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Online/Offline Pill (interactive)
+                    InkWell(
+                      onTap: () {
+                        ref
+                            .read(deliveryAgentProvider.notifier)
+                            .toggleDuty();
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: isOnline
+                              ? const Color(0xFFE8F5E9)
+                              : const Color(0xFFFFEBEE),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isOnline
+                                ? const Color(0xFFA5D6A7)
+                                : const Color(0xFFFFCDD2),
+                            width: 1.0,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: isOnline
+                                    ? const Color(0xFF2E7D32)
+                                    : const Color(0xFFE53935),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              isOnline ? 'Online' : 'Offline',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: isOnline
+                                    ? const Color(0xFF1B5E20)
+                                    : const Color(0xFFC62828),
+                              ),
                             ),
                           ],
                         ),
-                        child: DeliveryAgentAvatar(
-                          radius: 46,
-                          imageUrl: agent.profileImageUrl,
-                          iconSize: 48,
-                        ),
                       ),
-                      Positioned(
-                        bottom: 2,
-                        right: 2,
-                        child: InkWell(
-                          onTap: _isUploadingPhoto ? null : _pickAndUploadPhoto,
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: const BoxDecoration(
-                              color: DeliveryTheme.primary,
-                              shape: BoxShape.circle,
-                            ),
-                            child: _isUploadingPhoto
-                                ? const SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
+                    ),
+
+                    // 3. Menu Options List matching Screen 6
+                    const SizedBox(height: 18),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Container(
+                        decoration: DeliveryTheme.cardDecoration(),
+                        child: Material(
+                          color: DeliveryTheme.cardBg,
+                          borderRadius: BorderRadius.circular(
+                              DeliveryTheme.cardRadius),
+                          clipBehavior: Clip.antiAlias,
+                          child: Column(
+                            children: [
+                              _buildMenuTile(
+                                icon: Icons.person_outline_rounded,
+                                title: 'My Profile',
+                                onTap: () => _showAgentDetailsDialog(agent),
+                              ),
+                              const Divider(
+                                  height: 1,
+                                  indent: 54,
+                                  color: Color(0xFFECEFF1)),
+                              _buildMenuTile(
+                                icon: Icons.assignment_outlined,
+                                title: 'Delivery History',
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const DeliveryHistoryRedesignedScreen(),
                                     ),
-                                  )
-                                : const Icon(Icons.camera_alt_rounded,
-                                    color: Colors.white, size: 14),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    agent.name.isNotEmpty ? agent.name : 'Delivery Partner',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: DeliveryTheme.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Delivery Partner',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: DeliveryTheme.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Online/Offline Pill (interactive)
-                  InkWell(
-                    onTap: () {
-                      ref.read(deliveryAgentProvider.notifier).toggleDuty();
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: isOnline
-                            ? const Color(0xFFE8F5E9)
-                            : const Color(0xFFFFEBEE),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isOnline
-                              ? const Color(0xFFA5D6A7)
-                              : const Color(0xFFFFCDD2),
-                          width: 1.0,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: isOnline
-                                  ? const Color(0xFF2E7D32)
-                                  : const Color(0xFFE53935),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            isOnline ? 'Online' : 'Offline',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: isOnline
-                                  ? const Color(0xFF1B5E20)
-                                  : const Color(0xFFC62828),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // 3. Menu Options List matching Screen 6
-            Transform.translate(
-              offset: const Offset(0, -30),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Container(
-                  decoration: DeliveryTheme.cardDecoration(),
-                  child: Material(
-                    color: DeliveryTheme.cardBg,
-                    borderRadius:
-                        BorderRadius.circular(DeliveryTheme.cardRadius),
-                    clipBehavior: Clip.antiAlias,
-                    child: Column(
-                      children: [
-                        _buildMenuTile(
-                          icon: Icons.person_outline_rounded,
-                          title: 'My Profile',
-                          onTap: () => _showAgentDetailsDialog(agent),
-                        ),
-                        const Divider(
-                            height: 1, indent: 54, color: Color(0xFFECEFF1)),
-                        _buildMenuTile(
-                          icon: Icons.assignment_outlined,
-                          title: 'Delivery History',
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    const DeliveryHistoryRedesignedScreen(),
+                                  );
+                                },
                               ),
-                            );
-                          },
-                        ),
-                        const Divider(
-                            height: 1, indent: 54, color: Color(0xFFECEFF1)),
-                        _buildMenuTile(
-                          icon: Icons.account_balance_wallet_outlined,
-                          title: 'Earnings',
-                          onTap: () {
-                            ref.read(deliveryPanelTabProvider.notifier).setTab(3);
-                          },
-                        ),
-                        const Divider(
-                            height: 1, indent: 54, color: Color(0xFFECEFF1)),
-                        _buildMenuTile(
-                          icon: Icons.help_outline_rounded,
-                          title: 'Help & Support',
-                          onTap: _showSupportDialog,
-                        ),
-                        const Divider(
-                            height: 1, indent: 54, color: Color(0xFFECEFF1)),
-                        _buildMenuTile(
-                          icon: Icons.settings_outlined,
-                          title: 'Settings',
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    const DeliverySettingsRedesignedScreen(),
+                              const Divider(
+                                  height: 1,
+                                  indent: 54,
+                                  color: Color(0xFFECEFF1)),
+                              _buildMenuTile(
+                                icon: Icons.account_balance_wallet_outlined,
+                                title: 'Earnings',
+                                onTap: () {
+                                  ref
+                                      .read(
+                                          deliveryPanelTabProvider.notifier)
+                                      .setTab(3);
+                                },
                               ),
-                            );
-                          },
+                              const Divider(
+                                  height: 1,
+                                  indent: 54,
+                                  color: Color(0xFFECEFF1)),
+                              _buildMenuTile(
+                                icon: Icons.help_outline_rounded,
+                                title: 'Help & Support',
+                                onTap: _showSupportDialog,
+                              ),
+                              const Divider(
+                                  height: 1,
+                                  indent: 54,
+                                  color: Color(0xFFECEFF1)),
+                              _buildMenuTile(
+                                icon: Icons.settings_outlined,
+                                title: 'Settings',
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const DeliverySettingsRedesignedScreen(),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+
+                    // 4. Bottom Branding matching Screen 6
+                    const SizedBox(height: 24),
+                    Image.asset(
+                      AppAssets.sawariyaLogo,
+                      height: 52,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.eco_rounded,
+                        size: 40,
+                        color: DeliveryTheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'SAWARIYA DAIRY',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: DeliveryTheme.primaryDark,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Pure Goodness Every Day',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: DeliveryTheme.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                  ],
                 ),
               ),
             ),
-
-            // 4. Bottom Branding matching Screen 6
-            Transform.translate(
-              offset: const Offset(0, -10),
-              child: Column(
-                children: [
-                  Image.asset(
-                    AppAssets.sawariyaLogo,
-                    height: 52,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => const Icon(
-                      Icons.eco_rounded,
-                      size: 40,
-                      color: DeliveryTheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'SAWARIYA DAIRY',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      color: DeliveryTheme.primaryDark,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Pure Goodness Every Day',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: DeliveryTheme.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                ],
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
