@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/widgets/product_image.dart';
 import '../../../models/delivery_boy_model.dart';
 import '../../../models/order.dart';
 import '../../../providers/delivery_provider.dart';
@@ -47,6 +48,24 @@ class _DeliveryOrderDetailViewState
     final uri = Uri.parse('sms:$cleanPhone');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
+    }
+  }
+
+  Future<void> _openDirections(String address) async {
+    final cleanAddress = address.trim();
+    if (cleanAddress.isEmpty) return;
+    final query = Uri.encodeComponent(cleanAddress);
+    final geoUri = Uri.parse('geo:0,0?q=$query');
+    try {
+      if (await canLaunchUrl(geoUri)) {
+        await launchUrl(geoUri);
+        return;
+      }
+    } catch (_) {}
+    final mapUri =
+        Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
+    if (await canLaunchUrl(mapUri)) {
+      await launchUrl(mapUri, mode: LaunchMode.externalApplication);
     }
   }
 
@@ -587,19 +606,19 @@ class _DeliveryOrderDetailViewState
                         ],
                       ),
                       const SizedBox(height: 14),
-                      // Action Row: [ Call ] and [ Chat ]
+                      // Action Row: [ Call ], [ Chat ], [ Directions ]
                       Row(
                         children: [
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: () =>
                                   _makePhoneCall(order.customerPhone),
-                              icon: const Icon(Icons.phone_rounded, size: 16),
+                              icon: const Icon(Icons.phone_rounded, size: 15),
                               label: Text(
                                 'Call',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontWeight: FontWeight.w700,
-                                  fontSize: 13,
+                                  fontSize: 12,
                                 ),
                               ),
                               style: OutlinedButton.styleFrom(
@@ -614,18 +633,45 @@ class _DeliveryOrderDetailViewState
                               ),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: () => _openSms(order.customerPhone),
                               icon: const Icon(
                                   Icons.chat_bubble_outline_rounded,
-                                  size: 16),
+                                  size: 15),
                               label: Text(
                                 'Chat',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontWeight: FontWeight.w700,
-                                  fontSize: 13,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: DeliveryTheme.primary,
+                                side: const BorderSide(
+                                    color: DeliveryTheme.primary),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () =>
+                                  _openDirections(customerAddress),
+                              icon: const Icon(
+                                  Icons.directions_rounded,
+                                  size: 15),
+                              label: Text(
+                                'Directions',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
                                 ),
                               ),
                               style: OutlinedButton.styleFrom(
@@ -663,17 +709,37 @@ class _DeliveryOrderDetailViewState
                         ),
                       ),
                       const SizedBox(height: 12),
-                      if (order.items.isEmpty)
-                        _buildSingleItemRow('Fresh Milk (A2 Gir Cow)', 1,
-                            order.amount > 0 ? order.amount : 120)
-                      else
+                      if (order.orderItemDetails.isNotEmpty)
+                        ...order.orderItemDetails.map((item) {
+                          return _buildSingleItemRow(
+                            name: item.unit.isNotEmpty
+                                ? '${item.name} (${item.unit})'
+                                : item.name,
+                            qty: item.quantity,
+                            price: item.price > 0
+                                ? item.price
+                                : (order.amount / order.orderItemDetails.length),
+                            imageUrl: item.imageUrl,
+                            productId: item.productId,
+                            categoryKey: item.categoryKey,
+                          );
+                        })
+                      else if (order.items.isNotEmpty)
                         ...order.items.map((item) {
                           return _buildSingleItemRow(
-                            item,
-                            1,
-                            order.amount / (order.items.length),
+                            name: item,
+                            qty: 1,
+                            price: order.amount / (order.items.length),
+                            imageUrl: order.productImageUrl,
                           );
-                        }),
+                        })
+                      else
+                        _buildSingleItemRow(
+                          name: 'Fresh Milk (A2 Gir Cow)',
+                          qty: 1,
+                          price: order.amount > 0 ? order.amount : 120,
+                          imageUrl: order.productImageUrl,
+                        ),
                       const Divider(height: 24, color: Color(0xFFECEFF1)),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -780,20 +846,27 @@ class _DeliveryOrderDetailViewState
     );
   }
 
-  Widget _buildSingleItemRow(String name, int qty, double price) {
+  Widget _buildSingleItemRow({
+    required String name,
+    required int qty,
+    required double price,
+    String? imageUrl,
+    String? productId,
+    String? categoryKey,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F5E9),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.water_drop_outlined,
-                color: DeliveryTheme.primary, size: 20),
+          ProductImage(
+            imageUrl: imageUrl,
+            productId: productId,
+            categoryKey: categoryKey,
+            title: name,
+            size: 38,
+            radius: 8,
+            fit: BoxFit.contain,
+            backgroundColor: const Color(0xFFE8F5E9),
           ),
           const SizedBox(width: 10),
           Expanded(

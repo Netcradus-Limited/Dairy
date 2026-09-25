@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/widgets/product_image.dart';
 import '../../../models/delivery_boy_model.dart';
 import '../theme/delivery_theme.dart';
 import 'delivery_status_chip.dart';
@@ -103,20 +104,29 @@ class DeliveryOrderCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
-                // Green package icon inside light mint rounded square
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8F5E9),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.inventory_2_rounded,
-                    color: DeliveryTheme.primary,
-                    size: 22,
-                  ),
-                ),
+                // Product image or green package fallback icon
+                order.productImageUrl != null &&
+                        order.productImageUrl!.trim().isNotEmpty
+                    ? ProductImage(
+                        imageUrl: order.productImageUrl,
+                        size: 44,
+                        radius: 12,
+                        fit: BoxFit.contain,
+                        backgroundColor: const Color(0xFFE8F5E9),
+                      )
+                    : Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F5E9),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.inventory_2_rounded,
+                          color: DeliveryTheme.primary,
+                          size: 22,
+                        ),
+                      ),
                 const SizedBox(width: 12),
 
                 // Order metadata (Customer, address, item info)

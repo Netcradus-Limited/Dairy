@@ -255,7 +255,10 @@ class DeliveryOrder {
     this.paymentStatus,
     this.productImageUrl,
     this.cancellationReason,
+    this.orderItemDetails = const [],
   });
+
+  final List<DeliveryOrderItem> orderItemDetails;
 
   bool get isSubscription =>
       orderType.toLowerCase() == 'subscription' ||
@@ -335,6 +338,7 @@ class DeliveryOrder {
     String? paymentStatus,
     String? productImageUrl,
     String? cancellationReason,
+    List<DeliveryOrderItem>? orderItemDetails,
   }) {
     return DeliveryOrder(
       id: id ?? this.id,
@@ -371,8 +375,29 @@ class DeliveryOrder {
       paymentStatus: paymentStatus ?? this.paymentStatus,
       productImageUrl: productImageUrl ?? this.productImageUrl,
       cancellationReason: cancellationReason ?? this.cancellationReason,
+      orderItemDetails: orderItemDetails ?? this.orderItemDetails,
     );
   }
+}
+
+class DeliveryOrderItem {
+  final String name;
+  final String unit;
+  final int quantity;
+  final double price;
+  final String? imageUrl;
+  final String? productId;
+  final String? categoryKey;
+
+  const DeliveryOrderItem({
+    required this.name,
+    this.unit = '',
+    required this.quantity,
+    required this.price,
+    this.imageUrl,
+    this.productId,
+    this.categoryKey,
+  });
 }
 
 class DeliveryRequest {

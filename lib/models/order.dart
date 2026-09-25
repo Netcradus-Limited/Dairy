@@ -240,20 +240,60 @@ class Order {
   factory Order.fromFirestore(Map<String, dynamic> data, String id) {
     final itemsData = (data['items'] as List?) ?? [];
     final items = itemsData.map((raw) {
-      final m = raw as Map<String, dynamic>;
+      final m = raw is Map<String, dynamic> ? raw : <String, dynamic>{};
+      final pMap = m['product'] is Map<String, dynamic>
+          ? m['product'] as Map<String, dynamic>
+          : null;
+      final rawImg = (m['imageUrl'] ??
+              m['image'] ??
+              m['productImage'] ??
+              m['imagePath'] ??
+              m['productImageUrl'] ??
+              m['image_url'] ??
+              m['photoUrl'] ??
+              m['imageURL'] ??
+              pMap?['imageUrl'] ??
+              pMap?['image'] ??
+              pMap?['productImage'] ??
+              pMap?['imagePath'] ??
+              pMap?['productImageUrl'] ??
+              pMap?['photoUrl']) as String? ??
+          '';
+
+      final prodId = (m['productId'] as String?) ??
+          (pMap?['id'] as String?) ??
+          (m['id'] as String?) ??
+          '';
+      final prodTitle = (m['title'] as String?) ??
+          (m['productName'] as String?) ??
+          (m['name'] as String?) ??
+          (pMap?['title'] as String?) ??
+          (pMap?['name'] as String?) ??
+          '';
+      final catId = (m['categoryId'] as String?) ??
+          (m['category'] as String?) ??
+          (pMap?['categoryId'] as String?) ??
+          (pMap?['category'] as String?) ??
+          '';
+      final catName = (m['categoryName'] as String?) ??
+          (m['category'] as String?) ??
+          (pMap?['categoryName'] as String?) ??
+          '';
+      final price = (m['price'] as num?)?.toDouble() ??
+          (pMap?['price'] as num?)?.toDouble() ??
+          0.0;
+      final unit = (m['unit'] as String?) ??
+          (pMap?['unit'] as String?) ??
+          '';
+
       final product = Product(
-        id: (m['productId'] as String?) ?? '',
-        title: (m['title'] as String?) ??
-            (m['productName'] as String?) ??
-            (m['name'] as String?) ??
-            '',
-        categoryId:
-            (m['categoryId'] as String?) ?? (m['category'] as String?) ?? '',
-        categoryName:
-            (m['categoryName'] as String?) ?? (m['category'] as String?) ?? '',
-        price: (m['price'] as num?)?.toDouble() ?? 0.0,
-        unit: (m['unit'] as String?) ?? '',
-        imageUrl: (m['imageUrl'] as String?) ?? (m['image'] as String?) ?? '',
+        id: prodId,
+        title: prodTitle,
+        categoryId: catId,
+        categoryName: catName,
+        price: price,
+        unit: unit,
+        imageUrl: rawImg.trim(),
       );
       return CartItem(
         product: product,

@@ -9,6 +9,7 @@ import '../../../models/delivery_boy_model.dart';
 import '../../../providers/delivery_provider.dart';
 import '../../../services/firebase_storage_service.dart';
 import '../theme/delivery_theme.dart';
+import '../widgets/delivery_agent_avatar.dart';
 import 'delivery_history_redesigned_screen.dart';
 import 'delivery_settings_redesigned_screen.dart';
 
@@ -85,6 +86,13 @@ class _DeliveryProfileRedesignedTabState
   }
 
   void _showAgentDetailsDialog(DeliveryAgent agent) {
+    final authPhone = FirebaseAuth.instance.currentUser?.phoneNumber?.trim();
+    final displayPhone = agent.phone.isNotEmpty
+        ? agent.phone
+        : ((authPhone != null && authPhone.isNotEmpty)
+            ? authPhone
+            : 'Not configured');
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -96,20 +104,31 @@ class _DeliveryProfileRedesignedTabState
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: DeliveryAgentAvatar(
+                  radius: 30,
+                  imageUrl: agent.profileImageUrl,
+                  iconSize: 32,
+                ),
+              ),
+            ),
             _buildDetailField('Full Name',
                 agent.name.isNotEmpty ? agent.name : 'Delivery Agent'),
-            _buildDetailField('Phone',
-                agent.phone.isNotEmpty ? agent.phone : 'Not configured'),
+            _buildDetailField('Phone', displayPhone),
             _buildDetailField(
                 'Vehicle',
                 agent.vehicle.isNotEmpty
-                    ? '${agent.vehicle} • ${agent.vehicleNumber}'
+                    ? (agent.vehicleNumber.isNotEmpty
+                        ? '${agent.vehicle} • ${agent.vehicleNumber}'
+                        : agent.vehicle)
                     : 'Not assigned'),
             _buildDetailField(
                 'Active Zone',
                 agent.assignedZone.isNotEmpty
                     ? agent.assignedZone
-                    : 'Indore Hub'),
+                    : 'Not assigned'),
           ],
         ),
         actions: [
@@ -279,18 +298,10 @@ class _DeliveryProfileRedesignedTabState
                             ),
                           ],
                         ),
-                        child: CircleAvatar(
+                        child: DeliveryAgentAvatar(
                           radius: 46,
-                          backgroundColor: const Color(0xFFE8F5E9),
-                          backgroundImage: agent.profileImageUrl != null &&
-                                  agent.profileImageUrl!.isNotEmpty
-                              ? NetworkImage(agent.profileImageUrl!)
-                              : null,
-                          child: agent.profileImageUrl == null ||
-                                  agent.profileImageUrl!.isEmpty
-                              ? const Icon(Icons.person_rounded,
-                                  size: 48, color: DeliveryTheme.primary)
-                              : null,
+                          imageUrl: agent.profileImageUrl,
+                          iconSize: 48,
                         ),
                       ),
                       Positioned(

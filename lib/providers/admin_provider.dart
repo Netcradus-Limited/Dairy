@@ -1947,14 +1947,7 @@ class AdminProvider extends ChangeNotifier {
   static bool _isLegacyMockPhone(String? val) {
     if (val == null) return false;
     final digits = val.replaceAll(RegExp(r'\D'), '');
-    return digits == '917777777777' ||
-        digits == '7777777777' ||
-        digits == '919876543210' ||
-        digits == '9876543210' ||
-        digits == '919876500000' ||
-        digits == '9876500000' ||
-        digits == '1234567890' ||
-        digits == '911234567890';
+    return digits == '0000000000' || digits == '910000000000';
   }
 
   static bool _isLegacyMockVehicle(String? val) {

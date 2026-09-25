@@ -107,9 +107,26 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
   );
 
   String? productImageUrl;
-  if (order.items.isNotEmpty) {
-    final p = order.items.first.product;
-    productImageUrl = p.resolvedImageUrl.isNotEmpty ? p.resolvedImageUrl : p.imageUrl;
+  final List<DeliveryOrderItem> orderItemDetails = [];
+  for (final ci in order.items) {
+    final p = ci.product;
+    final img = p.resolvedImageUrl.isNotEmpty
+        ? p.resolvedImageUrl
+        : (p.imageUrl.isNotEmpty ? p.imageUrl : '');
+    if (productImageUrl == null && img.isNotEmpty) {
+      productImageUrl = img;
+    }
+    orderItemDetails.add(
+      DeliveryOrderItem(
+        name: p.title.isNotEmpty ? p.title : 'Product',
+        unit: p.unit,
+        quantity: ci.quantity,
+        price: p.price,
+        imageUrl: img,
+        productId: p.id,
+        categoryKey: p.categoryId,
+      ),
+    );
   }
 
   return DeliveryOrder(
@@ -156,6 +173,7 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
     paymentStatus: order.paymentStatus,
     productImageUrl: productImageUrl,
     cancellationReason: order.cancellationReason,
+    orderItemDetails: orderItemDetails,
   );
 }
 
@@ -349,14 +367,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
   static bool _isLegacyMockPhone(String? val) {
     if (val == null) return false;
     final digits = val.replaceAll(RegExp(r'\D'), '');
-    return digits == '917777777777' ||
-        digits == '7777777777' ||
-        digits == '919876543210' ||
-        digits == '9876543210' ||
-        digits == '919876500000' ||
-        digits == '9876500000' ||
-        digits == '1234567890' ||
-        digits == '911234567890';
+    return digits == '0000000000' || digits == '910000000000';
   }
 
   static String _maskPhone(String phone) {
@@ -442,9 +453,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
         final authPhone = authUser?.phoneNumber?.trim();
         final agentDocPhone = (data['phone'] as String?)?.trim() ?? '';
 
-        if (authPhone != null &&
-            authPhone.isNotEmpty &&
-            !_isLegacyMockPhone(authPhone)) {
+        if (authPhone != null && authPhone.isNotEmpty) {
           realPhone = authPhone;
           // Synchronize to Firestore if missing or mismatched
           if (agentDocPhone.isEmpty || agentDocPhone != authPhone) {
@@ -611,8 +620,74 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
           isLoaded: true,
         );
       } else {
-        // Doc in delivery_agents doesn't exist yet; check users/{uid}
-        debugPrint('DeliveryNotifier: Doc in delivery_agents does not exist; checking users/$uid');
+        // Doc in delivery_agents doesn't exist yet; check pre-existing doc or users/{uid}
+        debugPrint('DeliveryNotifier: Doc in delivery_agents does not exist; checking existing delivery records & users/$uid');
+
+        // 1. Check if an existing pre-registered document in delivery_agents exists with this phone
+        try {
+          final effectivePhone = authUser?.phoneNumber?.trim() ?? _currentUser.phone.trim();
+          final phoneVariants = PhoneAuthUtils.generateVariants(effectivePhone);
+          if (phoneVariants.isNotEmpty) {
+            final agentQuery = await firestore
+                .collection('delivery_agents')
+                .where('phone', whereIn: phoneVariants)
+                .limit(1)
+                .get();
+            if (agentQuery.docs.isNotEmpty) {
+              final aDoc = agentQuery.docs.first;
+              final aData = aDoc.data();
+              debugPrint('DeliveryNotifier: Found pre-existing delivery_agent doc ${aDoc.id}, auto-linking to $uid');
+              final aName = (aData['name'] as String?)?.trim() ?? '';
+              final aPhone = (aData['phone'] as String?)?.trim() ?? effectivePhone;
+              final aEmail = (aData['email'] as String?)?.trim() ?? '';
+              final aVehicle = ((aData['vehicle'] ?? aData['vehicleType']) as String?)?.trim() ?? '';
+              final aVehicleNum = (aData['vehicleNumber'] as String?)?.trim() ?? '';
+              final aZone = ((aData['assignedZone'] ?? aData['zone']) as String?)?.trim() ?? '';
+              final double? aRating = (aData['rating'] as num?)?.toDouble();
+              final aImage = ((aData['profileImageUrl'] ?? aData['photoUrl'] ?? aData['photoURL']) as String?)?.trim();
+              final isOnline = aData['isOnline'] == true || aData['isOnDuty'] == true;
+
+              await firestore.collection('delivery_agents').doc(uid).set({
+                'uid': uid,
+                'id': uid,
+                'role': 'delivery',
+                if (aName.isNotEmpty) 'name': aName,
+                if (aPhone.isNotEmpty) 'phone': aPhone,
+                if (aEmail.isNotEmpty) 'email': aEmail,
+                if (aVehicle.isNotEmpty) 'vehicle': aVehicle,
+                if (aVehicleNum.isNotEmpty) 'vehicleNumber': aVehicleNum,
+                if (aZone.isNotEmpty) 'assignedZone': aZone,
+                if (aRating != null) 'rating': aRating,
+                if (aImage != null && aImage.isNotEmpty) 'profileImageUrl': aImage,
+                'isOnline': isOnline,
+                'isOnDuty': isOnline,
+                'updatedAt': FieldValue.serverTimestamp(),
+              }, SetOptions(merge: true));
+
+              if (!mounted) return;
+              state = DeliveryAgent(
+                id: uid,
+                name: aName,
+                phone: aPhone,
+                email: aEmail,
+                vehicle: aVehicle,
+                vehicleNumber: aVehicleNum,
+                assignedZone: aZone,
+                status: isOnline ? DeliveryStatus.onDuty : DeliveryStatus.offDuty,
+                totalDeliveriesToday: ((aData['totalDeliveriesToday'] ?? 0) as num).toInt(),
+                completedDeliveriesToday: ((aData['completedDeliveriesToday'] ?? 0) as num).toInt(),
+                earningsToday: ((aData['earningsToday'] ?? 0.0) as num).toDouble(),
+                rating: aRating,
+                profileImageUrl: aImage,
+                isLoaded: true,
+              );
+              return;
+            }
+          }
+        } catch (e) {
+          debugPrint('DeliveryNotifier: Error querying delivery_agents by phone: $e');
+        }
+
         try {
           final userDoc = await firestore.collection('users').doc(uid).get();
           if (userDoc.exists) {
@@ -636,9 +711,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
                 ? ''
                 : uName;
             final authPhone = authUser?.phoneNumber?.trim();
-            final cleanPhone = (authPhone != null &&
-                    authPhone.isNotEmpty &&
-                    !_isLegacyMockPhone(authPhone))
+            final cleanPhone = (authPhone != null && authPhone.isNotEmpty)
                 ? authPhone
                 : (_isLegacyMockPhone(uPhone) ? '' : uPhone);
             final cleanVehicle = _isLegacyMockVehicle(uVehicle) ? '' : uVehicle;
@@ -653,6 +726,23 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
             debugPrint('DeliveryNotifier: Loaded vehicleNumber = $cleanVehicleNum');
             debugPrint('DeliveryNotifier: Loaded assignedZone = $cleanZone');
             debugPrint('DeliveryNotifier: Loaded profileImageUrl = $uProfileImage');
+
+            // Establish delivery_agents document so subsequent listeners work
+            try {
+              await firestore.collection('delivery_agents').doc(uid).set({
+                'uid': uid,
+                'id': uid,
+                'role': 'delivery',
+                if (cleanName.isNotEmpty) 'name': cleanName,
+                if (cleanPhone.isNotEmpty) 'phone': cleanPhone,
+                if (cleanVehicle.isNotEmpty) 'vehicle': cleanVehicle,
+                if (cleanVehicleNum.isNotEmpty) 'vehicleNumber': cleanVehicleNum,
+                if (cleanZone.isNotEmpty) 'assignedZone': cleanZone,
+                if (uRating != null) 'rating': uRating,
+                if (uProfileImage != null && uProfileImage.isNotEmpty) 'profileImageUrl': uProfileImage,
+                'updatedAt': FieldValue.serverTimestamp(),
+              }, SetOptions(merge: true));
+            } catch (_) {}
 
             if (!mounted) return;
             state = DeliveryAgent(
@@ -688,9 +778,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
             : _currentUser.name.trim();
 
         final authPhone = authUser?.phoneNumber?.trim();
-        final fallbackPhone = (authPhone != null &&
-                authPhone.isNotEmpty &&
-                !_isLegacyMockPhone(authPhone))
+        final fallbackPhone = (authPhone != null && authPhone.isNotEmpty)
             ? authPhone
             : (_isLegacyMockPhone(_currentUser.phone)
                 ? (authUser?.phoneNumber ?? '')

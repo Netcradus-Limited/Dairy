@@ -264,14 +264,75 @@ class UserNotifier extends StateNotifier<User> {
 
     // 3. Check `delivery_agents` collection
     try {
+      Future<String> linkDeliveryAgentMatch(Map<String, dynamic> data, String sourceDocId) async {
+        final name = (data['name'] as String?)?.trim() ?? '';
+        final phone = (data['phone'] as String?)?.trim() ?? effectivePhone;
+        final email = (data['email'] as String?)?.trim() ?? '';
+        final vehicle = ((data['vehicle'] ?? data['vehicleType']) as String?)?.trim() ?? '';
+        final vehicleNumber = (data['vehicleNumber'] as String?)?.trim() ?? '';
+        final assignedZone = ((data['assignedZone'] ?? data['zone']) as String?)?.trim() ?? '';
+        final status = (data['status'] as String? ?? 'Active').trim();
+        final rating = (data['rating'] as num?)?.toDouble();
+        final imageUrl = _extractProfileImageUrl(data);
+
+        debugPrint('[AUTH ROLE DEBUG] Linking delivery agent match (docId: $sourceDocId, name: $name) to auth user $uid');
+
+        try {
+          await firestore.collection('users').doc(uid).set({
+            'uid': uid,
+            'role': UserRole.deliveryValue,
+            'status': status,
+            if (name.isNotEmpty) 'name': name,
+            if (phone.isNotEmpty) 'phone': phone,
+            if (email.isNotEmpty) 'email': email,
+            if (vehicle.isNotEmpty) 'vehicle': vehicle,
+            if (vehicleNumber.isNotEmpty) 'vehicleNumber': vehicleNumber,
+            if (assignedZone.isNotEmpty) 'assignedZone': assignedZone,
+            if (rating != null) 'rating': rating,
+            if (imageUrl != null && imageUrl.isNotEmpty) ...{
+              'profileImageUrl': imageUrl,
+              'photoUrl': imageUrl,
+            },
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+
+          await firestore.collection('delivery_agents').doc(uid).set({
+            'uid': uid,
+            'id': uid,
+            'role': UserRole.deliveryValue,
+            'status': status,
+            'isOnline': data['isOnline'] == true || data['isOnDuty'] == true,
+            'isOnDuty': data['isOnDuty'] == true || data['isOnline'] == true,
+            if (name.isNotEmpty) 'name': name,
+            if (phone.isNotEmpty) 'phone': phone,
+            if (email.isNotEmpty) 'email': email,
+            if (vehicle.isNotEmpty) 'vehicle': vehicle,
+            if (vehicleNumber.isNotEmpty) 'vehicleNumber': vehicleNumber,
+            if (assignedZone.isNotEmpty) 'assignedZone': assignedZone,
+            if (rating != null) 'rating': rating,
+            if (imageUrl != null && imageUrl.isNotEmpty) ...{
+              'profileImageUrl': imageUrl,
+              'photoUrl': imageUrl,
+            },
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+        } catch (linkErr) {
+          debugPrint('[AUTH ROLE DEBUG] Error auto-linking delivery agent doc: $linkErr');
+        }
+
+        return UserRole.deliveryValue;
+      }
+
       // 3a. Check by direct doc ID == uid
       final agentDocByUid =
           await firestore.collection('delivery_agents').doc(uid).get();
       if (agentDocByUid.exists && agentDocByUid.data() != null) {
+        final data = agentDocByUid.data()!;
+        final resolvedRole = await linkDeliveryAgentMatch(data, uid);
         debugPrint(
             '[AUTH ROLE DEBUG] Admin lookup result: NOT admin. FOUND in delivery_agents by doc ID ($uid)');
-        debugPrint('[AUTH ROLE DEBUG] Detected role: delivery');
-        return UserRole.deliveryValue;
+        debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
+        return resolvedRole;
       }
 
       // 3b. Check by `uid` field
@@ -281,10 +342,13 @@ class UserNotifier extends StateNotifier<User> {
           .limit(1)
           .get();
       if (agentQueryByUid.docs.isNotEmpty) {
+        final doc = agentQueryByUid.docs.first;
+        final data = doc.data();
+        final resolvedRole = await linkDeliveryAgentMatch(data, doc.id);
         debugPrint(
-            '[AUTH ROLE DEBUG] Admin lookup result: NOT admin. FOUND in delivery_agents by uid field (${agentQueryByUid.docs.first.id})');
-        debugPrint('[AUTH ROLE DEBUG] Detected role: delivery');
-        return UserRole.deliveryValue;
+            '[AUTH ROLE DEBUG] Admin lookup result: NOT admin. FOUND in delivery_agents by uid field (${doc.id})');
+        debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
+        return resolvedRole;
       }
 
       // 3c. Check by phone field match
@@ -295,10 +359,29 @@ class UserNotifier extends StateNotifier<User> {
             .limit(1)
             .get();
         if (agentQueryByPhone.docs.isNotEmpty) {
+          final doc = agentQueryByPhone.docs.first;
+          final data = doc.data();
+          final resolvedRole = await linkDeliveryAgentMatch(data, doc.id);
           debugPrint(
-              '[AUTH ROLE DEBUG] Admin lookup result: NOT admin. FOUND in delivery_agents by phone field match (${agentQueryByPhone.docs.first.id})');
-          debugPrint('[AUTH ROLE DEBUG] Detected role: delivery');
-          return UserRole.deliveryValue;
+              '[AUTH ROLE DEBUG] Admin lookup result: NOT admin. FOUND in delivery_agents by phone field match (${doc.id})');
+          debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
+          return resolvedRole;
+        }
+
+        // 3d. Check by doc ID == normalized phone
+        if (normalizedPhone.isNotEmpty) {
+          final agentDocByPhone = await firestore
+              .collection('delivery_agents')
+              .doc(normalizedPhone)
+              .get();
+          if (agentDocByPhone.exists && agentDocByPhone.data() != null) {
+            final data = agentDocByPhone.data()!;
+            final resolvedRole = await linkDeliveryAgentMatch(data, agentDocByPhone.id);
+            debugPrint(
+                '[AUTH ROLE DEBUG] Admin lookup result: NOT admin. FOUND in delivery_agents by doc ID==phone (${agentDocByPhone.id})');
+            debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
+            return resolvedRole;
+          }
         }
       }
     } catch (e) {
@@ -325,9 +408,9 @@ class UserNotifier extends StateNotifier<User> {
       debugPrint('[AUTH ROLE DEBUG] User doc role lookup error: $e');
     }
 
-    // 5. Self-Healing Orphaned Staff Document Migration:
-    // If an orphaned staff document exists with this phone number (e.g. added via Add Staff before/after signup),
-    // atomically copy its role, roleTitle, permissions, status to users/{uid} and safely delete the orphan.
+    // 5. Self-Healing Orphaned Staff / Delivery Document Migration:
+    // If an orphaned staff or delivery document exists with this phone number (e.g. added via Add Staff / Add Rider before signup),
+    // atomically copy its role, profile fields, status to users/{uid} and safely clean up the orphan.
     try {
       if (phoneVariants.isNotEmpty) {
         final staffQuery = await firestore
@@ -340,14 +423,16 @@ class UserNotifier extends StateNotifier<User> {
             final sRoleRaw = sData['role'] as String?;
             if (sRoleRaw != null && sRoleRaw.trim().isNotEmpty) {
               final parsed = UserRole.fromString(sRoleRaw);
-              if (parsed == UserRole.admin || parsed == UserRole.staff) {
+              if (parsed == UserRole.admin || parsed == UserRole.staff || parsed == UserRole.delivery) {
                 final cleanRole = UserRole.sanitize(sRoleRaw);
                 final roleTitle = (sData['roleTitle'] as String?) ??
                     (cleanRole == 'dispatcher'
                         ? 'Route Dispatcher'
                         : (cleanRole == 'manager'
                             ? 'Operations Manager'
-                            : (cleanRole == 'admin' ? 'Super Admin' : 'Staff Member')));
+                            : (cleanRole == 'admin'
+                                ? 'Super Admin'
+                                : (cleanRole == 'delivery' ? 'Delivery Partner' : 'Staff Member'))));
                 final perms = sData['permissions'] is List
                     ? (sData['permissions'] as List)
                         .map((p) => p.toString().trim())
@@ -355,18 +440,60 @@ class UserNotifier extends StateNotifier<User> {
                         .toList()
                     : <String>[];
                 final status = (sData['status'] as String? ?? 'Active').trim();
+                final name = (sData['name'] as String?)?.trim() ?? '';
+                final email = (sData['email'] as String?)?.trim() ?? '';
+                final vehicle = ((sData['vehicle'] ?? sData['vehicleType']) as String?)?.trim() ?? '';
+                final vehicleNumber = (sData['vehicleNumber'] as String?)?.trim() ?? '';
+                final assignedZone = ((sData['assignedZone'] ?? sData['zone']) as String?)?.trim() ?? '';
+                final rating = (sData['rating'] as num?)?.toDouble();
+                final imageUrl = _extractProfileImageUrl(sData);
 
                 debugPrint(
-                    '[AUTH ROLE DEBUG] Found orphaned staff doc ${sDoc.id} with role=$cleanRole. Migrating to auth user $uid...');
+                    '[AUTH ROLE DEBUG] Found orphaned staff/delivery doc ${sDoc.id} with role=$cleanRole. Migrating to auth user $uid...');
 
                 await firestore.collection('users').doc(uid).set({
+                  'uid': uid,
                   'role': cleanRole,
                   'roleTitle': roleTitle,
-                  'permissions': perms,
+                  if (perms.isNotEmpty) 'permissions': perms,
                   'status': status,
                   'isAdmin': parsed == UserRole.admin,
+                  if (name.isNotEmpty) 'name': name,
+                  if (effectivePhone.isNotEmpty) 'phone': effectivePhone,
+                  if (email.isNotEmpty) 'email': email,
+                  if (vehicle.isNotEmpty) 'vehicle': vehicle,
+                  if (vehicleNumber.isNotEmpty) 'vehicleNumber': vehicleNumber,
+                  if (assignedZone.isNotEmpty) 'assignedZone': assignedZone,
+                  if (rating != null) 'rating': rating,
+                  if (imageUrl != null && imageUrl.isNotEmpty) ...{
+                    'profileImageUrl': imageUrl,
+                    'photoUrl': imageUrl,
+                  },
                   'updatedAt': FieldValue.serverTimestamp(),
                 }, SetOptions(merge: true));
+
+                if (parsed == UserRole.delivery) {
+                  await firestore.collection('delivery_agents').doc(uid).set({
+                    'uid': uid,
+                    'id': uid,
+                    'role': UserRole.deliveryValue,
+                    'status': status,
+                    'isOnline': sData['isOnline'] == true || sData['isOnDuty'] == true,
+                    'isOnDuty': sData['isOnDuty'] == true || sData['isOnline'] == true,
+                    if (name.isNotEmpty) 'name': name,
+                    if (effectivePhone.isNotEmpty) 'phone': effectivePhone,
+                    if (email.isNotEmpty) 'email': email,
+                    if (vehicle.isNotEmpty) 'vehicle': vehicle,
+                    if (vehicleNumber.isNotEmpty) 'vehicleNumber': vehicleNumber,
+                    if (assignedZone.isNotEmpty) 'assignedZone': assignedZone,
+                    if (rating != null) 'rating': rating,
+                    if (imageUrl != null && imageUrl.isNotEmpty) ...{
+                      'profileImageUrl': imageUrl,
+                      'photoUrl': imageUrl,
+                    },
+                    'updatedAt': FieldValue.serverTimestamp(),
+                  }, SetOptions(merge: true));
+                }
 
                 // Verify the primary doc was updated before removing the orphan
                 final verifyDoc = await firestore.collection('users').doc(uid).get();
@@ -383,7 +510,7 @@ class UserNotifier extends StateNotifier<User> {
         }
       }
     } catch (e) {
-      debugPrint('[AUTH ROLE DEBUG] Orphaned staff doc migration error: $e');
+      debugPrint('[AUTH ROLE DEBUG] Orphaned staff/delivery doc migration error: $e');
     }
 
     // 6. Default: Standard customer
@@ -717,36 +844,151 @@ class UserNotifier extends StateNotifier<User> {
             'updatedAt': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
         } else {
-          final cleanName = (user.name.trim().isNotEmpty &&
-                  user.name.trim() != 'Guest Customer' &&
-                  user.name.trim() != 'Sawariya Customer')
-              ? user.name.trim()
-              : '';
-          user = User(
-            id: user.id,
-            name: cleanName,
-            phone: user.phone,
-            email: user.email,
-            profileImageUrl: user.profileImageUrl,
-            role: resolvedRole,
-            roleTitle: user.roleTitle,
-            permissions: user.permissions,
-            status: user.status,
-          );
-          await docRef.set({
-            'uid': user.id,
-            if (cleanName.isNotEmpty) 'name': cleanName,
-            'phone': user.phone,
-            'email': user.email,
-            'profileImageUrl': user.profileImageUrl,
-            'photoUrl': user.profileImageUrl,
-            'role': resolvedRole,
-            if (user.roleTitle != null) 'roleTitle': user.roleTitle,
-            if (user.permissions.isNotEmpty) 'permissions': user.permissions,
-            'status': user.status,
-            'createdAt': FieldValue.serverTimestamp(),
-            'updatedAt': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
+          debugPrint(
+              '[AUTH TRACE] users/${user.id} does not exist. Checking for pre-registered data via phone...');
+          final phoneVariants = PhoneAuthUtils.generateVariants(user.phone);
+          Map<String, dynamic>? existingData;
+          String? sourceDocPath;
+
+          // Check if an existing pre-registered document in users exists with this phone
+          if (phoneVariants.isNotEmpty) {
+            final userQuery = await firestore
+                .collection('users')
+                .where('phone', whereIn: phoneVariants)
+                .limit(1)
+                .get();
+            if (userQuery.docs.isNotEmpty) {
+              final doc = userQuery.docs.first;
+              if (doc.id != user.id) {
+                existingData = doc.data();
+                sourceDocPath = doc.reference.path;
+              }
+            }
+          }
+
+          // If not in users, check delivery_agents
+          if (existingData == null && phoneVariants.isNotEmpty) {
+            final agentQuery = await firestore
+                .collection('delivery_agents')
+                .where('phone', whereIn: phoneVariants)
+                .limit(1)
+                .get();
+            if (agentQuery.docs.isNotEmpty) {
+              final doc = agentQuery.docs.first;
+              existingData = doc.data();
+              sourceDocPath = doc.reference.path;
+            }
+          }
+
+          if (existingData != null) {
+            debugPrint(
+                '[AUTH TRACE] users/${user.id} was missing, but found existing pre-registered document at $sourceDocPath with data: $existingData. Linking to auth UID ${user.id} without creating duplicate account.');
+
+            final existingName = (existingData['name'] as String?)?.trim() ?? '';
+            final existingEmail = (existingData['email'] as String?)?.trim() ?? '';
+            final existingPhone = (existingData['phone'] as String?)?.trim() ?? user.phone;
+            final existingRole = (existingData['role'] as String?)?.trim() ?? resolvedRole;
+            final cleanRole = UserRole.sanitize(existingRole);
+            final roleTitle = existingData['roleTitle'] as String? ?? user.roleTitle;
+            final status = (existingData['status'] as String? ?? user.status).trim();
+            final existingImageUrl = _extractProfileImageUrl(existingData) ?? user.profileImageUrl;
+            final vehicle = ((existingData['vehicle'] ?? existingData['vehicleType']) as String?)?.trim() ?? '';
+            final vehicleNumber = (existingData['vehicleNumber'] as String?)?.trim() ?? '';
+            final assignedZone = ((existingData['assignedZone'] ?? existingData['zone']) as String?)?.trim() ?? '';
+            final rating = (existingData['rating'] as num?)?.toDouble();
+
+            user = User(
+              id: user.id,
+              name: existingName.isNotEmpty ? existingName : user.name,
+              phone: existingPhone,
+              email: existingEmail.isNotEmpty ? existingEmail : user.email,
+              profileImageUrl: existingImageUrl,
+              role: cleanRole,
+              roleTitle: roleTitle,
+              permissions: existingData['permissions'] is List
+                  ? (existingData['permissions'] as List).map((p) => p.toString().trim()).toList()
+                  : user.permissions,
+              status: status,
+            );
+
+            await docRef.set({
+              'uid': user.id,
+              if (user.name.isNotEmpty) 'name': user.name,
+              'phone': user.phone,
+              if (user.email != null && user.email!.isNotEmpty) 'email': user.email!,
+              if (user.profileImageUrl != null) ...{
+                'profileImageUrl': user.profileImageUrl,
+                'photoUrl': user.profileImageUrl,
+              },
+              'role': cleanRole,
+              if (user.roleTitle != null) 'roleTitle': user.roleTitle,
+              if (user.permissions.isNotEmpty) 'permissions': user.permissions,
+              'status': user.status,
+              if (vehicle.isNotEmpty) 'vehicle': vehicle,
+              if (vehicleNumber.isNotEmpty) 'vehicleNumber': vehicleNumber,
+              if (assignedZone.isNotEmpty) 'assignedZone': assignedZone,
+              if (rating != null) 'rating': rating,
+              'createdAt': FieldValue.serverTimestamp(),
+              'updatedAt': FieldValue.serverTimestamp(),
+            }, SetOptions(merge: true));
+
+            if (cleanRole == UserRole.deliveryValue) {
+              await firestore.collection('delivery_agents').doc(user.id).set({
+                'uid': user.id,
+                'id': user.id,
+                'role': UserRole.deliveryValue,
+                'status': status,
+                'isOnline': existingData['isOnline'] == true || existingData['isOnDuty'] == true,
+                'isOnDuty': existingData['isOnDuty'] == true || existingData['isOnline'] == true,
+                if (user.name.isNotEmpty) 'name': user.name,
+                'phone': user.phone,
+                if (user.email != null && user.email!.isNotEmpty) 'email': user.email!,
+                if (vehicle.isNotEmpty) 'vehicle': vehicle,
+                if (vehicleNumber.isNotEmpty) 'vehicleNumber': vehicleNumber,
+                if (assignedZone.isNotEmpty) 'assignedZone': assignedZone,
+                if (rating != null) 'rating': rating,
+                if (user.profileImageUrl != null) ...{
+                  'profileImageUrl': user.profileImageUrl,
+                  'photoUrl': user.profileImageUrl,
+                },
+                'updatedAt': FieldValue.serverTimestamp(),
+              }, SetOptions(merge: true));
+            }
+          } else {
+            debugPrint(
+                '[AUTH TRACE] users/${user.id} missing and no pre-registered document found for phone ${user.phone}. Registering new customer record for auth UID ${user.id}.');
+
+            final cleanName = (user.name.trim().isNotEmpty &&
+                    user.name.trim() != 'Guest Customer' &&
+                    user.name.trim() != 'Sawariya Customer')
+                ? user.name.trim()
+                : '';
+            user = User(
+              id: user.id,
+              name: cleanName,
+              phone: user.phone,
+              email: user.email,
+              profileImageUrl: user.profileImageUrl,
+              role: resolvedRole,
+              roleTitle: user.roleTitle,
+              permissions: user.permissions,
+              status: user.status,
+            );
+            await docRef.set({
+              'uid': user.id,
+              if (cleanName.isNotEmpty) 'name': cleanName,
+              'phone': user.phone,
+              'email': user.email,
+              'profileImageUrl': user.profileImageUrl,
+              'photoUrl': user.profileImageUrl,
+              'role': resolvedRole,
+              if (user.roleTitle != null) 'roleTitle': user.roleTitle,
+              if (user.permissions.isNotEmpty) 'permissions': user.permissions,
+              'status': user.status,
+              'createdAt': FieldValue.serverTimestamp(),
+              'updatedAt': FieldValue.serverTimestamp(),
+            }, SetOptions(merge: true));
+          }
         }
       } catch (e) {
         debugPrint('[PROFILE DEBUG] setSession Firestore sync error: $e');

@@ -5,8 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../models/delivery_boy_model.dart';
 import '../../../providers/delivery_provider.dart';
 import '../../../providers/notification_provider.dart';
-import '../../../screens/notifications/notifications_screen.dart';
+import '../../notifications/notifications_screen.dart';
 import '../theme/delivery_theme.dart';
+import 'delivery_agent_avatar.dart';
 
 /// Top header for Delivery Home screen matching Screen 1 in reference design.
 class DeliveryHomeHeader extends ConsumerWidget {
@@ -181,19 +182,10 @@ class DeliveryHomeHeader extends ConsumerWidget {
                                 color: Colors.white,
                                 shape: BoxShape.circle,
                               ),
-                              child: CircleAvatar(
+                              child: DeliveryAgentAvatar(
                                 radius: 24,
-                                backgroundColor: const Color(0xFFE8F5E9),
-                                backgroundImage: agent.profileImageUrl !=
-                                            null &&
-                                        agent.profileImageUrl!.isNotEmpty
-                                    ? NetworkImage(agent.profileImageUrl!)
-                                    : null,
-                                child: agent.profileImageUrl == null ||
-                                        agent.profileImageUrl!.isEmpty
-                                    ? const Icon(Icons.person_rounded,
-                                        size: 26, color: DeliveryTheme.primary)
-                                    : null,
+                                imageUrl: agent.profileImageUrl,
+                                iconSize: 26,
                               ),
                             ),
                             const SizedBox(height: 4),

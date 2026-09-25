@@ -468,7 +468,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
     final templates = _getTemplatesForType(_selectedType);
 
-    return SingleChildScrollView(
+    final bodyContent = SingleChildScrollView(
       padding: EdgeInsets.symmetric(
         horizontal: isDesktop ? 28 : 16,
         vertical: 8,
@@ -925,6 +925,29 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           const SizedBox(height: 24),
         ],
       ),
+    );
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: Navigator.of(context).canPop()
+          ? AppBar(
+              title: Text(
+                'Broadcasts & Targeted Alerts',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: textPrimary,
+                ),
+              ),
+              backgroundColor: cardBg,
+              elevation: 0,
+              leading: IconButton(
+                icon: Icon(Icons.arrow_back_rounded, color: textPrimary),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            )
+          : null,
+      body: bodyContent,
     );
   }
 

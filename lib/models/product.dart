@@ -100,6 +100,9 @@ class Product {
     final original = data['originalPrice'];
     final rawImageUrl = (data['imageUrl'] as String?) ??
         (data['image'] as String?) ??
+        (data['productImage'] as String?) ??
+        (data['imagePath'] as String?) ??
+        (data['productImageUrl'] as String?) ??
         (data['image_url'] as String?) ??
         (data['imageURL'] as String?) ??
         (data['photoUrl'] as String?) ??

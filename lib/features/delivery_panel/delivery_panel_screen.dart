@@ -21,7 +21,9 @@ import 'screens/delivery_earnings_redesigned_tab.dart';
 import 'screens/delivery_profile_redesigned_tab.dart';
 import 'screens/delivery_history_redesigned_screen.dart';
 import 'screens/delivery_settings_redesigned_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide User;
 import 'widgets/battery_optimization_warning_banner.dart';
+import 'widgets/delivery_agent_avatar.dart';
 import 'widgets/delivery_bottom_nav.dart';
 import 'widgets/gps_status_warning_banner.dart';
 
@@ -215,23 +217,24 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
             accountEmail: Text(
               agent.phone.isNotEmpty
                   ? agent.phone
-                  : 'Sawariya Dairy Delivery Partner',
+                  : (FirebaseAuth.instance.currentUser?.phoneNumber ??
+                      'Sawariya Dairy Delivery Partner'),
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 12,
                 color: const Color(0xFFC8E6C9),
               ),
             ),
-            currentAccountPicture: CircleAvatar(
-              backgroundColor: Colors.white,
-              backgroundImage: agent.profileImageUrl != null &&
-                      agent.profileImageUrl!.isNotEmpty
-                  ? NetworkImage(agent.profileImageUrl!)
-                  : null,
-              child: agent.profileImageUrl == null ||
-                      agent.profileImageUrl!.isEmpty
-                  ? const Icon(Icons.person_rounded,
-                      size: 36, color: DeliveryTheme.primary)
-                  : null,
+            currentAccountPicture: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: DeliveryAgentAvatar(
+                radius: 34,
+                imageUrl: agent.profileImageUrl,
+                iconSize: 36,
+              ),
             ),
           ),
           ListTile(
