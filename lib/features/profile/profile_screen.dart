@@ -175,8 +175,13 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildProfileHeaderCard(BuildContext context, WidgetRef ref) {
     final user = ref.watch(userProvider);
     final isDesktop = context.isDesktop;
+    final safeUrlSummary = user.profileImageUrl != null
+        ? (Uri.tryParse(user.profileImageUrl!) != null
+            ? '${Uri.tryParse(user.profileImageUrl!)!.scheme}://${Uri.tryParse(user.profileImageUrl!)!.host}${Uri.tryParse(user.profileImageUrl!)!.path}'
+            : '[valid URL]')
+        : 'null';
     debugPrint(
-        '[PROFILE DEBUG T5] ProfileScreen: profileImageUrl received: ${user.profileImageUrl}');
+        '[PROFILE DEBUG T5] ProfileScreen: profileImageUrl received: $safeUrlSummary');
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(

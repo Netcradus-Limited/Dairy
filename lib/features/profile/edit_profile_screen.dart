@@ -236,11 +236,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           .read(userProvider.notifier)
           .updateProfile(profileImageUrl: downloadUrl);
 
-      final userAfter = ref.read(userProvider);
       debugPrint(
           '[PROFILE DEBUG T3] 7. Firestore profileImageUrl after write: $safeUrlSummary');
       debugPrint(
-          '[PROFILE DEBUG T3] 8. userProvider.profileImageUrl immediately after updateProfile(): ${userAfter.profileImageUrl}');
+          '[PROFILE DEBUG T3] 8. userProvider.profileImageUrl immediately after updateProfile(): $safeUrlSummary');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -48,8 +48,12 @@ class FirebaseStorageService {
             'Firebase Storage returned an invalid download URL: $downloadUrl');
       }
 
+      final uri = Uri.tryParse(trimmedUrl);
+      final safeUrlSummary = uri != null
+          ? '${uri.scheme}://${uri.host}${uri.path}'
+          : '[valid URL]';
       debugPrint(
-          'FirebaseStorageService: Uploaded to $path successfully. Download URL: $trimmedUrl');
+          'FirebaseStorageService: Uploaded to $path successfully. ($safeUrlSummary)');
       return trimmedUrl;
     } on FirebaseException catch (e) {
       debugPrint(
