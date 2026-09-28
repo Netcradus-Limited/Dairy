@@ -84,6 +84,11 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
       status = DeliveryOrderStatus.cancelled;
   }
 
+  if (order.deliveryCompletionRequested &&
+      order.status != OrderStatus.delivered) {
+    status = DeliveryOrderStatus.awaitingAdminConfirmation;
+  }
+
   final double? customerLat = (order.deliveryAddress.hasCoordinates &&
           DeliveryTrackingService.isValidCoordinates(
               order.deliveryAddress.latitude, order.deliveryAddress.longitude))
@@ -175,6 +180,12 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
     paymentStatus: order.paymentStatus,
     productImageUrl: productImageUrl,
     cancellationReason: order.cancellationReason,
+    deliveryCompletionRequested: order.deliveryCompletionRequested,
+    deliveryCompletionRequestedAt: order.deliveryCompletionRequestedAt,
+    deliveryCompletionAgentId: order.deliveryCompletionAgentId,
+    deliveryCompletionStatus: order.deliveryCompletionStatus,
+    deliveryCompletionRequestId: order.deliveryCompletionRequestId,
+    deliveryNotes: order.deliveryNotes,
     orderItemDetails: orderItemDetails,
   );
 }
@@ -215,7 +226,7 @@ final deliveryOrdersStreamProvider = StreamProvider<List<DeliveryOrder>>((ref) {
           orders.map<DeliveryOrder>(deliveryOrderFromOrder).toList());
 });
 
-/// Live Firestore stream of the agent's active (accepted / in-progress) orders,
+/// Live Firestore stream of the agent's active (accepted / in-progress / awaiting confirmation) orders,
 /// derived from the unified agent stream. Used by the Active tab and the
 /// tracking map.
 final deliveryActiveOrdersStreamProvider =
@@ -229,7 +240,8 @@ final deliveryActiveOrdersStreamProvider =
           .where((DeliveryOrder o) =>
               o.status == DeliveryOrderStatus.accepted ||
               o.status == DeliveryOrderStatus.pickup ||
-              o.status == DeliveryOrderStatus.outForDelivery)
+              o.status == DeliveryOrderStatus.outForDelivery ||
+              o.status == DeliveryOrderStatus.awaitingAdminConfirmation)
           .toList());
 });
 
@@ -649,7 +661,8 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
               final aZone = ((aData['assignedZone'] ?? aData['zone']) as String?)?.trim() ?? '';
               final double? aRating = (aData['rating'] as num?)?.toDouble();
               final aImage = ((aData['profileImageUrl'] ?? aData['photoUrl'] ?? aData['photoURL']) as String?)?.trim();
-              final isOnline = aData['isOnline'] == true || aData['isOnDuty'] == true;
+              final isPersistedOnline = (aDoc.id == uid) &&
+                  (aData['isOnline'] == true || aData['isOnDuty'] == true);
 
               await firestore.collection('delivery_agents').doc(uid).set({
                 'uid': uid,
@@ -663,8 +676,8 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
                 if (aZone.isNotEmpty) 'assignedZone': aZone,
                 if (aRating != null) 'rating': aRating,
                 if (aImage != null && aImage.isNotEmpty) 'profileImageUrl': aImage,
-                'isOnline': isOnline,
-                'isOnDuty': isOnline,
+                'isOnline': isPersistedOnline,
+                'isOnDuty': isPersistedOnline,
                 'updatedAt': FieldValue.serverTimestamp(),
               }, SetOptions(merge: true));
 
@@ -677,7 +690,7 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
                 vehicle: aVehicle,
                 vehicleNumber: aVehicleNum,
                 assignedZone: aZone,
-                status: isOnline ? DeliveryStatus.onDuty : DeliveryStatus.offDuty,
+                status: isPersistedOnline ? DeliveryStatus.onDuty : DeliveryStatus.offDuty,
                 totalDeliveriesToday: ((aData['totalDeliveriesToday'] ?? 0) as num).toInt(),
                 completedDeliveriesToday: ((aData['completedDeliveriesToday'] ?? 0) as num).toInt(),
                 earningsToday: ((aData['earningsToday'] ?? 0.0) as num).toDouble(),
@@ -753,6 +766,8 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
                 if (cleanZone.isNotEmpty) 'assignedZone': cleanZone,
                 if (uRating != null) 'rating': uRating,
                 if (uProfileImage != null && uProfileImage.isNotEmpty) 'profileImageUrl': uProfileImage,
+                'isOnline': false,
+                'isOnDuty': false,
                 'updatedAt': FieldValue.serverTimestamp(),
               }, SetOptions(merge: true));
             } catch (_) {}
@@ -971,6 +986,12 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
     if (trimmedName != null && trimmedName.isNotEmpty && authUser != null) {
       try {
         await authUser.updateDisplayName(trimmedName);
+      } catch (_) {}
+    }
+
+    if (trimmedImage != null && trimmedImage.isNotEmpty && authUser != null) {
+      try {
+        await authUser.updatePhotoURL(trimmedImage);
       } catch (_) {}
     }
 

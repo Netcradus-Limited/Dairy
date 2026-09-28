@@ -203,11 +203,19 @@ void main() {
         expect(route, '/notifications');
       });
 
-      test('Delivery agent with orderId resolves to /delivery (DeliveryPanel)',
+      test('Delivery agent with orderId resolves to /delivery/orders/:orderId',
           () {
         final route = NotificationService.resolveNotificationRoute(
           user: deliveryUser,
           orderId: 'ORD-600',
+        );
+        expect(route, '/delivery/orders/ORD-600');
+      });
+
+      test('Delivery agent without orderId resolves to /delivery (DeliveryPanel)',
+          () {
+        final route = NotificationService.resolveNotificationRoute(
+          user: deliveryUser,
         );
         expect(route, '/delivery');
       });
@@ -307,6 +315,83 @@ void main() {
         expect(mockRepo.markedReadNotifIds, contains('notif-doc-999'));
         expect(mockRepo.markedReadUserIds, contains('cust-marked-1'));
         authContainer.dispose();
+      });
+    });
+
+    group('6. Delivery Deep-Link & RBAC Security Verification', () {
+      test(
+          'Delivery agent tapping notification passes orderId into lastTappedOrderIdProvider and orderAlertProvider',
+          () {
+        final mockRepo = _TestNotificationRepo();
+        const testDeliveryUser = User(
+          id: 'agent_42',
+          name: 'Delivery Agent 42',
+          phone: '9876543210',
+          role: 'delivery',
+        );
+
+        final authContainer = ProviderContainer(
+          overrides: [
+            notificationRepositoryProvider.overrideWithValue(mockRepo),
+            userProvider.overrideWith((ref) => _TestUserNotifier(testDeliveryUser)),
+          ],
+        );
+
+        final service = authContainer.read(notificationServiceProvider);
+        final dest = NotificationDestination.fromPayload({
+          'notificationId': 'notif-agent-1',
+          'orderId': 'ORD-DELIV-42',
+          'route': '/delivery',
+        });
+
+        service.handleNotificationTap(dest);
+
+        // Verify orderId is preserved in state providers
+        expect(authContainer.read(lastTappedOrderIdProvider), 'ORD-DELIV-42');
+        expect(authContainer.read(orderAlertProvider)?.orderId, 'ORD-DELIV-42');
+
+        // Verify resolved route points directly to /delivery/orders/:orderId
+        final targetRoute = NotificationService.resolveNotificationRoute(
+          user: testDeliveryUser,
+          orderId: dest.orderId,
+          explicitRoute: dest.route,
+        );
+        expect(targetRoute, '/delivery/orders/ORD-DELIV-42');
+
+        // Verify mark-as-read triggered for authenticated delivery agent
+        expect(mockRepo.markedReadNotifIds, contains('notif-agent-1'));
+        expect(mockRepo.markedReadUserIds, contains('agent_42'));
+
+        authContainer.dispose();
+      });
+
+      test('RBAC verification: Cross-role protection matrices', () {
+        const customer =
+            User(id: 'c1', name: 'Cust', phone: '9876543210', role: 'customer');
+        const agent =
+            User(id: 'a1', name: 'Agent', phone: '9876543210', role: 'delivery');
+        const admin =
+            User(id: 'adm1', name: 'Admin', phone: '9876543210', role: 'admin');
+
+        // 1. Delivery agent can access /delivery and /delivery/orders/:orderId
+        expect(NotificationService.resolveNotificationRoute(user: agent, explicitRoute: '/delivery'), '/delivery');
+        expect(NotificationService.resolveNotificationRoute(user: agent, orderId: 'ORD-1'), '/delivery/orders/ORD-1');
+
+        // 2. Delivery agent cannot access /admin/*
+        expect(NotificationService.resolveNotificationRoute(user: agent, explicitRoute: '/admin'), '/delivery');
+        expect(NotificationService.resolveNotificationRoute(user: agent, explicitRoute: '/admin/orders'), '/delivery');
+
+        // 3. Customer cannot access /delivery/*
+        expect(NotificationService.resolveNotificationRoute(user: customer, explicitRoute: '/delivery'), '/notifications');
+        expect(NotificationService.resolveNotificationRoute(user: customer, explicitRoute: '/delivery-map'), '/notifications');
+
+        // 4. Customer cannot access /admin/*
+        expect(NotificationService.resolveNotificationRoute(user: customer, explicitRoute: '/admin'), '/notifications');
+        expect(NotificationService.resolveNotificationRoute(user: customer, explicitRoute: '/admin/users'), '/notifications');
+
+        // 5. Admin routes correctly
+        expect(NotificationService.resolveNotificationRoute(user: admin, orderId: 'ORD-1'), '/admin/orders');
+        expect(NotificationService.resolveNotificationRoute(user: admin, explicitRoute: '/admin/orders'), '/admin/orders');
       });
     });
   });

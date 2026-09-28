@@ -117,14 +117,10 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
   }
 
   void _handleTappedOrderId(String orderId) {
-    final activeOrders =
-        ref.read(deliveryActiveOrdersStreamProvider).asData?.value ?? [];
-    final isActive =
-        activeOrders.any((o) => o.id == orderId || o.orderId == orderId);
-    if (isActive) {
-      ref.read(deliveryPanelTabProvider.notifier).setTab(1);
-    } else {
-      ref.read(deliveryPanelTabProvider.notifier).setTab(0);
+    final cleanId = orderId.trim();
+    if (cleanId.isNotEmpty) {
+      ref.read(lastTappedOrderIdProvider.notifier).state = '';
+      context.push('/delivery/orders/$cleanId');
     }
   }
 
@@ -660,38 +656,46 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
             onPressed: () =>
                 ref.read(agentLiveLocationProvider.notifier).toggle(),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: isOnline
-                  ? const Color(0xFFE8F5E9)
-                  : AppColors.error.withValues(alpha: 0.1),
+          Tooltip(
+            message: isOnline ? 'Click to go Offline' : 'Click to go Online',
+            child: InkWell(
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isOnline ? const Color(0xFF43A047) : AppColors.error,
+              onTap: () =>
+                  ref.read(deliveryAgentProvider.notifier).toggleDuty(),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isOnline
+                      ? const Color(0xFFE8F5E9)
+                      : AppColors.error.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isOnline ? const Color(0xFF43A047) : AppColors.error,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: isOnline ? const Color(0xFF43A047) : AppColors.error,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      isOnline ? 'Online' : 'Offline',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: isOnline ? const Color(0xFF43A047) : AppColors.error,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: isOnline ? const Color(0xFF43A047) : AppColors.error,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  isOnline ? 'Online' : 'Offline',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: isOnline ? const Color(0xFF43A047) : AppColors.error,
-                  ),
-                ),
-              ],
             ),
           ),
         ],

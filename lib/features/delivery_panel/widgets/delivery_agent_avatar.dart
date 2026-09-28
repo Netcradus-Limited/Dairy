@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import '../../../core/widgets/app_network_image.dart';
 import '../theme/delivery_theme.dart';
 
 /// Reusable Delivery Agent Avatar widget with safe image loading and fallback.
@@ -97,37 +98,21 @@ class DeliveryAgentAvatar extends StatelessWidget {
       );
     }
 
-    // On Flutter Web, CachedNetworkImage may have CORS issues with Firebase Storage
-    // URLs that contain auth tokens. Use Image.network with an explicit Accept header.
+    // On Flutter Web, CachedNetworkImage and Image.network with custom headers
+    // suffer from CORS restrictions with Firebase Storage URLs.
+    // Use AppNetworkImage which renders a native HTML <img> element via
+    // HtmlElementView without CORS blocking.
     if (kIsWeb) {
       return ClipOval(
         child: Container(
           width: radius * 2,
           height: radius * 2,
           color: backgroundColor,
-          child: Image.network(
-            cleanUrl,
+          child: AppNetworkImage(
+            imageUrl: cleanUrl,
             width: radius * 2,
             height: radius * 2,
             fit: BoxFit.cover,
-            headers: const {'Accept': 'image/*'},
-            loadingBuilder: (context, child, progress) {
-              if (progress == null) return child;
-              return Center(
-                child: SizedBox(
-                  width: radius * 0.7,
-                  height: radius * 0.7,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    value: progress.expectedTotalBytes != null
-                        ? progress.cumulativeBytesLoaded /
-                            progress.expectedTotalBytes!
-                        : null,
-                    color: DeliveryTheme.primary,
-                  ),
-                ),
-              );
-            },
             errorBuilder: (_, __, ___) => _buildFallbackIcon(),
           ),
         ),

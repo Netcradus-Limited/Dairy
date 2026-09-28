@@ -56,6 +56,8 @@ class DeliveryOrderCard extends StatelessWidget {
         return DeliveryChipType.inProgress;
       case DeliveryOrderStatus.accepted:
         return DeliveryChipType.next;
+      case DeliveryOrderStatus.awaitingAdminConfirmation:
+        return DeliveryChipType.pending;
       case DeliveryOrderStatus.cancelled:
         return DeliveryChipType.cancelled;
       default:
@@ -72,6 +74,8 @@ class DeliveryOrderCard extends StatelessWidget {
         return 'In Progress';
       case DeliveryOrderStatus.accepted:
         return 'Next';
+      case DeliveryOrderStatus.awaitingAdminConfirmation:
+        return 'Awaiting Confirmation';
       case DeliveryOrderStatus.cancelled:
         return 'Cancelled';
       default:

@@ -823,7 +823,7 @@ class DeliveryStaffScreen extends StatelessWidget {
                       decoration: const InputDecoration(labelText: 'Status'),
                       items: const [
                         DropdownMenuItem(
-                            value: 'Active', child: Text('Active / On Duty')),
+                            value: 'Active', child: Text('Active (Authorized)')),
                         DropdownMenuItem(
                             value: 'Break', child: Text('On Break')),
                         DropdownMenuItem(
@@ -848,7 +848,6 @@ class DeliveryStaffScreen extends StatelessWidget {
               ElevatedButton(
                 onPressed: () async {
                   if (nameCtrl.text.trim().isNotEmpty) {
-                    final isOnline = selectedStatus.toLowerCase() == 'active';
                     final ratingText = ratingCtrl.text.trim();
                     final rating = ratingText.isNotEmpty
                         ? double.tryParse(ratingText)
@@ -856,6 +855,9 @@ class DeliveryStaffScreen extends StatelessWidget {
 
                     try {
                       if (isEdit) {
+                        final isOnline = (selectedStatus.toLowerCase() == 'active')
+                            ? existing.isOnline
+                            : false;
                         await provider.updateRider(
                           existing.copyWith(
                             name: nameCtrl.text.trim(),
@@ -899,7 +901,7 @@ class DeliveryStaffScreen extends StatelessWidget {
                             pendingDeliveries: 0,
                             rating: rating,
                             status: selectedStatus,
-                            isOnline: isOnline,
+                            isOnline: false,
                             joinedDate: DateFormat('dd MMM yyyy')
                                 .format(DateTime.now()),
                           ),

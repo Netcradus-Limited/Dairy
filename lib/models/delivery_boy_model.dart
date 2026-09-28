@@ -12,6 +12,7 @@ enum DeliveryOrderStatus {
   accepted,
   pickup,
   outForDelivery,
+  awaitingAdminConfirmation,
   delivered,
   cancelled,
   declined;
@@ -26,6 +27,8 @@ enum DeliveryOrderStatus {
         return 'Pickup';
       case DeliveryOrderStatus.outForDelivery:
         return 'Out for Delivery';
+      case DeliveryOrderStatus.awaitingAdminConfirmation:
+        return 'Awaiting Admin Confirmation';
       case DeliveryOrderStatus.delivered:
         return 'Delivered';
       case DeliveryOrderStatus.cancelled:
@@ -45,6 +48,8 @@ enum DeliveryOrderStatus {
         return const Color(0xFFA855F7);
       case DeliveryOrderStatus.outForDelivery:
         return const Color(0xFF0284C7);
+      case DeliveryOrderStatus.awaitingAdminConfirmation:
+        return const Color(0xFFD97706);
       case DeliveryOrderStatus.delivered:
         return const Color(0xFF10B981);
       case DeliveryOrderStatus.cancelled:
@@ -221,6 +226,12 @@ class DeliveryOrder {
   final String? paymentStatus;
   final String? productImageUrl;
   final String? cancellationReason;
+  final bool deliveryCompletionRequested;
+  final DateTime? deliveryCompletionRequestedAt;
+  final String? deliveryCompletionAgentId;
+  final String? deliveryCompletionStatus;
+  final String? deliveryCompletionRequestId;
+  final String? deliveryNotes;
 
   const DeliveryOrder({
     required this.id,
@@ -255,6 +266,12 @@ class DeliveryOrder {
     this.paymentStatus,
     this.productImageUrl,
     this.cancellationReason,
+    this.deliveryCompletionRequested = false,
+    this.deliveryCompletionRequestedAt,
+    this.deliveryCompletionAgentId,
+    this.deliveryCompletionStatus,
+    this.deliveryCompletionRequestId,
+    this.deliveryNotes,
     this.orderItemDetails = const [],
   });
 
@@ -263,6 +280,11 @@ class DeliveryOrder {
   bool get isSubscription =>
       orderType.toLowerCase() == 'subscription' ||
       (subscriptionId != null && subscriptionId!.isNotEmpty);
+
+  /// True if agent requested completion and order is awaiting admin confirmation.
+  bool get isAwaitingAdminConfirmation =>
+      (deliveryCompletionRequested || status == DeliveryOrderStatus.awaitingAdminConfirmation) &&
+      status != DeliveryOrderStatus.delivered;
 
   /// The customer-facing 6-character order code (e.g. "KRT482").
   String get displayCode => orderCode.isNotEmpty ? orderCode : orderId;
@@ -338,6 +360,12 @@ class DeliveryOrder {
     String? paymentStatus,
     String? productImageUrl,
     String? cancellationReason,
+    bool? deliveryCompletionRequested,
+    DateTime? deliveryCompletionRequestedAt,
+    String? deliveryCompletionAgentId,
+    String? deliveryCompletionStatus,
+    String? deliveryCompletionRequestId,
+    String? deliveryNotes,
     List<DeliveryOrderItem>? orderItemDetails,
   }) {
     return DeliveryOrder(
@@ -375,6 +403,17 @@ class DeliveryOrder {
       paymentStatus: paymentStatus ?? this.paymentStatus,
       productImageUrl: productImageUrl ?? this.productImageUrl,
       cancellationReason: cancellationReason ?? this.cancellationReason,
+      deliveryCompletionRequested:
+          deliveryCompletionRequested ?? this.deliveryCompletionRequested,
+      deliveryCompletionRequestedAt:
+          deliveryCompletionRequestedAt ?? this.deliveryCompletionRequestedAt,
+      deliveryCompletionAgentId:
+          deliveryCompletionAgentId ?? this.deliveryCompletionAgentId,
+      deliveryCompletionStatus:
+          deliveryCompletionStatus ?? this.deliveryCompletionStatus,
+      deliveryCompletionRequestId:
+          deliveryCompletionRequestId ?? this.deliveryCompletionRequestId,
+      deliveryNotes: deliveryNotes ?? this.deliveryNotes,
       orderItemDetails: orderItemDetails ?? this.orderItemDetails,
     );
   }

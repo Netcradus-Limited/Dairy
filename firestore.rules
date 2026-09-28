@@ -1,6 +1,6 @@
 rules_version = '2';
 
-/// Sawariya Dairy — Complete Cloud Firestore Security Rules (Task 5)
+/// Sawariya Dairy â€” Complete Cloud Firestore Security Rules (Task 5)
 /// ---------------------------------------------------------------------------
 /// Architecture:
 ///   * Deny-by-default on all root documents.
@@ -14,12 +14,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Deny by Default ────────────────────────────────────────────────────
+    // â”€â”€ Deny by Default â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // ── Shared RBAC Helpers ────────────────────────────────────────────────
+    // â”€â”€ Shared RBAC Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function isSignedIn() {
       return request.auth != null;
     }
@@ -37,14 +37,19 @@ service cloud.firestore {
 
     function currentRole() {
       let data = getUserData();
-      if (data != null && ('role' in data) && data.role != null) {
-        return data.role;
-      }
-      if (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid))) {
-        let adminData = get(/databases/$(database)/documents/admins/$(request.auth.uid)).data;
-        return adminData != null && ('role' in adminData) ? adminData.role : null;
-      }
-      return null;
+      let adminData = (isSignedIn()
+          && exists(/databases/$(database)/documents/admins/$(request.auth.uid)))
+          ? get(/databases/$(database)/documents/admins/$(request.auth.uid)).data
+          : null;
+
+      return data != null
+          && ('role' in data)
+          && data.role != null
+          ? data.role
+          : adminData != null
+              && ('role' in adminData)
+              ? adminData.role
+              : null;
     }
 
     function isSuperAdmin() {
@@ -96,7 +101,7 @@ service cloud.firestore {
       return isSignedIn() && (currentRole() == 'customer' || currentRole() == null);
     }
 
-    // ── 1. users Collection ─────────────────────────────────────────────────
+    // â”€â”€ 1. users Collection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /users/{userId} {
       // Users can read own profile; Staff/Admins can read all users
       allow read: if isAdmin() || isOwnDoc(userId);
@@ -129,13 +134,13 @@ service cloud.firestore {
       allow delete: if isSuperAdmin() || hasPermission('manageStaff') || hasPermission('deleteCustomer');
     }
 
-    // ── 2. users/{userId}/addresses Subcollection ───────────────────────────
+    // â”€â”€ 2. users/{userId}/addresses Subcollection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /users/{userId}/addresses/{addressId} {
       // Owners can CRUD own addresses; Admins have full access
       allow read, create, update, delete: if isAdmin() || isOwnDoc(userId);
     }
 
-    // ── 3. users/{userId}/notifications Subcollection ───────────────────────
+    // â”€â”€ 3. users/{userId}/notifications Subcollection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /users/{userId}/notifications/{notifId} {
       // Owners read own notifications; Admins read all
       allow read: if isAdmin() || isOwnDoc(userId);
@@ -152,32 +157,32 @@ service cloud.firestore {
       allow delete: if isAdmin() || isOwnDoc(userId);
     }
 
-    // ── 4. users/{userId}/cart Subcollection ─────────────────────────────────
+    // â”€â”€ 4. users/{userId}/cart Subcollection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /users/{userId}/cart/{productId} {
       // Owners can CRUD own cart items; Admins have full access
       allow read, create, update, delete: if isAdmin() || isOwnDoc(userId);
     }
 
-    // ── 5. users/{userId}/subscription Subcollection ────────────────────────
+    // â”€â”€ 5. users/{userId}/subscription Subcollection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /users/{userId}/subscription/{subscriptionId} {
       // Owners can CRUD own subscriptions; Admins have full access
       allow read, create, update, delete: if isAdmin() || isOwnDoc(userId);
     }
 
-    // ── 5a. users/{userId}/delivery_records Subcollection ────────────────────
+    // â”€â”€ 5a. users/{userId}/delivery_records Subcollection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /users/{userId}/delivery_records/{recordId} {
       // Owners can read own delivery records; Admins have full access
       allow read: if isAdmin() || isOwnDoc(userId);
       allow create, update, delete: if isAdmin();
     }
 
-    // ── 5b. users/{userId}/skipped_dates Subcollection ───────────────────────
+    // â”€â”€ 5b. users/{userId}/skipped_dates Subcollection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /users/{userId}/skipped_dates/{dateId} {
       // Owners and Admins can manage skipped delivery dates
       allow read, create, update, delete: if isAdmin() || isOwnDoc(userId);
     }
 
-    // ── 5c. subscriptions Root Collection ────────────────────────────────────
+    // â”€â”€ 5c. subscriptions Root Collection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /subscriptions/{subscriptionId} {
       // Customers read own subscriptions; Admins read all subscriptions
       allow read: if isAdmin() || hasPermission('viewSubscriptions')
@@ -205,7 +210,7 @@ service cloud.firestore {
           || (isCustomer() && (resource.data.userId == request.auth.uid || resource.data.uid == request.auth.uid));
     }
 
-    // ── 6. products Collection ──────────────────────────────────────────────
+    // â”€â”€ 6. products Collection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /products/{productId} {
       // Any signed-in user can browse products in the shop
       allow read: if isSignedIn();
@@ -216,7 +221,7 @@ service cloud.firestore {
       allow delete: if isSuperAdmin() || hasPermission('deleteProduct') || canManageCatalog();
     }
 
-    // ── 7. categories Collection ────────────────────────────────────────────
+    // â”€â”€ 7. categories Collection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /categories/{categoryId} {
       // Any signed-in user can view categories
       allow read: if isSignedIn();
@@ -227,7 +232,7 @@ service cloud.firestore {
       allow delete: if isSuperAdmin() || hasPermission('deleteCategory') || canManageCatalog();
     }
 
-    // ── 8. orders Collection ────────────────────────────────────────────────
+    // â”€â”€ 8. orders Collection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /orders/{orderId} {
       // Customers: read own orders.
       // Delivery: read ONLY orders assigned to this authenticated agent.
@@ -289,7 +294,8 @@ service cloud.firestore {
           && setsCancelled;
     }
 
-    // Valid delivery status transition state machine
+    // Valid delivery status transition state machine for Delivery Agents
+    // Note: Delivery agents CANNOT mark 'delivered' directly. Only Admin confirmation completes the order to 'delivered'.
     function isValidDeliveryStatusTransition(fromStatus, toStatus) {
       let fromLower = (fromStatus is string) ? fromStatus.lower() : '';
       let toLower = (toStatus is string) ? toStatus.lower() : '';
@@ -302,7 +308,7 @@ service cloud.firestore {
       let fromPreparing = (fromLower in ['preparing', 'pickup'])
           && (toLower in ['preparing', 'pickup', 'outfordelivery', 'out for delivery', 'cancelled']);
       let fromOutForDelivery = (fromLower in ['outfordelivery', 'out for delivery'])
-          && (toLower in ['outfordelivery', 'out for delivery', 'delivered', 'cancelled']);
+          && (toLower in ['outfordelivery', 'out for delivery', 'cancelled']);
 
       return isUnchanged || fromAssigned || fromAccepted || fromPreparing || fromOutForDelivery;
     }
@@ -320,17 +326,24 @@ service cloud.firestore {
           && (request.resource.data.assignedAgentId == null || request.resource.data.assignedAgentId == '')
           && (request.resource.data.status.lower() in ['confirmed', 'pending', 'placed']);
 
+      // Agent can request delivery completion (awaiting admin confirmation)
+      let requestsCompletion = ('deliveryCompletionRequested' in request.resource.data)
+          && request.resource.data.deliveryCompletionRequested == true
+          && ('deliveryCompletionAgentId' in request.resource.data)
+          && request.resource.data.deliveryCompletionAgentId == request.auth.uid;
+
       let isNonTerminal = !(resource.data.status.lower() in ['delivered', 'cancelled']);
       let validTransition = !('status' in request.resource.data)
           || isValidDeliveryStatusTransition(resource.data.status, request.resource.data.status);
 
       return isMine && isNonTerminal && (
-        (validTransition && changed.hasOnly(['status', 'acceptedAt', 'deliveredAt', 'deliveryConfirmed', 'cancellationReason', 'updatedAt']))
+        (requestsCompletion && changed.hasOnly(['deliveryCompletionRequested', 'deliveryCompletionRequestedAt', 'deliveryCompletionAgentId', 'deliveryCompletionStatus', 'deliveryCompletionRequestId', 'deliveryNotes', 'updatedAt']))
+        || (validTransition && changed.hasOnly(['status', 'acceptedAt', 'deliveredAt', 'deliveryConfirmed', 'cancellationReason', 'updatedAt']))
         || (releases && changed.hasOnly(['status', 'assignedAgentId', 'assignedAgentName', 'assignedAt', 'acceptedAt', 'updatedAt']))
       );
     }
 
-    // ── 9. delivery_agents Collection ───────────────────────────────────────
+    // â”€â”€ 9. delivery_agents Collection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /delivery_agents/{agentId} {
       // Delivery agent reads own profile; Customers track assigned driver for active order; Admins read all.
       // Delivery agents CANNOT read another agent's private profile.
@@ -393,7 +406,7 @@ service cloud.firestore {
       return changed.hasOnly(allowed) && keepsUid && keepsRole;
     }
 
-    // ── 10. earnings Collection ─────────────────────────────────────────────
+    // â”€â”€ 10. earnings Collection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /earnings/{earningId} {
       // Delivery agent reads own earnings; Admins read all.
       // Delivery agents can NEVER read other agents' earnings.
@@ -409,7 +422,7 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // ── 11. complaints Collection ───────────────────────────────────────────
+    // â”€â”€ 11. complaints Collection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /complaints/{complaintId} {
       // Customer reads own support tickets; Admins & authorized staff read all
       // Delivery users do NOT have access unless they are admins or viewing their own ticket
@@ -441,7 +454,7 @@ service cloud.firestore {
       allow delete: if isSuperAdmin() || hasPermission('replyComplaint') || isSuperAdmin();
     }
 
-    // ── 12. payments Collection ─────────────────────────────────────────────
+    // â”€â”€ 12. payments Collection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /payments/{paymentId} {
       // Users read own payments; Admins read all payments
       allow read: if isSuperAdmin()
@@ -483,7 +496,7 @@ service cloud.firestore {
           && orderDoc.assignedAgentId == request.auth.uid;
     }
 
-    // ── 13. admins Collection ───────────────────────────────────────────────
+    // â”€â”€ 13. admins Collection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /admins/{adminId} {
       // Signed-in users can read admins collection for role verification / discovery
       allow read: if isSignedIn();
@@ -491,7 +504,7 @@ service cloud.firestore {
       allow write: if isSuperAdmin() || hasPermission('manageStaff');
     }
 
-    // ── 14. delivery_batches Collection ────────────────────────────────────
+    // â”€â”€ 14. delivery_batches Collection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /delivery_batches/{batchId} {
       // Admins & authorized staff have full access.
       // Delivery agents can read batches assigned to them.
@@ -520,7 +533,7 @@ service cloud.firestore {
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'completedOrders', 'completedCount', 'pendingOrders', 'updatedAt']));
     }
 
-    // ── 15. delivery_routes Collection ─────────────────────────────────────
+    // â”€â”€ 15. delivery_routes Collection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /delivery_routes/{routeId} {
       // Admins & authorized staff have full access.
       // Delivery agents can read routes assigned to them.

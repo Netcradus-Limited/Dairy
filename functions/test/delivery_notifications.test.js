@@ -377,4 +377,42 @@ describe("Delivery Agent -> Admin Notification Backend Unit Tests", () => {
     assert.equal(result.status, "skipped");
     assert.equal(result.reason, "not_a_delivery_event");
   });
+
+  test("12: deliveryCompletionRequested transition creates admin notification and customer notification", async () => {
+    const orderData = {
+      status: "outForDelivery",
+      assignedAgentId: "agent_valid_01",
+      customerName: "Sneha Patel",
+      customerId: "cust_uid_42",
+      deliveryCompletionRequested: true,
+      deliveryCompletionStatus: "awaitingAdminConfirmation",
+    };
+
+    const previousData = {
+      status: "outForDelivery",
+      assignedAgentId: "agent_valid_01",
+      deliveryCompletionRequested: false,
+    };
+
+    const result = await processDeliveryEventNotification(
+      db,
+      orderData,
+      "ORD-COMPLETION-1",
+      previousData
+    );
+
+    assert.equal(result.status, "created");
+    assert.equal(result.eventType, "deliveryCompletionRequested");
+    assert.equal(result.notificationId, "delivery_ORD-COMPLETION-1_deliveryCompletionRequested");
+
+    const adminNotif = db._store.get("users/admin_uid_01/notifications/delivery_ORD-COMPLETION-1_deliveryCompletionRequested");
+    assert.ok(adminNotif);
+    assert.ok(adminNotif.title.includes("Delivery Completed — Confirmation Required"));
+    assert.equal(adminNotif.route, "/admin/orders");
+
+    const custNotif = db._store.get("users/cust_uid_42/notifications/delivery_ORD-COMPLETION-1_completionRequested");
+    assert.ok(custNotif);
+    assert.ok(custNotif.title.includes("Delivery Completed"));
+    assert.equal(custNotif.route, "/orders/ORD-COMPLETION-1");
+  });
 });

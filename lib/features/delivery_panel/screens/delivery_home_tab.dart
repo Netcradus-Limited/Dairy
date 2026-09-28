@@ -56,7 +56,8 @@ class _DeliveryHomeTabState extends ConsumerState<DeliveryHomeTab> {
     final inProgressOrders = activeOrders
         .where((o) =>
             o.status == DeliveryOrderStatus.pickup ||
-            o.status == DeliveryOrderStatus.outForDelivery)
+            o.status == DeliveryOrderStatus.outForDelivery ||
+            o.status == DeliveryOrderStatus.awaitingAdminConfirmation)
         .toList();
 
     final pendingOrders = requests

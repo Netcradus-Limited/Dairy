@@ -35,7 +35,10 @@ Widget createPlatformNetworkImage({
   return SizedBox(
     width: width,
     height: height,
-    child: HtmlElementView(viewType: viewType),
+    child: HtmlElementView(
+      key: ValueKey(viewType),
+      viewType: viewType,
+    ),
   );
 }
 

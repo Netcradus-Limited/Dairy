@@ -1,8 +1,10 @@
 import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dairy_app/models/delivery_boy_model.dart';
 import 'package:dairy_app/models/delivery_staff_model.dart';
 import 'package:dairy_app/core/utils/validators.dart';
+import 'package:dairy_app/features/delivery_panel/widgets/delivery_agent_avatar.dart';
 
 void main() {
   group('Delivery Agent Profile System & Model Tests', () {
@@ -869,6 +871,74 @@ void main() {
           equals('Rohan Verma'));
       expect(AppValidators.normalizeVehicleNumber('mp  09  ab  1234'),
           equals('MP 09 AB 1234'));
+    });
+  });
+
+  group('Delivery Agent Avatar & Photo Cache-Busting Regression Tests', () {
+    testWidgets('DeliveryAgentAvatar renders safely with null imageUrl',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: DeliveryAgentAvatar(
+              imageUrl: null,
+              radius: 46,
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.byIcon(Icons.person_rounded), findsOneWidget);
+    });
+
+    testWidgets('DeliveryAgentAvatar renders safely with empty imageUrl',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: DeliveryAgentAvatar(
+              imageUrl: '   ',
+              radius: 46,
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.byIcon(Icons.person_rounded), findsOneWidget);
+    });
+
+    testWidgets('DeliveryAgentAvatar renders safely with valid https URL',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: DeliveryAgentAvatar(
+              imageUrl:
+                  'https://firebasestorage.googleapis.com/v0/b/app/o/delivery_agents%2Fagent_1%2Fprofile_photo?alt=media&token=xyz&t=1700000000000',
+              radius: 46,
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+    });
+
+    test('Profile photo download URL includes timestamp query param for cache-busting',
+        () {
+      const rawUrl =
+          'https://firebasestorage.googleapis.com/v0/b/app/o/delivery_agents%2Fagent_1%2Fprofile_photo?alt=media&token=xyz';
+      final separator = rawUrl.contains('?') ? '&' : '?';
+      final cacheBustedUrl = '$rawUrl${separator}t=1700000000000';
+
+      expect(cacheBustedUrl, contains('&t=1700000000000'));
+      expect(cacheBustedUrl, startsWith('https://firebasestorage.googleapis.com'));
+      final uri = Uri.parse(cacheBustedUrl);
+      expect(uri.queryParameters['t'], equals('1700000000000'));
+      expect(uri.queryParameters['alt'], equals('media'));
+      expect(uri.queryParameters['token'], equals('xyz'));
     });
   });
 }

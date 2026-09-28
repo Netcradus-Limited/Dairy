@@ -508,7 +508,12 @@ async function processDeliveryEventNotification(db, orderData, orderId, previous
   const newStatus = (orderData.status ? String(orderData.status) : "").toLowerCase().trim();
 
   // 1. Unrelated update check: skip if status did not change (e.g. notes, timestamps, GPS ticks)
-  if (previousStatusLower && previousStatusLower === newStatus) {
+  // EXCEPT when deliveryCompletionRequested was toggled to true!
+  const isCompletionRequestedTransition =
+    orderData.deliveryCompletionRequested === true &&
+    !(previousData && previousData.deliveryCompletionRequested === true);
+
+  if (previousStatusLower && previousStatusLower === newStatus && !isCompletionRequestedTransition) {
     return { status: "skipped", reason: "status_not_changed" };
   }
 
@@ -560,8 +565,11 @@ async function processDeliveryEventNotification(db, orderData, orderId, previous
   // 4. Determine and validate status transition for delivery events
   let eventType = null;
 
+  if (isCompletionRequestedTransition) {
+    eventType = "deliveryCompletionRequested";
+  }
   // ACCEPT: Moves to 'accepted' (or 'confirmed' from pending/placed)
-  if (
+  else if (
     newStatus === "accepted" ||
     (newStatus === "confirmed" && ["pending", "placed", ""].includes(previousStatusLower))
   ) {
@@ -668,6 +676,11 @@ async function processDeliveryEventNotification(db, orderData, orderId, previous
       body = `${customerName}: Agent started delivery for order #${cleanOrderId}`;
       route = "/delivery";
       break;
+    case "deliveryCompletionRequested":
+      title = "Delivery Completed — Confirmation Required 📋";
+      body = `${customerName}: Agent reported delivery completed for order #${cleanOrderId}. Confirmation required.`;
+      route = "/admin/orders";
+      break;
     case "deliveryConfirmed":
       title = "Delivery Confirmed ✅";
       body = `${customerName}: Order #${cleanOrderId} delivered successfully`;
@@ -721,6 +734,36 @@ async function processDeliveryEventNotification(db, orderData, orderId, previous
       console.log(`[Delivery Event Notify] Created admin notification at users/${adminUid}/notifications/${notifDocId}`);
     } catch (writeErr) {
       console.error(`[Delivery Event Notify] Failed to write notification for admin ${adminUid}: ${writeErr.message}`);
+    }
+  }
+
+  // Also notify the customer when delivery completion is requested
+  if (eventType === "deliveryCompletionRequested" && customerId && customerId !== "customer") {
+    try {
+      const custNotifId = `delivery_${cleanOrderId}_completionRequested`;
+      await db.collection("users").doc(customerId).collection("notifications").doc(custNotifId).set({
+        notificationId: custNotifId,
+        id: custNotifId,
+        title: "Delivery Completed 📦",
+        body: "Your delivery has been reported as completed and is awaiting confirmation.",
+        type: "delivery",
+        timestamp: FieldValue.serverTimestamp(),
+        isRead: false,
+        isActionable: true,
+        route: `/orders/${cleanOrderId}`,
+        createdBy: assignedAgentId,
+        userId: customerId,
+        orderId: cleanOrderId,
+        eventType: "deliveryCompletionRequested",
+        metadata: {
+          source: "delivery",
+          orderId: cleanOrderId,
+          agentId: assignedAgentId,
+          status: "awaitingAdminConfirmation",
+        },
+      }, { merge: true });
+    } catch (custErr) {
+      console.warn(`[Delivery Event Notify] Customer completion notification error: ${custErr.message}`);
     }
   }
 

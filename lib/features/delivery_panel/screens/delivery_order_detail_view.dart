@@ -8,6 +8,7 @@ import '../../../core/widgets/product_image.dart';
 import '../../../models/delivery_boy_model.dart';
 import '../../../models/order.dart';
 import '../../../providers/delivery_provider.dart';
+import '../../../providers/user_provider.dart';
 import '../../../services/delivery_tracking_service.dart';
 import '../../../services/order_service.dart';
 import '../theme/delivery_theme.dart';
@@ -193,11 +194,14 @@ class _DeliveryOrderDetailViewState
     final messenger = ScaffoldMessenger.of(context);
 
     try {
-      final agentId = ref.read(deliveryAgentProvider).id;
+      final agent = ref.read(deliveryAgentProvider);
+      final agentId = agent.id.isNotEmpty
+          ? agent.id
+          : (ref.read(userProvider).id);
 
-      await ref.read(orderServiceProvider).updateOrderStatus(
-            order.id,
-            OrderStatus.delivered,
+      await ref.read(orderServiceProvider).submitDeliveryCompletion(
+            orderId: order.id,
+            agentId: agentId,
           );
 
       if (agentId.isNotEmpty) {
@@ -209,8 +213,8 @@ class _DeliveryOrderDetailViewState
       if (mounted) {
         messenger.showSnackBar(
           SnackBar(
-            content:
-                Text('Order #${order.displayCode} successfully delivered!'),
+            content: Text(
+                'Order #${order.displayCode} delivery completed! Awaiting admin confirmation.'),
             backgroundColor: DeliveryTheme.primary,
           ),
         );
@@ -410,6 +414,8 @@ class _DeliveryOrderDetailViewState
         return 'Pickup in Progress';
       case DeliveryOrderStatus.accepted:
         return 'Order Accepted';
+      case DeliveryOrderStatus.awaitingAdminConfirmation:
+        return 'Awaiting Confirmation';
       case DeliveryOrderStatus.delivered:
         return 'Delivered';
       case DeliveryOrderStatus.cancelled:
@@ -427,6 +433,8 @@ class _DeliveryOrderDetailViewState
         return 'Please pick up the fresh items from the dairy hub';
       case DeliveryOrderStatus.accepted:
         return 'Order is assigned to you. Proceed to store pickup.';
+      case DeliveryOrderStatus.awaitingAdminConfirmation:
+        return 'Delivery completed. Awaiting admin review and confirmation.';
       case DeliveryOrderStatus.delivered:
         return 'Order has been successfully completed';
       case DeliveryOrderStatus.cancelled:
@@ -993,6 +1001,46 @@ class _DeliveryOrderDetailViewState
       );
     }
 
+    if (order.isAwaitingAdminConfirmation ||
+        order.status == DeliveryOrderStatus.awaitingAdminConfirmation) {
+      return Container(
+        width: double.infinity,
+        height: 52,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF3C7),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(
+            color: const Color(0xFFF59E0B),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.hourglass_top_rounded,
+              color: Color(0xFFB45309),
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                'Delivery Completed — Awaiting Admin Confirmation',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF92400E),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     String label;
     VoidCallback? action;
 
@@ -1008,6 +1056,10 @@ class _DeliveryOrderDetailViewState
       case DeliveryOrderStatus.outForDelivery:
         label = 'Mark as Delivered';
         action = () => _markDelivered(order);
+        break;
+      case DeliveryOrderStatus.awaitingAdminConfirmation:
+        label = 'Delivery Completed — Awaiting Admin Confirmation';
+        action = null;
         break;
       case DeliveryOrderStatus.delivered:
         label = 'Order Completed';

@@ -108,11 +108,13 @@ class FirebaseStorageService {
       throw ArgumentError(
           'User ID cannot be empty when uploading profile image.');
     }
-    return uploadBytes(
+    final rawUrl = await uploadBytes(
       path: 'profiles/${uid.trim()}/image',
       bytes: bytes,
       contentType: contentType,
     );
+    final separator = rawUrl.contains('?') ? '&' : '?';
+    return '$rawUrl${separator}t=${DateTime.now().millisecondsSinceEpoch}';
   }
 
   /// Uploads a delivery agent profile image to dedicated path `delivery_agents/{uid}/profile_photo`.
@@ -126,11 +128,13 @@ class FirebaseStorageService {
       throw ArgumentError(
           'Delivery Agent UID cannot be empty when uploading profile image.');
     }
-    return uploadBytes(
+    final rawUrl = await uploadBytes(
       path: 'delivery_agents/$sanitizedUid/profile_photo',
       bytes: bytes,
       contentType: contentType,
     );
+    final separator = rawUrl.contains('?') ? '&' : '?';
+    return '$rawUrl${separator}t=${DateTime.now().millisecondsSinceEpoch}';
   }
 
   /// Uploads a banner image to `banners/{bannerId}/image`.

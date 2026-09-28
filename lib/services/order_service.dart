@@ -535,6 +535,119 @@ class OrderService {
     });
   }
 
+  /// Submits a delivery completion request for an order on behalf of the assigned delivery agent.
+  /// Enforces state machine and ownership:
+  /// - Agent must match the assignedAgentId.
+  /// - Order must not already be in terminal state (delivered / cancelled).
+  /// - Marks deliveryCompletionRequested: true, deliveryCompletionRequestedAt: now,
+  ///   deliveryCompletionAgentId: agentId, deliveryCompletionStatus: 'awaitingAdminConfirmation',
+  ///   deliveryCompletionRequestId: 'COMP_$orderId_$timestamp'.
+  /// - Idempotent: If already requested with 'awaitingAdminConfirmation', succeeds cleanly.
+  /// - Triggers notification creation to Admin and to Customer.
+  Future<void> submitDeliveryCompletion({
+    required String orderId,
+    required String agentId,
+    String? notes,
+  }) async {
+    final cleanOrderId = orderId.trim();
+    final cleanAgentId = agentId.trim();
+    if (cleanOrderId.isEmpty) throw ArgumentError('orderId cannot be empty');
+    if (cleanAgentId.isEmpty) throw ArgumentError('agentId cannot be empty');
+
+    await retryOperation(() async {
+      final docRef = _firestore.collection('orders').doc(cleanOrderId);
+      await _firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(docRef);
+        if (!snapshot.exists) {
+          throw StateError('Order not found: $cleanOrderId');
+        }
+        final data = snapshot.data();
+        final currentAssignedAgentId =
+            (data?['assignedAgentId'] as String?)?.trim();
+        final currentStatus = (data?['status'] as String?)?.toLowerCase();
+        final alreadyRequested = data?['deliveryCompletionRequested'] == true;
+
+        // Idempotency: if already requested by this agent, succeed cleanly
+        if (alreadyRequested && currentAssignedAgentId == cleanAgentId) {
+          return;
+        }
+
+        // Security check: Must be assigned to this agent
+        if (currentAssignedAgentId != cleanAgentId) {
+          throw StateError(
+              'Order is not assigned to delivery agent $cleanAgentId.');
+        }
+
+        // Terminal state check
+        if (currentStatus == 'delivered' || currentStatus == 'cancelled') {
+          throw StateError(
+              'Cannot request completion on $currentStatus order: $cleanOrderId');
+        }
+
+        final completionRequestId =
+            'COMP_${cleanOrderId}_${DateTime.now().millisecondsSinceEpoch}';
+
+        transaction.update(docRef, {
+          'deliveryCompletionRequested': true,
+          'deliveryCompletionRequestedAt': FieldValue.serverTimestamp(),
+          'deliveryCompletionAgentId': cleanAgentId,
+          'deliveryCompletionStatus': 'awaitingAdminConfirmation',
+          'deliveryCompletionRequestId': completionRequestId,
+          if (notes != null && notes.trim().isNotEmpty)
+            'deliveryNotes': notes.trim(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      });
+    });
+
+    // Notify Admin via NotificationRepository
+    try {
+      final notifRepo = NotificationRepository(firestore: _firestore);
+      await notifRepo.sendNotificationToAdmins(
+        title: 'Delivery Completed — Confirmation Required 📋',
+        body:
+            'Agent reported delivery completed for order #$cleanOrderId. Confirmation required.',
+        type: NotificationType.delivery,
+        orderId: cleanOrderId,
+        assignedAgentId: cleanAgentId,
+        route: '/admin/orders',
+        isActionable: true,
+        metadata: {
+          'source': 'delivery_completion_request',
+          'orderId': cleanOrderId,
+          'agentId': cleanAgentId,
+          'status': 'awaitingAdminConfirmation',
+        },
+      );
+    } catch (e) {
+      debugPrint('[COMPLETION NOTIFY ADMIN ERROR] $e');
+    }
+
+    // Notify Customer that delivery was reported completed and is awaiting confirmation
+    try {
+      final orderDoc =
+          await _firestore.collection('orders').doc(cleanOrderId).get();
+      final customerUid = (orderDoc.data()?['userId'] as String?)?.trim();
+      if (customerUid != null && customerUid.isNotEmpty) {
+        final notifRepo = NotificationRepository(firestore: _firestore);
+        await notifRepo.sendNotificationToUser(
+          targetUserId: customerUid,
+          title: 'Delivery Completed 📦',
+          body:
+              'Your delivery has been reported as completed and is awaiting confirmation.',
+          type: NotificationType.delivery,
+          createdBy: cleanAgentId,
+          orderId: cleanOrderId,
+          route: '/orders/$cleanOrderId',
+          isActionable: true,
+          trackInAdminHistory: false,
+        );
+      }
+    } catch (e) {
+      debugPrint('[COMPLETION NOTIFY CUSTOMER ERROR] $e');
+    }
+  }
+
   /// Approves an unconfirmed/pending order and assigns a delivery agent in sequence.
   Future<void> approveAndAssignOrder(
     String orderId,

@@ -15,6 +15,7 @@ import '../../features/auth/screens/register_screen.dart';
 import '../../features/cart/cart_screen.dart';
 import '../../features/checkout/checkout_screen.dart';
 import '../../features/delivery_panel/delivery_panel_screen.dart';
+import '../../features/delivery_panel/screens/delivery_order_detail_route_screen.dart';
 import '../../features/delivery_map/delivery_map_screen.dart';
 import '../../features/main_layout/main_layout_screen.dart';
 import '../../features/orders/order_details_screen.dart';
@@ -299,6 +300,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/delivery',
         builder: (context, state) => const DeliveryPanelScreen(),
+      ),
+      GoRoute(
+        path: '/delivery/orders/:orderId',
+        builder: (context, state) {
+          final orderId = state.pathParameters['orderId'] ?? '';
+          return DeliveryOrderDetailRouteScreen(orderId: orderId);
+        },
       ),
       GoRoute(
         path: '/delivery-map',

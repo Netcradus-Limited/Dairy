@@ -86,6 +86,12 @@ class Order {
   final String? paymentStatus;
   final DateTime? deliveredAt;
   final String? cancellationReason;
+  final bool deliveryCompletionRequested;
+  final DateTime? deliveryCompletionRequestedAt;
+  final String? deliveryCompletionAgentId;
+  final String? deliveryCompletionStatus;
+  final String? deliveryCompletionRequestId;
+  final String? deliveryNotes;
 
   const Order({
     required this.id,
@@ -117,6 +123,12 @@ class Order {
     this.paymentStatus,
     this.deliveredAt,
     this.cancellationReason,
+    this.deliveryCompletionRequested = false,
+    this.deliveryCompletionRequestedAt,
+    this.deliveryCompletionAgentId,
+    this.deliveryCompletionStatus,
+    this.deliveryCompletionRequestId,
+    this.deliveryNotes,
   });
 
   bool get isSubscription =>
@@ -185,6 +197,12 @@ class Order {
     String? paymentStatus,
     DateTime? deliveredAt,
     String? cancellationReason,
+    bool? deliveryCompletionRequested,
+    DateTime? deliveryCompletionRequestedAt,
+    String? deliveryCompletionAgentId,
+    String? deliveryCompletionStatus,
+    String? deliveryCompletionRequestId,
+    String? deliveryNotes,
   }) {
     return Order(
       id: id ?? this.id,
@@ -217,6 +235,17 @@ class Order {
       paymentStatus: paymentStatus ?? this.paymentStatus,
       deliveredAt: deliveredAt ?? this.deliveredAt,
       cancellationReason: cancellationReason ?? this.cancellationReason,
+      deliveryCompletionRequested:
+          deliveryCompletionRequested ?? this.deliveryCompletionRequested,
+      deliveryCompletionRequestedAt:
+          deliveryCompletionRequestedAt ?? this.deliveryCompletionRequestedAt,
+      deliveryCompletionAgentId:
+          deliveryCompletionAgentId ?? this.deliveryCompletionAgentId,
+      deliveryCompletionStatus:
+          deliveryCompletionStatus ?? this.deliveryCompletionStatus,
+      deliveryCompletionRequestId:
+          deliveryCompletionRequestId ?? this.deliveryCompletionRequestId,
+      deliveryNotes: deliveryNotes ?? this.deliveryNotes,
     );
   }
 
@@ -547,6 +576,29 @@ class Order {
       }
     }
 
+    final bool deliveryCompletionRequested =
+        data['deliveryCompletionRequested'] == true ||
+        data['isCompletionRequested'] == true;
+
+    final rawCompletionAt = data['deliveryCompletionRequestedAt'];
+    final deliveryCompletionRequestedAt = rawCompletionAt is Timestamp
+        ? rawCompletionAt.toDate()
+        : (rawCompletionAt is String
+            ? DateTime.tryParse(rawCompletionAt)
+            : null);
+
+    final deliveryCompletionAgentId = (data['deliveryCompletionAgentId'] ??
+            data['completionAgentId'])
+        as String?;
+
+    final deliveryCompletionStatus = (data['deliveryCompletionStatus'] ??
+            data['completionStatus'])
+        as String?;
+
+    final deliveryCompletionRequestId =
+        data['deliveryCompletionRequestId'] as String?;
+    final deliveryNotes = (data['deliveryNotes'] ?? data['notes']) as String?;
+
     return Order(
       id: id,
       orderCode: resolvedOrderCode,
@@ -581,6 +633,12 @@ class Order {
       paymentStatus: (data['paymentStatus'] as String?),
       deliveredAt: deliveredAt,
       cancellationReason: (data['cancellationReason'] as String?),
+      deliveryCompletionRequested: deliveryCompletionRequested,
+      deliveryCompletionRequestedAt: deliveryCompletionRequestedAt,
+      deliveryCompletionAgentId: deliveryCompletionAgentId,
+      deliveryCompletionStatus: deliveryCompletionStatus,
+      deliveryCompletionRequestId: deliveryCompletionRequestId,
+      deliveryNotes: deliveryNotes,
     );
   }
 
@@ -601,6 +659,22 @@ class Order {
           'deliveredAt': Timestamp.fromDate(deliveredAt!),
         if (cancellationReason != null)
           'cancellationReason': cancellationReason,
+        if (deliveryCompletionRequested)
+          'deliveryCompletionRequested': true,
+        if (deliveryCompletionRequestedAt != null)
+          'deliveryCompletionRequestedAt':
+              Timestamp.fromDate(deliveryCompletionRequestedAt!),
+        if (deliveryCompletionAgentId != null &&
+            deliveryCompletionAgentId!.trim().isNotEmpty)
+          'deliveryCompletionAgentId': deliveryCompletionAgentId!.trim(),
+        if (deliveryCompletionStatus != null &&
+            deliveryCompletionStatus!.trim().isNotEmpty)
+          'deliveryCompletionStatus': deliveryCompletionStatus!.trim(),
+        if (deliveryCompletionRequestId != null &&
+            deliveryCompletionRequestId!.trim().isNotEmpty)
+          'deliveryCompletionRequestId': deliveryCompletionRequestId!.trim(),
+        if (deliveryNotes != null && deliveryNotes!.trim().isNotEmpty)
+          'deliveryNotes': deliveryNotes!.trim(),
         'items': items
             .map((item) => {
                   'productId': item.product.id,
@@ -652,6 +726,9 @@ class Order {
         if (deliveryDate != null)
           'deliveryDate': Timestamp.fromDate(deliveryDate!),
         if (deliveredAt != null) 'deliveredAt': deliveredAt!.toIso8601String(),
+        if (deliveryCompletionRequestedAt != null)
+          'deliveryCompletionRequestedAt':
+              deliveryCompletionRequestedAt!.toIso8601String(),
       };
 
   factory Order.fromMap(Map<String, dynamic> map, String id) =>

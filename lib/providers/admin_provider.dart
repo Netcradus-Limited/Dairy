@@ -1396,9 +1396,9 @@ class AdminProvider extends ChangeNotifier {
         'vehicle': rider.vehicle,
         'vehicleNumber': rider.vehicleNumber,
         'assignedZone': rider.assignedZone,
-        'isOnline': rider.status.toLowerCase() == 'active' || rider.isOnline,
-        'isOnDuty': rider.status.toLowerCase() == 'active' || rider.isOnline,
-        'status': rider.status,
+        'isOnline': false,
+        'isOnDuty': false,
+        'status': rider.status.isNotEmpty ? rider.status : 'Active',
         if (rider.rating != null) 'rating': rider.rating,
         if (rider.profileImageUrl != null) ...{
           'profileImageUrl': rider.profileImageUrl,
@@ -1445,8 +1445,8 @@ class AdminProvider extends ChangeNotifier {
         'vehicle': rider.vehicle,
         'vehicleNumber': rider.vehicleNumber,
         'assignedZone': rider.assignedZone,
-        'isOnline': rider.status.toLowerCase() == 'active' || rider.isOnline,
-        'isOnDuty': rider.status.toLowerCase() == 'active' || rider.isOnline,
+        'isOnline': rider.status.toLowerCase() == 'active' ? rider.isOnline : false,
+        'isOnDuty': rider.status.toLowerCase() == 'active' ? rider.isOnline : false,
         'status': rider.status,
         if (rider.rating != null) 'rating': rider.rating,
         if (rider.profileImageUrl != null) ...{
@@ -2154,9 +2154,11 @@ class AdminProvider extends ChangeNotifier {
 
       final isOnline = (data['isOnline'] as bool?) ??
           (data['isOnDuty'] as bool?) ??
-          (data['status']?.toString().toLowerCase() == 'active');
-      final status =
-          isOnline ? 'Active' : (data['status'] as String? ?? 'Offline');
+          false;
+      final rawStatus = data['status']?.toString().trim();
+      final status = (rawStatus != null && rawStatus.isNotEmpty)
+          ? rawStatus
+          : (isOnline ? 'Active' : 'Offline');
 
       final totalDeliveriesToday =
           (data['totalDeliveriesToday'] as num?)?.toInt() ??

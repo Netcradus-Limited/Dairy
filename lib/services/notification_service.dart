@@ -365,9 +365,9 @@ class NotificationService {
             '[NOTIFICATION RBAC] Blocked delivery agent from admin route: $explicitRoute');
         return '/delivery';
       }
-      // If orderId is provided, delivery agent goes to /delivery (DeliveryPanel) with focused order
+      // If orderId is provided, route directly to delivery order details
       if (orderId != null && orderId.isNotEmpty) {
-        return '/delivery';
+        return '/delivery/orders/$orderId';
       }
       if (explicitRoute != null && explicitRoute.isNotEmpty) {
         // Allowed delivery-specific routes
