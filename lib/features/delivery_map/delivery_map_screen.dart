@@ -63,7 +63,10 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen> {
   // -------------------------------------------------------------------------
 
   void _focusOn(LatLng point, {double zoom = 16}) {
-    _mapController.move(point, zoom);
+    if (!mounted) return;
+    try {
+      _mapController.move(point, zoom);
+    } catch (_) {}
   }
 
   void _selectOrder(DeliveryOrder order) {
@@ -234,18 +237,27 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen> {
 
     final agentPos = agentLocationAsync.valueOrNull;
 
+    // Dynamically rebuild straight-line route when agent moves or order changes
+    _maybeRebuildRoute(agentPos);
+
     // Center map on real agent location when first received
     if (agentPos != null && !_hasInitiallyCentered) {
       _hasInitiallyCentered = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _mapController.move(agentPos, 16.0);
+        if (!mounted) return;
+        try {
+          _mapController.move(agentPos, 16.0);
+        } catch (_) {}
       });
     }
 
     // Optional auto-follow: keep agent centered as they move
     if (_followAgent && agentPos != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _mapController.move(agentPos, _mapController.camera.zoom);
+        if (!mounted) return;
+        try {
+          _mapController.move(agentPos, _mapController.camera.zoom);
+        } catch (_) {}
       });
     }
 

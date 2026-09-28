@@ -195,13 +195,17 @@ class _DeliveryOrderDetailViewState
 
     try {
       final agent = ref.read(deliveryAgentProvider);
-      final agentId = agent.id.isNotEmpty
-          ? agent.id
-          : (ref.read(userProvider).id);
+      final user = ref.read(userProvider);
+      final agentId = agent.id.isNotEmpty ? agent.id : user.id;
 
-      await ref.read(orderServiceProvider).submitDeliveryCompletion(
+      if (agentId.isEmpty) {
+        throw StateError('Agent not authenticated');
+      }
+
+      await ref.read(orderServiceProvider).markOrderDelivered(
             orderId: order.id,
             agentId: agentId,
+            agentName: agent.name.isNotEmpty ? agent.name : user.name,
           );
 
       if (agentId.isNotEmpty) {
@@ -214,7 +218,7 @@ class _DeliveryOrderDetailViewState
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-                'Order #${order.displayCode} delivery completed! Awaiting admin confirmation.'),
+                'Order #${order.displayCode} marked as Delivered!'),
             backgroundColor: DeliveryTheme.primary,
           ),
         );
@@ -223,9 +227,9 @@ class _DeliveryOrderDetailViewState
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-                'Could not complete delivery. Please check your connection.'),
+                'Could not mark as delivered: $e'),
             backgroundColor: DeliveryTheme.statusCancelledText,
           ),
         );
@@ -778,6 +782,83 @@ class _DeliveryOrderDetailViewState
                 ),
                 const SizedBox(height: 16),
 
+                // 3b. Payment Method Card
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: DeliveryTheme.cardDecoration(),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F5E9),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.payment_rounded,
+                          size: 20,
+                          color: DeliveryTheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Payment Method',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: DeliveryTheme.textDark,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              order.paymentMethod.isNotEmpty
+                                  ? order.paymentMethod
+                                  : 'Cash on Delivery',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: DeliveryTheme.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: (order.paymentStatus?.toLowerCase() == 'success' ||
+                                  order.paymentStatus?.toLowerCase() == 'paid')
+                              ? const Color(0xFFE8F5E9)
+                              : const Color(0xFFFFF3E0),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          (order.paymentStatus?.toLowerCase() == 'success' ||
+                                  order.paymentStatus?.toLowerCase() == 'paid')
+                              ? 'Paid'
+                              : (order.paymentMethod.toLowerCase().contains('cash')
+                                  ? 'Collect Cash'
+                                  : 'Pending'),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: (order.paymentStatus?.toLowerCase() == 'success' ||
+                                    order.paymentStatus?.toLowerCase() == 'paid')
+                                ? const Color(0xFF2E7D32)
+                                : const Color(0xFFE65100),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
                 // 4. Customer Note Card
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -1054,15 +1135,15 @@ class _DeliveryOrderDetailViewState
         action = () => _transitionOrder(order, OrderStatus.outForDelivery);
         break;
       case DeliveryOrderStatus.outForDelivery:
-        label = 'Mark as Delivered';
+        label = 'Delivered';
         action = () => _markDelivered(order);
         break;
       case DeliveryOrderStatus.awaitingAdminConfirmation:
-        label = 'Delivery Completed — Awaiting Admin Confirmation';
+        label = 'Delivered';
         action = null;
         break;
       case DeliveryOrderStatus.delivered:
-        label = 'Order Completed';
+        label = 'Delivered';
         action = null;
         break;
       case DeliveryOrderStatus.cancelled:
@@ -1071,8 +1152,8 @@ class _DeliveryOrderDetailViewState
         action = null;
         break;
       default:
-        label = 'Start Pickup';
-        action = null;
+        label = 'Delivered';
+        action = () => _markDelivered(order);
         break;
     }
 

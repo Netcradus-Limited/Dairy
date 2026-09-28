@@ -145,8 +145,14 @@ service cloud.firestore {
       // Owners read own notifications; Admins read all
       allow read: if isAdmin() || isOwnDoc(userId);
 
-      // Only Admins / staff with sendNotifications can create/broadcast notifications
-      allow create: if isSuperAdmin() || hasPermission('sendNotifications') || isAdmin();
+      // Only Admins / staff with sendNotifications can create/broadcast notifications;
+      // Authorized delivery agents can create order notifications for their assigned orders.
+      allow create: if isSuperAdmin()
+          || hasPermission('sendNotifications')
+          || isAdmin()
+          || (isDelivery()
+              && ('orderId' in request.resource.data)
+              && isAssignedDeliveryAgentForOrder(request.resource.data.orderId));
 
       // Owners can only update 'isRead' status; Admins have full update access
       allow update: if isAdmin()
@@ -295,22 +301,33 @@ service cloud.firestore {
     }
 
     // Valid delivery status transition state machine for Delivery Agents
-    // Note: Delivery agents CANNOT mark 'delivered' directly. Only Admin confirmation completes the order to 'delivered'.
+    // Valid delivery status transition state machine for Delivery Agents
+    // Note: Delivery agents can mark 'delivered' directly when completing delivery.
+    function isAssignedDeliveryAgentForOrder(orderId) {
+      return isDelivery()
+          && orderId != null
+          && orderId != ''
+          && exists(/databases/$(database)/documents/orders/$(orderId))
+          && get(/databases/$(database)/documents/orders/$(orderId)).data.assignedAgentId == request.auth.uid;
+    }
+
     function isValidDeliveryStatusTransition(fromStatus, toStatus) {
       let fromLower = (fromStatus is string) ? fromStatus.lower() : '';
       let toLower = (toStatus is string) ? toStatus.lower() : '';
 
       let isUnchanged = fromLower == toLower;
+      let isNonTerminal = !(fromLower in ['delivered', 'cancelled']);
+      let toDelivered = (toLower == 'delivered') && isNonTerminal;
       let fromAssigned = (fromLower in ['assigned', 'confirmed'])
-          && (toLower in ['assigned', 'accepted', 'confirmed', 'preparing', 'pickup', 'outfordelivery', 'out for delivery', 'cancelled']);
+          && (toLower in ['assigned', 'accepted', 'confirmed', 'preparing', 'pickup', 'outfordelivery', 'out for delivery', 'delivered', 'cancelled']);
       let fromAccepted = (fromLower in ['accepted'])
-          && (toLower in ['accepted', 'preparing', 'pickup', 'outfordelivery', 'out for delivery', 'cancelled']);
+          && (toLower in ['accepted', 'preparing', 'pickup', 'outfordelivery', 'out for delivery', 'delivered', 'cancelled']);
       let fromPreparing = (fromLower in ['preparing', 'pickup'])
-          && (toLower in ['preparing', 'pickup', 'outfordelivery', 'out for delivery', 'cancelled']);
+          && (toLower in ['preparing', 'pickup', 'outfordelivery', 'out for delivery', 'delivered', 'cancelled']);
       let fromOutForDelivery = (fromLower in ['outfordelivery', 'out for delivery'])
-          && (toLower in ['outfordelivery', 'out for delivery', 'cancelled']);
+          && (toLower in ['outfordelivery', 'out for delivery', 'delivered', 'cancelled']);
 
-      return isUnchanged || fromAssigned || fromAccepted || fromPreparing || fromOutForDelivery;
+      return isUnchanged || toDelivered || fromAssigned || fromAccepted || fromPreparing || fromOutForDelivery;
     }
 
     // Delivery-agent order mutation guard:
@@ -465,14 +482,18 @@ service cloud.firestore {
               || (('customerId' in resource.data) && resource.data.customerId == request.auth.uid)
              ));
 
-      // Users can create a payment record corresponding to their own order during checkout
+      // Users can create a payment record corresponding to their own order during checkout;
+      // Authorized delivery agents can record payment on cash-on-delivery collection for assigned orders.
       allow create: if isSuperAdmin()
           || hasPermission('updatePaymentStatus')
           || isAdmin()
           || (isSignedIn() && (
               request.resource.data.userId == request.auth.uid
               || (('customerId' in request.resource.data) && request.resource.data.customerId == request.auth.uid)
-             ));
+             ))
+          || (isDelivery()
+              && ('orderId' in request.resource.data)
+              && isAssignedDeliveryAgentForOrder(request.resource.data.orderId));
 
       // Admins & staff with updatePaymentStatus have full management; Delivery agents can update status on cash collection for their assigned orders only
       allow update: if isSuperAdmin()

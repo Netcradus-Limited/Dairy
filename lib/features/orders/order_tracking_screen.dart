@@ -6,6 +6,7 @@ import '../../core/constants/app_colors.dart';
 import '../../models/order.dart';
 import '../../models/address.dart';
 import '../../services/delivery_tracking_service.dart';
+import '../../providers/delivery_provider.dart';
 
 /// Single tracking step on the timeline
 class _TrackingStep {
@@ -391,6 +392,7 @@ class _LiveTrackingMapCard extends ConsumerStatefulWidget {
 
 class _LiveTrackingMapCardState extends ConsumerState<_LiveTrackingMapCard> {
   final MapController _mapController = MapController();
+  bool _hasInitiallyFitted = false;
 
   // Indore center coordinates
   static const LatLng indoreCenter = LatLng(22.7255, 75.8800);
@@ -448,203 +450,222 @@ class _LiveTrackingMapCardState extends ConsumerState<_LiveTrackingMapCard> {
 
   @override
   Widget build(BuildContext context) {
-    final trackingService = ref.watch(deliveryTrackingServiceProvider);
-    final locationStream = trackingService.agentLocationStream(widget.agentId);
+    // Optimized single-listener subscription managed by Riverpod autoDispose family
+    final locationAsync = ref.watch(orderAgentLocationStreamProvider(widget.agentId));
+    final agentPos = locationAsync.valueOrNull;
 
     // Approximate drop coordinates for the customer
     final dropLoc = _getCustomerLatLng();
 
-    return StreamBuilder<LatLng?>(
-      stream: locationStream,
-      builder: (context, snapshot) {
-        final agentPos = snapshot.data;
+    // Auto-fit bounds ONCE upon first coordinates arrival without breaking widget state
+    if (!_hasInitiallyFitted && (agentPos != null || dropLoc != null)) {
+      _hasInitiallyFitted = true;
+      _fitMapBounds(agentPos, dropLoc);
+    }
 
-        // Auto-center / fit map bounds
-        _fitMapBounds(agentPos, dropLoc);
+    // Build list of active markers
+    final markers = <Marker>[];
 
-        // Build list of active markers
-        final markers = <Marker>[];
+    // 1. Hub/Pickup Marker
+    markers.add(
+      const Marker(
+        point: pickupHub,
+        width: 32,
+        height: 32,
+        child: Icon(
+          Icons.store_rounded,
+          color: AppColors.primaryBlue,
+          size: 24,
+        ),
+      ),
+    );
 
-        // 1. Hub/Pickup Marker
-        markers.add(
-          const Marker(
-            point: pickupHub,
-            width: 32,
-            height: 32,
-            child: Icon(
-              Icons.store_rounded,
-              color: AppColors.primaryBlue,
-              size: 24,
-            ),
+    // 2. Customer Drop Location Marker (if available)
+    if (dropLoc != null) {
+      markers.add(
+        Marker(
+          point: dropLoc,
+          width: 32,
+          height: 32,
+          child: const Icon(
+            Icons.home_rounded,
+            color: AppColors.error,
+            size: 24,
           ),
-        );
+        ),
+      );
+    }
 
-        // 2. Customer Drop Location Marker (if available)
-        if (dropLoc != null) {
-          markers.add(
-            Marker(
-              point: dropLoc,
-              width: 32,
-              height: 32,
-              child: const Icon(
-                Icons.home_rounded,
-                color: AppColors.error,
-                size: 24,
-              ),
-            ),
-          );
-        }
-
-        // 3. Agent Live Position Marker (if available)
-        if (agentPos != null) {
-          markers.add(
-            Marker(
-              point: agentPos,
-              width: 38,
-              height: 38,
-              child: const Icon(
-                Icons.delivery_dining_rounded,
-                color: AppColors.freshGreen,
-                size: 28,
-              ),
-            ),
-          );
-        }
-
-        // 4. Polyline Route
-        final route = <LatLng>[];
-        if (agentPos != null && dropLoc != null) {
-          route.addAll([pickupHub, agentPos, dropLoc]);
-        }
-
-        return Container(
-          height: 260,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
-            boxShadow: const [
-              BoxShadow(
-                color: AppColors.shadow,
-                blurRadius: 8,
-                offset: Offset(0, 3),
-              ),
-            ],
+    // 3. Agent Live Position Marker (if available)
+    if (agentPos != null) {
+      markers.add(
+        Marker(
+          point: agentPos,
+          width: 38,
+          height: 38,
+          child: const Icon(
+            Icons.delivery_dining_rounded,
+            color: AppColors.freshGreen,
+            size: 28,
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Stack(
+        ),
+      );
+    }
+
+    // 4. Polyline Route
+    final route = <LatLng>[];
+    if (agentPos != null && dropLoc != null) {
+      route.addAll([pickupHub, agentPos, dropLoc]);
+    }
+
+    return Container(
+      height: 260,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          children: [
+            FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: agentPos ?? dropLoc ?? pickupHub,
+                initialZoom: 14,
+                minZoom: 4,
+                maxZoom: 18,
+              ),
               children: [
-                FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter: agentPos ?? dropLoc ?? pickupHub,
-                    initialZoom: 14,
-                    minZoom: 4,
-                    maxZoom: 18,
-                  ),
-                  children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.example.dairy_app',
-                    ),
-                    if (route.isNotEmpty)
-                      PolylineLayer(
-                        polylines: [
-                          Polyline(
-                            points: route,
-                            strokeWidth: 4,
-                            color: AppColors.primaryBlue.withValues(alpha: 0.7),
-                          ),
-                        ],
+                TileLayer(
+                  urlTemplate:
+                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.dairy_app',
+                ),
+                if (route.isNotEmpty)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: route,
+                        strokeWidth: 4,
+                        color: AppColors.primaryBlue.withValues(alpha: 0.7),
                       ),
-                    MarkerLayer(
-                      markers: markers,
+                    ],
+                  ),
+                MarkerLayer(
+                  markers: markers,
+                ),
+              ],
+            ),
+            Positioned(
+              top: 10,
+              left: 10,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 4,
                     ),
                   ],
                 ),
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 4,
-                        ),
-                      ],
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.gps_fixed_rounded,
+                      color: agentPos != null
+                          ? AppColors.freshGreen
+                          : AppColors.textMuted,
+                      size: 12,
                     ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.gps_fixed_rounded,
-                          color: agentPos != null
-                              ? AppColors.freshGreen
-                              : AppColors.textMuted,
-                          size: 12,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          agentPos != null
-                              ? 'Agent Live Location'
-                              : 'Connecting Location...',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(width: 6),
+                    Text(
+                      agentPos != null
+                          ? 'Agent Live Location'
+                          : 'Connecting Location...',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Re-center / Fit bounds manual button
+            Positioned(
+              top: 10,
+              right: 10,
+              child: Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                elevation: 2,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => _fitMapBounds(agentPos, dropLoc),
+                  child: const Padding(
+                    padding: EdgeInsets.all(6),
+                    child: Icon(
+                      Icons.center_focus_strong_rounded,
+                      size: 18,
+                      color: AppColors.primaryBlue,
                     ),
                   ),
                 ),
-                if (agentPos == null)
-                  Positioned(
-                    bottom: 10,
-                    left: 10,
-                    right: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 12,
-                            height: 12,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.primaryBlue,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            'Waiting for driver\'s live location...',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
+              ),
             ),
-          ),
-        );
-      },
+            if (agentPos == null)
+              Positioned(
+                bottom: 10,
+                left: 10,
+                right: 10,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.primaryBlue,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Waiting for driver\'s live location...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -11,6 +11,8 @@ import '../../providers/navigation_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../providers/product_provider.dart';
+import '../../providers/user_provider.dart';
+import '../delivery_panel/screens/delivery_order_detail_route_screen.dart';
 import '../orders/order_details_screen.dart';
 import '../profile/customer_support_screen.dart';
 import '../subscription/subscriptions_screen.dart';
@@ -47,17 +49,33 @@ class NotificationsScreen extends ConsumerWidget {
 
     if (!context.mounted) return;
 
+    final user = ref.read(userProvider);
+
     // 2. Navigate to Order Details if orderId is present
     final rawOrderId = item.orderId?.trim();
     if (rawOrderId != null && rawOrderId.isNotEmpty) {
       final cleanOrderId = rawOrderId.replaceAll(RegExp(r'^#+'), '').trim();
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => OrderDetailsRouteScreen(orderId: cleanOrderId),
-        ),
-      );
-      return;
+      if (user.isDelivery) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                DeliveryOrderDetailRouteScreen(orderId: cleanOrderId),
+          ),
+        );
+        return;
+      } else if (user.isAdmin) {
+        context.go('/admin/orders');
+        return;
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OrderDetailsRouteScreen(orderId: cleanOrderId),
+          ),
+        );
+        return;
+      }
     }
 
     // 3. Handle Promotional notification / Ghee / Product offers -> Navigate straight to Shop with category filtered

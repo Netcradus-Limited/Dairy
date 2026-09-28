@@ -711,6 +711,7 @@ async function processDeliveryEventNotification(db, orderData, orderId, previous
       title: title,
       body: body,
       type: "delivery",
+      category: "delivery",
       timestamp: FieldValue.serverTimestamp(),
       isRead: false,
       isActionable: true,
@@ -725,6 +726,7 @@ async function processDeliveryEventNotification(db, orderData, orderId, previous
         orderId: cleanOrderId,
         eventType: eventType,
         agentId: assignedAgentId,
+        category: "delivery",
       },
     };
 
@@ -747,6 +749,7 @@ async function processDeliveryEventNotification(db, orderData, orderId, previous
         title: "Delivery Completed 📦",
         body: "Your delivery has been reported as completed and is awaiting confirmation.",
         type: "delivery",
+        category: "delivery",
         timestamp: FieldValue.serverTimestamp(),
         isRead: false,
         isActionable: true,
@@ -760,10 +763,45 @@ async function processDeliveryEventNotification(db, orderData, orderId, previous
           orderId: cleanOrderId,
           agentId: assignedAgentId,
           status: "awaitingAdminConfirmation",
+          category: "delivery",
         },
       }, { merge: true });
     } catch (custErr) {
       console.warn(`[Delivery Event Notify] Customer completion notification error: ${custErr.message}`);
+    }
+  }
+
+  // Also notify the customer when delivery is confirmed
+  if (eventType === "deliveryConfirmed" && customerId && customerId !== "customer") {
+    try {
+      const orderCode = String(orderData.orderCode || cleanOrderId).trim();
+      const custNotifId = `order_${cleanOrderId}_delivered`;
+      await db.collection("users").doc(customerId).collection("notifications").doc(custNotifId).set({
+        notificationId: custNotifId,
+        id: custNotifId,
+        title: "Order Delivered 🎉",
+        body: `Your order #${orderCode} has been delivered. Enjoy fresh dairy!`,
+        type: "order",
+        category: "order",
+        timestamp: FieldValue.serverTimestamp(),
+        isRead: false,
+        isActionable: true,
+        route: `/orders/${cleanOrderId}`,
+        createdBy: assignedAgentId || "system",
+        userId: customerId,
+        orderId: cleanOrderId,
+        eventType: "deliveryConfirmed",
+        metadata: {
+          source: "delivery",
+          orderId: cleanOrderId,
+          agentId: assignedAgentId,
+          status: "delivered",
+          category: "order",
+        },
+      }, { merge: true });
+      console.log(`[Delivery Event Notify] Created customer notification at users/${customerId}/notifications/${custNotifId}`);
+    } catch (custErr) {
+      console.warn(`[Delivery Event Notify] Customer delivered notification error: ${custErr.message}`);
     }
   }
 

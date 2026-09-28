@@ -178,6 +178,7 @@ class NotificationRepository {
     bool isActionable = false,
     Map<String, dynamic>? metadata,
     bool trackInAdminHistory = true,
+    String? notificationId,
   }) async {
     final cleanTargetUid = targetUserId.trim();
     final col = _notifCol(cleanTargetUid);
@@ -200,7 +201,15 @@ class NotificationRepository {
       if (metadata != null) 'metadata': metadata,
     };
 
-    await col.add(docData);
+    try {
+      if (notificationId != null && notificationId.trim().isNotEmpty) {
+        await col.doc(notificationId.trim()).set(docData, SetOptions(merge: true));
+      } else {
+        await col.add(docData);
+      }
+    } catch (e) {
+      debugPrint('[NOTIFICATION WRITE ERROR] $e');
+    }
 
     // If sent by an admin to a customer/agent, track in admin's own notification history as read
     if (trackInAdminHistory &&
@@ -228,7 +237,9 @@ class NotificationRepository {
     }
   }
 
-  /// Fetches UIDs of all admin users (`role in ['admin', 'owner', 'superadmin']`).
+  /// Fetches UIDs of all admin users safely without permission-denied errors.
+  /// Queries `/admins` collection first (readable by all signed-in users),
+  /// falling back to `/users` only if permitted.
   Future<List<String>> fetchAdminUserIds() async {
     final fs = _firestore;
     if (fs == null) return [];
@@ -236,36 +247,52 @@ class NotificationRepository {
       debugPrint('[ADMIN NOTIFY] Looking up admins');
       final uids = <String>{};
 
-      // 1. Primary query: users where role in ['admin', 'owner', 'superadmin']
+      // 1. Primary query: read from `admins` collection (accessible to all signed-in users)
       try {
-        final snapshot = await fs.collection('users').where('role', whereIn: [
-          'admin',
-          'Admin',
-          'ADMIN',
-          'owner',
-          'Owner',
-          'superadmin',
-          'Superadmin'
-        ]).get();
-        for (final d in snapshot.docs) {
-          uids.add(d.id);
-        }
-      } catch (e) {
-        debugPrint('[ADMIN NOTIFY ERROR] users role query failed: $e');
-      }
-
-      // 2. Fallback query: users where isAdmin == true (if present)
-      try {
-        final isAdminSnap = await fs
-            .collection('users')
-            .where('isAdmin', isEqualTo: true)
-            .get();
-        for (final d in isAdminSnap.docs) {
-          if (d.id.trim().isNotEmpty) {
+        final adminSnap = await fs.collection('admins').get();
+        for (final d in adminSnap.docs) {
+          final data = d.data();
+          final uid = (data['uid'] as String?)?.trim();
+          if (uid != null && uid.isNotEmpty) {
+            uids.add(uid);
+          } else if (d.id.trim().isNotEmpty && !d.id.startsWith('+')) {
             uids.add(d.id.trim());
           }
         }
       } catch (_) {}
+
+      // 2. Secondary query: users where role in ['admin', 'owner', 'superadmin']
+      if (uids.isEmpty) {
+        try {
+          final snapshot = await fs.collection('users').where('role', whereIn: [
+            'admin',
+            'Admin',
+            'ADMIN',
+            'owner',
+            'Owner',
+            'superadmin',
+            'Superadmin'
+          ]).get();
+          for (final d in snapshot.docs) {
+            uids.add(d.id);
+          }
+        } catch (_) {}
+      }
+
+      // 3. Fallback query: users where isAdmin == true (if present)
+      if (uids.isEmpty) {
+        try {
+          final isAdminSnap = await fs
+              .collection('users')
+              .where('isAdmin', isEqualTo: true)
+              .get();
+          for (final d in isAdminSnap.docs) {
+            if (d.id.trim().isNotEmpty) {
+              uids.add(d.id.trim());
+            }
+          }
+        } catch (_) {}
+      }
 
       debugPrint('[ADMIN NOTIFY] admin count=${uids.length}');
       return uids.toList();
@@ -292,6 +319,7 @@ class NotificationRepository {
     bool isActionable = false,
     Map<String, dynamic>? metadata,
     String? senderUid,
+    String? notificationId,
   }) async {
     final fs = _firestore;
     if (fs == null) {
@@ -315,7 +343,9 @@ class NotificationRepository {
             '[ADMIN NOTIFY ERROR] collection ref null for admin uid=$adminUid');
         continue;
       }
-      final docRef = col.doc();
+      final docRef = (notificationId != null && notificationId.trim().isNotEmpty)
+          ? col.doc(notificationId.trim())
+          : col.doc();
       final path = 'users/$adminUid/notifications/${docRef.id}';
       debugPrint('[ADMIN NOTIFY] admin uid=$adminUid');
       debugPrint('[ADMIN NOTIFY] writing notification');
@@ -326,6 +356,7 @@ class NotificationRepository {
           'title': title,
           'body': body,
           'type': type.value,
+          'category': metadata?['category'] ?? type.value,
           'timestamp': FieldValue.serverTimestamp(),
           'isRead': false,
           'isActionable': isActionable,
@@ -337,11 +368,11 @@ class NotificationRepository {
             'assignedAgentId': assignedAgentId.trim(),
           if (route != null && route.trim().isNotEmpty) 'route': route.trim(),
           if (metadata != null) 'metadata': metadata,
-        });
+        }, SetOptions(merge: true));
         debugPrint('[ADMIN NOTIFY] SUCCESS');
       } catch (e) {
         debugPrint('[ADMIN NOTIFY ERROR] $e');
-        rethrow;
+        // Do not rethrow: Cloud Functions handles server-side delivery event notification
       }
     }
   }

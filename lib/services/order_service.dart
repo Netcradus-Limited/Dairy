@@ -304,6 +304,8 @@ class OrderService {
             'status': orderStatusToString(status),
             if (status == OrderStatus.confirmed && doc.data()?['approvedAt'] == null)
               'approvedAt': FieldValue.serverTimestamp(),
+            if (status == OrderStatus.delivered)
+              'deliveredAt': FieldValue.serverTimestamp(),
             'updatedAt': FieldValue.serverTimestamp(),
           });
         }
@@ -330,6 +332,145 @@ class OrderService {
     } catch (e) {
       if (e is StateError || e is ArgumentError) rethrow;
       throw Exception('Failed to update order status for $cleanOrderId: $e');
+    }
+  }
+
+  /// Completes the delivery of an order by the assigned delivery agent.
+  ///
+  /// Enforces:
+  /// - Order must exist in Firestore.
+  /// - Order must not already be in terminal state ('delivered' / 'cancelled').
+  /// - Logged-in delivery agent MUST be assigned to this order (`assignedAgentId == agentId`).
+  /// - Updates status to 'delivered', sets 'deliveredAt' and 'updatedAt'.
+  /// - Syncs payment status to 'Success'.
+  /// - Dispatches 'Order Delivered' notification to the customer with route: '/orders/$cleanOrderId'.
+  /// - Dispatches 'Order Delivered' notification to admins with route: '/admin/orders'.
+  /// - Uses deterministic notification IDs to prevent duplicates on retries.
+  Future<void> markOrderDelivered({
+    required String orderId,
+    required String agentId,
+    String? agentName,
+  }) async {
+    final cleanOrderId = orderId.trim();
+    final cleanAgentId = agentId.trim();
+    if (cleanOrderId.isEmpty) throw ArgumentError('orderId cannot be empty');
+    if (cleanAgentId.isEmpty) throw ArgumentError('agentId cannot be empty');
+
+    String? customerUid;
+    String displayCode = '';
+    String effectiveAgentName = (agentName != null && agentName.trim().isNotEmpty)
+        ? agentName.trim()
+        : 'Delivery Staff';
+    bool statusUpdated = false;
+
+    await retryOperation(() async {
+      final docRef = _firestore.collection('orders').doc(cleanOrderId);
+      await _firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(docRef);
+        if (!snapshot.exists) {
+          throw StateError('Order not found: $cleanOrderId');
+        }
+        final data = snapshot.data();
+        final currentAssignedAgentId =
+            (data?['assignedAgentId'] as String?)?.trim();
+        final currentStatus = (data?['status'] as String?)?.toLowerCase() ?? '';
+
+        // Terminal state check
+        if (currentStatus == 'delivered') {
+          throw StateError('Order $cleanOrderId is already delivered.');
+        }
+        if (currentStatus == 'cancelled') {
+          throw StateError('Cannot deliver cancelled order $cleanOrderId.');
+        }
+
+        // Security check: Must be assigned to this agent
+        if (currentAssignedAgentId != cleanAgentId) {
+          throw StateError(
+              'Order $cleanOrderId is not assigned to delivery agent $cleanAgentId.');
+        }
+
+        customerUid = (data?['userId'] as String?)?.trim();
+        final code = (data?['orderCode'] as String?)?.trim();
+        displayCode = (code != null && code.isNotEmpty)
+            ? code
+            : Order.formatFallbackOrderCode(cleanOrderId);
+
+        final existingAgentName =
+            (data?['assignedAgentName'] as String?)?.trim();
+        if (existingAgentName != null && existingAgentName.isNotEmpty) {
+          effectiveAgentName = existingAgentName;
+        }
+
+        transaction.update(docRef, {
+          'status': 'delivered',
+          'deliveredAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        statusUpdated = true;
+      });
+
+      // Sync payment status to Success
+      try {
+        final paymentDoc =
+            _firestore.collection('payments').doc('PAY_$cleanOrderId');
+        final paymentSnap = await paymentDoc.get();
+        if (paymentSnap.exists) {
+          await paymentDoc.update({
+            'status': 'Success',
+            'paymentStatus': 'Success',
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      } catch (_) {}
+    });
+
+    if (!statusUpdated) return;
+
+    final notifRepo = NotificationRepository(firestore: _firestore);
+
+    // 1. Notify Customer: "Your order #XXXX has been delivered."
+    if (customerUid != null && customerUid!.isNotEmpty) {
+      try {
+        await notifRepo.sendNotificationToUser(
+          targetUserId: customerUid!,
+          title: 'Order Delivered',
+          body: 'Your order #$displayCode has been delivered.',
+          type: NotificationType.order,
+          createdBy: cleanAgentId,
+          orderId: cleanOrderId,
+          route: '/orders/$cleanOrderId',
+          isActionable: true,
+          trackInAdminHistory: false,
+          notificationId: 'order_${cleanOrderId}_delivered',
+        );
+      } catch (e) {
+        debugPrint('[DELIVERED NOTIFY CUSTOMER ERROR] $e');
+      }
+    }
+
+    // 2. Notify Admin: "Order #XXXX has been delivered by [delivery staff]."
+    try {
+      await notifRepo.sendNotificationToAdmins(
+        title: 'Order Delivered',
+        body: 'Order #$displayCode has been delivered by $effectiveAgentName.',
+        type: NotificationType.delivery,
+        orderId: cleanOrderId,
+        assignedAgentId: cleanAgentId,
+        route: '/admin/orders',
+        isActionable: true,
+        metadata: {
+          'source': 'delivery_completion',
+          'orderId': cleanOrderId,
+          'agentId': cleanAgentId,
+          'agentName': effectiveAgentName,
+          'status': 'delivered',
+          'eventType': 'deliveryConfirmed',
+        },
+        senderUid: cleanAgentId,
+        notificationId: 'delivery_${cleanOrderId}_deliveryConfirmed',
+      );
+    } catch (e) {
+      debugPrint('[DELIVERED NOTIFY ADMIN ERROR] $e');
     }
   }
 
@@ -738,7 +879,7 @@ class OrderService {
               createdBy: adminUid ?? 'admin',
               orderId: cleanOrderId,
               assignedAgentId: cleanAgentId,
-              route: '/delivery',
+              route: '/delivery/orders/$cleanOrderId',
               isActionable: true,
             );
           } catch (notifErr) {

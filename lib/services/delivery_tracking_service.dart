@@ -183,6 +183,11 @@ class DeliveryTrackingService {
 
       // 2. Check document fields (e.g. data['latitude'] and data['longitude'])
       return parseCoordinates(data);
+    }).distinct((prev, curr) {
+      if (prev == null && curr == null) return true;
+      if (prev == null || curr == null) return false;
+      return (prev.latitude - curr.latitude).abs() < 0.00001 &&
+          (prev.longitude - curr.longitude).abs() < 0.00001;
     });
   }
 

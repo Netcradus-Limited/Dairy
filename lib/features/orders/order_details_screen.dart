@@ -7,7 +7,10 @@ import '../../core/constants/app_sizes.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/widgets/product_image.dart';
 import '../../models/order.dart';
+import '../delivery_panel/screens/delivery_order_detail_route_screen.dart';
+import '../../providers/delivery_provider.dart';
 import '../../providers/order_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../services/order_service.dart';
 import 'order_tracking_screen.dart';
 
@@ -457,10 +460,85 @@ class OrderDetailsScreen extends ConsumerWidget {
 
   Widget _buildActions(BuildContext context, WidgetRef ref, Order o,
       bool isCancelled, bool canCancel) {
+    final user = ref.watch(userProvider);
+    final deliveryAgent = ref.watch(deliveryAgentProvider);
+    final effectiveAgentId =
+        deliveryAgent.id.isNotEmpty ? deliveryAgent.id : user.id;
+    final isDeliveryAgent = user.isDelivery ||
+        (effectiveAgentId.isNotEmpty && o.assignedAgentId == effectiveAgentId);
+
+    if (isDeliveryAgent) {
+      // DELIVERY PANEL: Strictly NO "Track Order", NO "Cancel Order"
+      if (o.status == OrderStatus.delivered) {
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE8F5E9),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFA5D6A7)),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.check_circle_rounded,
+                  color: Color(0xFF2E7D32), size: 22),
+              SizedBox(width: 8),
+              Text(
+                'Delivered',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1B5E20),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      if (isCancelled) {
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFEBEE),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFFFCDD2)),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.cancel_outlined, color: AppColors.error, size: 22),
+              SizedBox(width: 8),
+              Text(
+                'Order Cancelled',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.error,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      // Active order for delivery agent: REPLACE "Track Order" with "Delivered"
+      return _DeliveryOrderDeliveredButton(
+        order: o,
+        agentId: effectiveAgentId,
+        agentName: deliveryAgent.name.isNotEmpty
+            ? deliveryAgent.name
+            : (user.name.isNotEmpty ? user.name : 'Delivery Staff'),
+      );
+    }
+
+    // Customer / Admin view:
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (!isCancelled) ...[
+        if (!isCancelled && o.status != OrderStatus.delivered) ...[
           ElevatedButton.icon(
             onPressed: () {
               Navigator.push(
@@ -641,6 +719,11 @@ class OrderDetailsRouteScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(userProvider);
+    if (user.isDelivery) {
+      return DeliveryOrderDetailRouteScreen(orderId: orderId);
+    }
+
     return FutureBuilder<Order?>(
       future: ref.read(orderServiceProvider).getOrderById(orderId),
       builder: (context, snapshot) {
@@ -701,6 +784,134 @@ class OrderDetailsRouteScreen extends ConsumerWidget {
         }
         return OrderDetailsScreen(order: order);
       },
+    );
+  }
+}
+
+/// Delivery completion action button for the Delivery Panel order detail view.
+class _DeliveryOrderDeliveredButton extends ConsumerStatefulWidget {
+  final Order order;
+  final String agentId;
+  final String agentName;
+
+  const _DeliveryOrderDeliveredButton({
+    required this.order,
+    required this.agentId,
+    required this.agentName,
+  });
+
+  @override
+  ConsumerState<_DeliveryOrderDeliveredButton> createState() =>
+      _DeliveryOrderDeliveredButtonState();
+}
+
+class _DeliveryOrderDeliveredButtonState
+    extends ConsumerState<_DeliveryOrderDeliveredButton> {
+  bool _isProcessing = false;
+
+  Future<void> _handleDelivered() async {
+    if (_isProcessing) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final user = ref.read(userProvider);
+    final order = widget.order;
+    final agentId = widget.agentId;
+
+    // Security check: validate that the logged-in delivery boy is assigned to this order
+    if (order.assignedAgentId != null &&
+        order.assignedAgentId!.isNotEmpty &&
+        order.assignedAgentId != agentId &&
+        !user.isAdmin) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Access Denied: You are not assigned to this order.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    if (order.status == OrderStatus.delivered) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('This order has already been delivered.'),
+          backgroundColor: Color(0xFF2E7D32),
+        ),
+      );
+      return;
+    }
+
+    if (order.isCancelled) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Cannot deliver a cancelled order.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isProcessing = true);
+
+    try {
+      await ref.read(orderServiceProvider).markOrderDelivered(
+            orderId: order.id,
+            agentId: agentId,
+            agentName: widget.agentName,
+          );
+
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+                'Order #${order.displayOrderCode} delivered successfully!'),
+            backgroundColor: const Color(0xFF2E7D32),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Could not mark order delivered: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: _isProcessing ? null : _handleDelivered,
+      icon: _isProcessing
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : const Icon(Icons.check_circle_outline_rounded, size: 20),
+      label: Text(
+        _isProcessing ? 'Updating...' : 'Delivered',
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF2E7D32),
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: const Color(0xFFA5D6A7),
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
     );
   }
 }

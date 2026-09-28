@@ -278,20 +278,7 @@ class _DeliverySettingsRedesignedScreenState
                       ),
                       const Divider(
                           height: 1, indent: 54, color: Color(0xFFECEFF1)),
-
-                      // 8. About Sawariya Dairy
-                      _buildNavigationTile(
-                        icon: Icons.info_outline_rounded,
-                        title: 'About Sawariya Dairy',
-                        onTap: () => _showInfoDialog(
-                          'Sawariya Dairy',
-                          'Sawariya Dairy v2.5.0\nPure dairy goodness delivered directly from farm to doorstep.',
-                        ),
-                      ),
-                      const Divider(
-                          height: 1, indent: 54, color: Color(0xFFECEFF1)),
-
-                      // 9. Logout
+                      // 8. Logout
                       ListTile(
                         onTap: _showLogoutDialog,
                         leading: Container(

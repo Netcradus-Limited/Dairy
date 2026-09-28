@@ -212,6 +212,18 @@ final deliveryAgentLocationStreamProvider =
       .agentLocationStream(agentId);
 });
 
+/// Streams the assigned delivery agent's real-time geographic position for customer tracking.
+/// Auto-disposes when the tracking screen unmounts, preventing leaked Firestore listeners.
+final orderAgentLocationStreamProvider =
+    StreamProvider.autoDispose.family<LatLng?, String>((ref, agentId) {
+  if (agentId.trim().isEmpty) {
+    return Stream.value(null);
+  }
+  return ref
+      .watch(deliveryTrackingServiceProvider)
+      .agentLocationStream(agentId);
+});
+
 /// Single source of truth for the delivery panel: a live Firestore stream of the
 /// orders relevant to THIS agent — pending orders awaiting acceptance plus any
 /// order already assigned to the agent — mapped into [DeliveryOrder]s. The

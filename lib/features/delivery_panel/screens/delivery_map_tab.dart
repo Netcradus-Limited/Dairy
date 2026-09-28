@@ -28,7 +28,10 @@ class _DeliveryMapTabState extends ConsumerState<DeliveryMapTab> {
   bool _hasCentered = false;
 
   void _reCenter(LatLng point) {
-    _mapController.move(point, 15.5);
+    if (!mounted) return;
+    try {
+      _mapController.move(point, 15.5);
+    } catch (_) {}
   }
 
   Future<void> _makePhoneCall(String phone) async {
@@ -127,6 +130,7 @@ class _DeliveryMapTabState extends ConsumerState<DeliveryMapTab> {
     if (!_hasCentered && hasRealAgentGps) {
       _hasCentered = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
         _reCenter(agentPos);
       });
     }
