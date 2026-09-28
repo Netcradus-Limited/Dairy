@@ -601,6 +601,20 @@ class AdminProvider extends ChangeNotifier {
                 ?.name
             : null);
 
+    if (effectiveAgentId != null) {
+      final targetedRider = _riders.cast<DeliveryRider?>().firstWhere(
+            (r) => r?.id == effectiveAgentId,
+            orElse: () => null,
+          );
+      if (targetedRider != null && !targetedRider.isOnline) {
+        const errorMsg =
+            'Cannot assign order: Delivery agent is currently offline';
+        _ordersError = errorMsg;
+        notifyListeners();
+        throw StateError(errorMsg);
+      }
+    }
+
     try {
       await _orderService.approveAndAssignOrder(
         cleanOrderId,
@@ -647,6 +661,20 @@ class AdminProvider extends ChangeNotifier {
                     orElse: () => null)
                 ?.name
             : null);
+
+    if (effectiveAgentId != null) {
+      final targetedRider = _riders.cast<DeliveryRider?>().firstWhere(
+            (r) => r?.id == effectiveAgentId,
+            orElse: () => null,
+          );
+      if (targetedRider != null && !targetedRider.isOnline) {
+        const errorMsg =
+            'Cannot assign order: Delivery agent is currently offline';
+        _ordersError = errorMsg;
+        notifyListeners();
+        throw StateError(errorMsg);
+      }
+    }
 
     try {
       await _orderService.assignDeliveryAgent(

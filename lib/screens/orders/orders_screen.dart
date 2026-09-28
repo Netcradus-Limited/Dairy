@@ -83,11 +83,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   r.id.toLowerCase().contains(q);
             }).toList();
 
-            final selectedRider = allRiders.cast<DeliveryRider?>().firstWhere(
-                  (r) => r?.id == selectedAgentId,
-                  orElse: () => null,
-                );
-
             final screenWidth = MediaQuery.sizeOf(dialogContext).width;
             final isNarrow = screenWidth < 480;
 
@@ -442,6 +437,27 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                       selectedAgentId == order.assignedAgentId)
                                   ? null
                                   : () async {
+                                      final selectedRider = filteredRiders
+                                          .cast<DeliveryRider?>()
+                                          .firstWhere(
+                                            (r) => r?.id == selectedAgentId,
+                                            orElse: () => null,
+                                          );
+                                      if (selectedRider != null &&
+                                          !selectedRider.isOnline) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                  'Cannot assign order: Delivery agent is currently offline'),
+                                              backgroundColor:
+                                                  AppColors.statusCancelled,
+                                            ),
+                                          );
+                                        }
+                                        return;
+                                      }
                                       setDialogState(() => isSubmitting = true);
                                       try {
                                         if (order.status == OrderStatus.pending) {
@@ -479,7 +495,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                             () => isSubmitting = false);
                                         if (context.mounted) {
                                           ScaffoldMessenger.of(context)
-                                            ..showSnackBar(
+                                                .showSnackBar(
                                               SnackBar(
                                                 content: Text(
                                                     'Failed to assign agent: $e'),
@@ -680,6 +696,27 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                               order.assignedAgentId)
                                       ? null
                                       : () async {
+                                          final selectedRider = filteredRiders
+                                              .cast<DeliveryRider?>()
+                                              .firstWhere(
+                                                (r) => r?.id == selectedAgentId,
+                                                orElse: () => null,
+                                              );
+                                          if (selectedRider != null &&
+                                              !selectedRider.isOnline) {
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                      'Cannot assign order: Delivery agent is currently offline'),
+                                                  backgroundColor:
+                                                      AppColors.statusCancelled,
+                                                ),
+                                              );
+                                            }
+                                            return;
+                                          }
                                           setDialogState(
                                               () => isSubmitting = true);
                                           try {
@@ -720,7 +757,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                                 () => isSubmitting = false);
                                             if (context.mounted) {
                                               ScaffoldMessenger.of(context)
-                                                ..showSnackBar(
+                                                .showSnackBar(
                                                   SnackBar(
                                                     content: Text(
                                                         'Failed to assign agent: $e'),

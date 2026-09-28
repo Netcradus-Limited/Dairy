@@ -852,6 +852,38 @@ class OrderService {
                 'Order must be confirmed by Admin before assigning a delivery agent.');
           }
 
+          // Enforce online-only assignment rule
+          bool isAgentOnline = false;
+          bool docFound = false;
+          try {
+            final agentDoc = await _firestore
+                .collection('delivery_agents')
+                .doc(cleanAgentId)
+                .get();
+            if (agentDoc.exists) {
+              docFound = true;
+              final agentData = agentDoc.data();
+              isAgentOnline = agentData?['isOnline'] == true ||
+                  agentData?['isOnDuty'] == true;
+            } else {
+              final userDoc = await _firestore
+                  .collection('users')
+                  .doc(cleanAgentId)
+                  .get();
+              if (userDoc.exists) {
+                docFound = true;
+                final userData = userDoc.data();
+                isAgentOnline = userData?['isOnline'] == true ||
+                    userData?['isOnDuty'] == true;
+              }
+            }
+          } catch (_) {}
+
+          if (docFound && !isAgentOnline) {
+            throw StateError(
+                'Cannot assign order: Delivery agent is currently offline');
+          }
+
           final Map<String, dynamic> updateData = {
             'assignedAgentId': cleanAgentId,
             'assignedAgentName': agentName,

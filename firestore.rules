@@ -264,7 +264,7 @@ service cloud.firestore {
       // Admins & staff: Full management based on permissions (with admin workflow enforcement).
       // Customers: Can cancel their own pending/placed/confirmed orders before dispatch.
       // Delivery Agents: Controlled state transition strictly on own assigned order.
-      allow update: if isSuperAdmin()
+      allow update: if (isSuperAdmin() && canAdminUpdateOrder())
           || (isAdmin() && canAdminUpdateOrder())
           || (isSignedIn() && canCustomerCancelOrder())
           || (isDelivery() && canUpdateAssignedOrder());
@@ -273,18 +273,55 @@ service cloud.firestore {
       allow delete: if isSuperAdmin() || hasPermission('cancelOrders');
     }
 
+    // Helper: checks whether a delivery agent is online in /delivery_agents or /users
+    function isAgentOnline(agentId) {
+      let hasAgentDoc = exists(/databases/$(database)/documents/delivery_agents/$(agentId));
+      let agentDoc = hasAgentDoc ? get(/databases/$(database)/documents/delivery_agents/$(agentId)).data : null;
+      let isAgentDocOnline = agentDoc != null && (
+        ('isOnline' in agentDoc && agentDoc.isOnline == true)
+        || ('isOnDuty' in agentDoc && agentDoc.isOnDuty == true)
+      );
+
+      let hasUserDoc = exists(/databases/$(database)/documents/users/$(agentId));
+      let userDoc = hasUserDoc ? get(/databases/$(database)/documents/users/$(agentId)).data : null;
+      let isUserDocOnline = userDoc != null && (
+        ('isOnline' in userDoc && userDoc.isOnline == true)
+        || ('isOnDuty' in userDoc && userDoc.isOnDuty == true)
+      );
+
+      return isAgentDocOnline || isUserDocOnline;
+    }
+
     // Admin order update validation:
-    // Ensures admin cannot assign an agent while order is still in Pending state (must be Confirmed first).
+    // 1. Ensures admin cannot assign an agent while order is still in Pending state (must be Confirmed first).
+    // 2. Enforces that an order's assigned agent can only be updated if the targeted agent has isOnline == true.
     function canAdminUpdateOrder() {
-      let isAssigning = ('assignedAgentId' in request.resource.data)
+      let targetAgentId = ('assignedAgentId' in request.resource.data)
           && request.resource.data.assignedAgentId != null
           && request.resource.data.assignedAgentId != ''
-          && (!('assignedAgentId' in resource.data) || resource.data.assignedAgentId != request.resource.data.assignedAgentId);
+          ? request.resource.data.assignedAgentId
+          : (('assignedDeliveryAgentId' in request.resource.data)
+              && request.resource.data.assignedDeliveryAgentId != null
+              && request.resource.data.assignedDeliveryAgentId != ''
+              ? request.resource.data.assignedDeliveryAgentId
+              : null);
 
+      let prevAgentId = ('assignedAgentId' in resource.data)
+          && resource.data.assignedAgentId != null
+          ? resource.data.assignedAgentId
+          : (('assignedDeliveryAgentId' in resource.data)
+              && resource.data.assignedDeliveryAgentId != null
+              ? resource.data.assignedDeliveryAgentId
+              : null);
+
+      let isAssigning = targetAgentId != null && (prevAgentId == null || prevAgentId != targetAgentId);
       let isCurrentPending = ('status' in resource.data) && resource.data.status.lower() in ['pending', 'placed'];
 
-      // Assigning an agent to an unapproved pending order is strictly forbidden
-      return isAssigning ? !isCurrentPending : true;
+      // Assigning an agent to an unapproved pending order is strictly forbidden.
+      // Additionally, only ONLINE delivery agents (isOnline == true) can be assigned.
+      return isAssigning
+          ? (!isCurrentPending && isAgentOnline(targetAgentId))
+          : true;
     }
 
     // Customer cancellation guard

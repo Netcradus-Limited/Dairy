@@ -51,6 +51,14 @@ class MockAdminProvider extends ChangeNotifier implements AdminProvider {
     String agentId, {
     String? agentName,
   }) async {
+    final rider = _mockRiders.cast<DeliveryRider?>().firstWhere(
+          (r) => r?.id == agentId,
+          orElse: () => null,
+        );
+    if (rider != null && !rider.isOnline) {
+      throw StateError(
+          'Cannot assign order: Delivery agent is currently offline');
+    }
     await updateOrderStatus(orderId, OrderStatus.confirmed);
     await assignDeliveryAgent(orderId, agentId, agentName: agentName);
   }
@@ -61,6 +69,16 @@ class MockAdminProvider extends ChangeNotifier implements AdminProvider {
     String? agentId, {
     String? agentName,
   }) async {
+    if (agentId != null) {
+      final rider = _mockRiders.cast<DeliveryRider?>().firstWhere(
+            (r) => r?.id == agentId,
+            orElse: () => null,
+          );
+      if (rider != null && !rider.isOnline) {
+        throw StateError(
+            'Cannot assign order: Delivery agent is currently offline');
+      }
+    }
     lastAssignedOrderId = orderId;
     lastAssignedAgentId = agentId;
     lastAssignedAgentName = agentName;
@@ -116,6 +134,20 @@ void main() {
     pendingDeliveries: 0,
     status: 'Offline',
     isOnline: false,
+  );
+
+  const testRider3 = DeliveryRider(
+    id: 'agent_003',
+    name: 'Vikram Singh',
+    phone: '+91 98765 00003',
+    email: 'vikram@sawariyadairy.com',
+    vehicle: 'Motorcycle',
+    vehicleNumber: 'UP16 EF 9012',
+    assignedZone: 'Sector 62 Hub',
+    totalDeliveriesToday: 5,
+    pendingDeliveries: 0,
+    status: 'Active',
+    isOnline: true,
   );
 
   const unassignedOrder = DairyOrder(
@@ -270,7 +302,7 @@ void main() {
         (tester) async {
       final mockProvider = MockAdminProvider()
         ..setMockOrders([assignedOrder])
-        ..setMockRiders([testRider1, testRider2]);
+        ..setMockRiders([testRider1, testRider2, testRider3]);
 
       await tester.pumpWidget(createOrdersScreenTestWidget(mockProvider));
       await tester.pumpAndSettle();
@@ -281,8 +313,8 @@ void main() {
 
       expect(find.text('Reassign Delivery Agent'), findsOneWidget);
 
-      // Select Rajesh Sharma
-      await tester.tap(find.text('Rajesh Sharma'));
+      // Select Vikram Singh (online)
+      await tester.tap(find.text('Vikram Singh'));
       await tester.pumpAndSettle();
 
       // Confirm reassignment
@@ -290,8 +322,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(mockProvider.lastAssignedOrderId, equals('ord_102'));
-      expect(mockProvider.lastAssignedAgentId, equals('agent_002'));
-      expect(mockProvider.lastAssignedAgentName, equals('Rajesh Sharma'));
+      expect(mockProvider.lastAssignedAgentId, equals('agent_003'));
+      expect(mockProvider.lastAssignedAgentName, equals('Vikram Singh'));
       // Preserved preparing status
       expect(mockProvider.orders.first.status, equals(OrderStatus.preparing));
     });
@@ -381,6 +413,40 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('Order #SWD101'), findsOneWidget);
       expect(find.text('Order #SWD102'), findsOneWidget);
+    });
+ 
+
+    testWidgets(
+        '11. Attempting to assign an offline delivery agent is blocked with clear snackbar',
+        (tester) async {
+      final mockProvider = MockAdminProvider()
+        ..setMockOrders([unassignedOrder])
+        ..setMockRiders([testRider1, testRider2]);
+
+      await tester.pumpWidget(createOrdersScreenTestWidget(mockProvider));
+      await tester.pumpAndSettle();
+
+      // Open assignment dialog
+      await tester.tap(find.text('Assign Agent'));
+      await tester.pumpAndSettle();
+
+      // Select Rajesh Sharma (isOnline == false)
+      await tester.tap(find.text('Rajesh Sharma'));
+      await tester.pumpAndSettle();
+
+      // Attempt to assign
+      await tester.tap(find.text('Assign Agent').last);
+      await tester.pumpAndSettle();
+
+      // Verify clear snackbar is displayed
+      expect(
+        find.text('Cannot assign order: Delivery agent is currently offline'),
+        findsOneWidget,
+      );
+
+      // Verify database commit was blocked
+      expect(mockProvider.lastAssignedAgentId, isNot(equals('agent_002')));
+      expect(mockProvider.orders.first.isAssigned, isFalse);
     });
   });
 }
