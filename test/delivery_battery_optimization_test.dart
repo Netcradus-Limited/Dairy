@@ -80,7 +80,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('BatteryOptimizationService Unit Tests', () {
-    const channelName = 'com.example.dairy_app/battery_optimization';
+    const channelName = 'com.sawariyassarkar.app/battery_optimization';
     final List<MethodCall> methodCalls = [];
 
     setUp(() {

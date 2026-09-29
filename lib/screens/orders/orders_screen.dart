@@ -490,7 +490,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                         await provider.assignDeliveryAgent(
                                           order.id,
                                           selectedAgentId,
-                                          agentName: selectedRider?.name,
+                                          agentName: selectedRider.name,
                                         );
                                         if (dialogContext.mounted) {
                                           Navigator.of(dialogContext).pop();
@@ -501,10 +501,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                             SnackBar(
                                               content: Text(
                                                 order.isAssigned
-                                                    ? 'Order reassigned to ${selectedRider?.name ?? "agent"}.'
+                                                    ? 'Order reassigned to ${selectedRider.name}.'
                                                     : (order.status == OrderStatus.pending
-                                                        ? 'Order approved & assigned to ${selectedRider?.name ?? "agent"}.'
-                                                        : 'Order assigned to ${selectedRider?.name ?? "agent"}.'),
+                                                        ? 'Order approved & assigned to ${selectedRider.name}.'
+                                                        : 'Order assigned to ${selectedRider.name}.'),
                                               ),
                                               backgroundColor:
                                                   AppColors.revenueGreen,
@@ -745,13 +745,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                               await provider.approveAndAssignOrder(
                                                 order.id,
                                                 selectedAgentId!,
-                                                agentName: selectedRider?.name,
+                                                agentName: selectedRider.name,
                                               );
                                             } else {
                                               await provider.assignDeliveryAgent(
                                                 order.id,
                                                 selectedAgentId,
-                                                agentName: selectedRider?.name,
+                                                agentName: selectedRider.name,
                                               );
                                             }
                                             if (dialogContext.mounted) {
@@ -763,10 +763,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                                 SnackBar(
                                                   content: Text(
                                                     order.isAssigned
-                                                        ? 'Order reassigned to ${selectedRider?.name ?? "agent"}.'
+                                                        ? 'Order reassigned to ${selectedRider.name}.'
                                                         : (order.status == OrderStatus.pending
-                                                            ? 'Order approved & assigned to ${selectedRider?.name ?? "agent"}.'
-                                                            : 'Order assigned to ${selectedRider?.name ?? "agent"}.'),
+                                                            ? 'Order approved & assigned to ${selectedRider.name}.'
+                                                            : 'Order assigned to ${selectedRider.name}.'),
                                                   ),
                                                   backgroundColor:
                                                       AppColors.revenueGreen,

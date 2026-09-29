@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// exemptions to safeguard background/continuous GPS tracking for delivery agents.
 class BatteryOptimizationService {
   static const MethodChannel _defaultChannel =
-      MethodChannel('com.example.dairy_app/battery_optimization');
+      MethodChannel('com.sawariyassarkar.app/battery_optimization');
 
   final MethodChannel _channel;
   final TargetPlatform? _targetPlatformOverride;

@@ -23,6 +23,7 @@ import 'screens/delivery_history_redesigned_screen.dart';
 import 'screens/delivery_settings_redesigned_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide User;
 import 'widgets/delivery_agent_avatar.dart';
+import 'widgets/delivery_location_disclosure_dialog.dart';
 import 'widgets/delivery_bottom_nav.dart';
 
 class _BottomNavItem {
@@ -653,15 +654,27 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
             icon: Icon(sharing
                 ? Icons.location_on_rounded
                 : Icons.location_off_rounded),
-            onPressed: () =>
-                ref.read(agentLiveLocationProvider.notifier).toggle(),
+            onPressed: () async {
+              if (!sharing) {
+                final agreed =
+                    await DeliveryLocationDisclosureDialog.showIfNeeded(context);
+                if (!agreed) return;
+              }
+              ref.read(agentLiveLocationProvider.notifier).toggle();
+            },
           ),
           Tooltip(
             message: isOnline ? 'Click to go Offline' : 'Click to go Online',
             child: InkWell(
               borderRadius: BorderRadius.circular(20),
-              onTap: () =>
-                  ref.read(deliveryAgentProvider.notifier).toggleDuty(),
+              onTap: () async {
+                if (!isOnline) {
+                  final agreed =
+                      await DeliveryLocationDisclosureDialog.showIfNeeded(context);
+                  if (!agreed) return;
+                }
+                ref.read(deliveryAgentProvider.notifier).toggleDuty();
+              },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(

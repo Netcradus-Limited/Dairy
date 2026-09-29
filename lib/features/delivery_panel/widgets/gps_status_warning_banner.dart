@@ -7,6 +7,7 @@ import '../../../providers/delivery_live_location_provider.dart';
 import '../../../providers/delivery_provider.dart';
 import '../../../models/delivery_boy_model.dart';
 import '../../../services/location_service.dart';
+import 'delivery_location_disclosure_dialog.dart';
 
 /// Clean, colorful, responsive, non-blocking warning banner displayed in the
 /// Delivery Panel when GPS hardware is turned off or location permissions are missing.
@@ -85,6 +86,9 @@ class _GpsStatusWarningBannerState
         iconData = Icons.near_me_disabled_rounded;
         accentColor = const Color(0xFFD97706);
         onAction = () async {
+          final agreed =
+              await DeliveryLocationDisclosureDialog.showIfNeeded(context);
+          if (!agreed) return;
           await ref.read(agentLiveLocationProvider.notifier).startTracking();
         };
         break;

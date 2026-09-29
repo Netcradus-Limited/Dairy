@@ -64,7 +64,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '325042169664',
     projectId: 'sawariya-7efd4',
     storageBucket: 'sawariya-7efd4.firebasestorage.app',
-    iosBundleId: 'com.example.dairyApp',
+    iosBundleId: 'com.sawariyassarkar.app',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -73,7 +73,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '325042169664',
     projectId: 'sawariya-7efd4',
     storageBucket: 'sawariya-7efd4.firebasestorage.app',
-    iosBundleId: 'com.example.dairyApp',
+    iosBundleId: 'com.sawariyassarkar.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

@@ -7,6 +7,7 @@ import '../../core/responsive/responsive.dart';
 import '../../providers/settings_provider.dart';
 import '../../core/localization/app_language.dart';
 import '../../widgets/settings_tile.dart';
+import '../../features/profile/legal_policies_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -110,6 +111,25 @@ class SettingsScreen extends ConsumerWidget {
                     trailing: const Icon(Icons.chevron_right_rounded,
                         color: AppColors.textMuted),
                     onTap: () => _showThemeDialog(context, ref),
+                  ),
+                ]),
+                const SizedBox(height: 16),
+                _sectionTitle('Legal & Privacy'),
+                _card([
+                  SettingsTile(
+                    icon: Icons.policy_outlined,
+                    title: 'Legal & Policies',
+                    subtitle: 'Privacy Policy, Terms, Refunds & Delivery',
+                    trailing: const Icon(Icons.chevron_right_rounded,
+                        color: AppColors.textMuted),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const LegalPoliciesScreen(),
+                        ),
+                      );
+                    },
                   ),
                 ]),
                 const SizedBox(height: 24),

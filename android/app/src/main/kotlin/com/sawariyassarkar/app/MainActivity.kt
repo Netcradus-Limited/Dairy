@@ -1,4 +1,4 @@
-package com.example.dairy_app
+package com.sawariyassarkar.app
 
 import android.content.Context
 import android.content.Intent
@@ -12,7 +12,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
-    private val BATTERY_CHANNEL = "com.example.dairy_app/battery_optimization"
+    private val BATTERY_CHANNEL = "com.sawariyassarkar.app/battery_optimization"
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

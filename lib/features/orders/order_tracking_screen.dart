@@ -5,7 +5,6 @@ import 'package:latlong2/latlong.dart';
 import '../../core/constants/app_colors.dart';
 import '../../models/order.dart';
 import '../../models/address.dart';
-import '../../services/delivery_tracking_service.dart';
 import '../../providers/delivery_provider.dart';
 
 /// Single tracking step on the timeline
@@ -547,7 +546,7 @@ class _LiveTrackingMapCardState extends ConsumerState<_LiveTrackingMapCard> {
                 TileLayer(
                   urlTemplate:
                       'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.example.dairy_app',
+                  userAgentPackageName: 'com.sawariyassarkar.app',
                 ),
                 if (route.isNotEmpty)
                   PolylineLayer(

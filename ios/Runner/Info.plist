@@ -66,10 +66,15 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<!-- Location permissions for real-time delivery agent GPS tracking -->
+	<!-- Location permissions: Customer address auto-detect & Delivery agent shift tracking -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Your live location is shared with customers while you are on duty for delivery tracking.</string>
+	<string>Sawariya Dairy uses your location to auto-detect your delivery address for orders, and to enable live route tracking while delivery staff are on duty.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Your live location is shared with customers while you are on duty for delivery tracking.</string>
+	<string>Sawariya Dairy uses background location exclusively for delivery staff on duty to share real-time order tracking with customers.</string>
+	<!-- Camera and Photo Library permissions for avatar and catalog image uploads -->
+	<key>NSCameraUsageDescription</key>
+	<string>Sawariya Dairy requires camera access to allow you to take and upload a profile photo and document delivery verification.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Sawariya Dairy requires photo library access to select and upload your profile avatar and product catalog images.</string>
 </dict>
 </plist>

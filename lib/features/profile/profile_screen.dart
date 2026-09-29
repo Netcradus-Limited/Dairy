@@ -13,6 +13,8 @@ import 'edit_profile_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../subscription/subscriptions_screen.dart';
 import 'about_screen.dart';
+import 'account_deletion_screen.dart';
+import 'legal_policies_screen.dart';
 import '../../core/localization/app_language.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -149,6 +151,37 @@ class ProfileScreen extends ConsumerWidget {
                                             builder: (_) =>
                                                 const AboutScreen()));
                                   },
+                                ),
+                                const Divider(
+                                    height: 1, color: Color(0xFFF1F5F9)),
+                                _buildMenuTile(
+                                  context,
+                                  Icons.policy_outlined,
+                                  'Legal & Policies',
+                                  'Terms, privacy, refunds, delivery & deletion',
+                                  () {
+                                    Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                const LegalPoliciesScreen()));
+                                  },
+                                ),
+                                const Divider(
+                                    height: 1, color: Color(0xFFF1F5F9)),
+                                _buildMenuTile(
+                                  context,
+                                  Icons.delete_outline_rounded,
+                                  'Delete Account',
+                                  'Permanently remove account and personal data',
+                                  () {
+                                    Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                const AccountDeletionScreen()));
+                                  },
+                                  isDestructive: true,
                                 ),
                               ],
                             ),
@@ -394,33 +427,46 @@ class ProfileScreen extends ConsumerWidget {
     IconData icon,
     String title,
     String subtitle,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    bool isDestructive = false,
+  }) {
     return ListTile(
       dense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: Container(
         padding: const EdgeInsets.all(8),
-        decoration: const BoxDecoration(
-          color: Color(0xFFEAF5EF),
+        decoration: BoxDecoration(
+          color: isDestructive
+              ? const Color(0xFFFEE2E2)
+              : const Color(0xFFEAF5EF),
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: const Color(0xFF005F38), size: 18),
+        child: Icon(
+          icon,
+          color: isDestructive
+              ? const Color(0xFFDC2626)
+              : const Color(0xFF005F38),
+          size: 18,
+        ),
       ),
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13.5,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF172033),
+          color: isDestructive
+              ? const Color(0xFFDC2626)
+              : const Color(0xFF172033),
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w500,
-          color: Color(0xFF98A2B3),
+          color: isDestructive
+              ? const Color(0xFFEF4444)
+              : const Color(0xFF98A2B3),
         ),
       ),
       trailing: const Icon(
