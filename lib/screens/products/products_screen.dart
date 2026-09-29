@@ -511,15 +511,17 @@ class ProductsScreen extends StatelessWidget {
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
     final subtitleCtrl = TextEditingController(text: existing?.subtitle ?? '');
     final priceCtrl = TextEditingController(
-        text: existing != null ? '${existing.price.toInt()}' : '65');
-    final unitCtrl = TextEditingController(text: existing?.unit ?? '1 Litre');
-    final fatCtrl =
-        TextEditingController(text: existing?.fatContent ?? '3.5% Fat');
-    final stockCtrl =
-        TextEditingController(text: '${existing?.stockQuantity ?? 100}');
-    final categoryCtrl =
-        TextEditingController(text: existing?.category ?? 'Milk & Creams');
-    final emojiCtrl = TextEditingController(text: existing?.emoji ?? '🥛');
+        text: existing != null
+            ? (existing.price == existing.price.roundToDouble()
+                ? '${existing.price.toInt()}'
+                : '${existing.price}')
+            : '');
+    final unitCtrl = TextEditingController(text: existing?.unit ?? '');
+    final fatCtrl = TextEditingController(text: existing?.fatContent ?? '');
+    final stockCtrl = TextEditingController(
+        text: existing != null ? '${existing.stockQuantity}' : '');
+    final categoryCtrl = TextEditingController(text: existing?.category ?? '');
+    final emojiCtrl = TextEditingController(text: existing?.emoji ?? '');
 
     showDialog(
       context: context,
@@ -961,7 +963,7 @@ class ProductsScreen extends StatelessWidget {
                                   fatContent: fatCtrl.text.trim(),
                                   category: categoryCtrl.text.trim(),
                                   emoji: emojiCtrl.text.trim().isEmpty
-                                      ? '🥛'
+                                      ? existing.emoji
                                       : emojiCtrl.text.trim(),
                                   imageUrl: selectedImageUrl,
                                 ),
@@ -974,19 +976,13 @@ class ProductsScreen extends StatelessWidget {
                                   subtitle: subtitleCtrl.text.trim().isEmpty
                                       ? fatCtrl.text.trim()
                                       : subtitleCtrl.text.trim(),
-                                  category: categoryCtrl.text.trim().isEmpty
-                                      ? 'Milk & Creams'
-                                      : categoryCtrl.text.trim(),
-                                  unit: unitCtrl.text.trim().isEmpty
-                                      ? '1 Litre'
-                                      : unitCtrl.text.trim(),
+                                  category: categoryCtrl.text.trim(),
+                                  unit: unitCtrl.text.trim(),
                                   price:
-                                      double.tryParse(priceCtrl.text) ?? 60.0,
+                                      double.tryParse(priceCtrl.text) ?? 0.0,
                                   stockQuantity:
-                                      int.tryParse(stockCtrl.text) ?? 100,
-                                  fatContent: fatCtrl.text.trim().isEmpty
-                                      ? '3.5% Fat'
-                                      : fatCtrl.text.trim(),
+                                      int.tryParse(stockCtrl.text) ?? 0,
+                                  fatContent: fatCtrl.text.trim(),
                                   packaging: 'Fresh Pouch',
                                   emoji: emojiCtrl.text.trim().isEmpty
                                       ? '🥛'

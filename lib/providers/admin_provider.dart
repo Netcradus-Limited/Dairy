@@ -2180,9 +2180,7 @@ class AdminProvider extends ChangeNotifier {
 
       final rating = (data['rating'] as num?)?.toDouble();
 
-      final isOnline = (data['isOnline'] as bool?) ??
-          (data['isOnDuty'] as bool?) ??
-          false;
+      final isOnline = data['isOnline'] == true;
       final rawStatus = data['status']?.toString().trim();
       final status = (rawStatus != null && rawStatus.isNotEmpty)
           ? rawStatus

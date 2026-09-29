@@ -71,8 +71,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
+        return ListenableBuilder(
+          listenable: provider,
+          builder: (dialogContext, _) {
+            return StatefulBuilder(
+              builder: (context, setDialogState) {
             final allRiders = provider.riders;
             final filteredRiders = allRiders.where((r) {
               if (searchQuery.trim().isEmpty) return true;
@@ -229,20 +232,37 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                       selectedAgentId == rider.id;
                                   final isCurrentlyAssigned =
                                       order.assignedAgentId == rider.id;
+                                  final isRiderOnline = rider.isOnline;
 
-                                  return InkWell(
-                                    borderRadius: BorderRadius.circular(8),
-                                    onTap: isSubmitting
-                                        ? null
-                                        : () {
-                                            setDialogState(() {
-                                              selectedAgentId = rider.id;
-                                            });
-                                          },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8.0, vertical: 10.0),
-                                      child: Row(
+                                  return Opacity(
+                                    opacity: isRiderOnline ? 1.0 : 0.55,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(8),
+                                      onTap: isSubmitting
+                                          ? null
+                                          : (!isRiderOnline
+                                              ? () {
+                                                  if (context.mounted) {
+                                                    ScaffoldMessenger.of(context)
+                                                        .showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text(
+                                                            'Cannot assign order: Delivery agent is currently offline'),
+                                                        backgroundColor:
+                                                            AppColors.statusCancelled,
+                                                      ),
+                                                    );
+                                                  }
+                                                }
+                                              : () {
+                                                  setDialogState(() {
+                                                    selectedAgentId = rider.id;
+                                                  });
+                                                }),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8.0, vertical: 10.0),
+                                        child: Row(
                                         children: [
                                           // Avatar
                                           Container(
@@ -407,7 +427,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                             materialTapTargetSize:
                                                 MaterialTapTargetSize
                                                     .shrinkWrap,
-                                            onChanged: isSubmitting
+                                            onChanged: (isSubmitting || !isRiderOnline)
                                                 ? null
                                                 : (val) {
                                                     setDialogState(() {
@@ -418,7 +438,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                         ],
                                       ),
                                     ),
-                                  );
+                                  ),
+                                );
                                 },
                               ),
                       ),
@@ -437,13 +458,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                       selectedAgentId == order.assignedAgentId)
                                   ? null
                                   : () async {
-                                      final selectedRider = filteredRiders
+                                      final selectedRider = provider.riders
                                           .cast<DeliveryRider?>()
                                           .firstWhere(
                                             (r) => r?.id == selectedAgentId,
                                             orElse: () => null,
                                           );
-                                      if (selectedRider != null &&
+                                      if (selectedRider == null ||
                                           !selectedRider.isOnline) {
                                         if (context.mounted) {
                                           ScaffoldMessenger.of(context)
@@ -696,13 +717,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                               order.assignedAgentId)
                                       ? null
                                       : () async {
-                                          final selectedRider = filteredRiders
+                                          final selectedRider = provider.riders
                                               .cast<DeliveryRider?>()
                                               .firstWhere(
                                                 (r) => r?.id == selectedAgentId,
                                                 orElse: () => null,
                                               );
-                                          if (selectedRider != null &&
+                                          if (selectedRider == null ||
                                               !selectedRider.isOnline) {
                                             if (context.mounted) {
                                               ScaffoldMessenger.of(context)
@@ -809,7 +830,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
         );
       },
     );
-  }
+  },
+);
+}
 
   Future<void> _showOrderDetailsDialog(
     BuildContext context,

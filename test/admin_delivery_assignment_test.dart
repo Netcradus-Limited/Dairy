@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:dairy_app/models/delivery_staff_model.dart';
 import 'package:dairy_app/models/order_model.dart';
 import 'package:dairy_app/providers/admin_provider.dart';
 import 'package:dairy_app/screens/orders/orders_screen.dart';
+import 'package:dairy_app/services/order_service.dart';
 
 class MockAdminProvider extends ChangeNotifier implements AdminProvider {
   List<DairyOrder> _mockOrders = [];
@@ -447,6 +449,211 @@ void main() {
       // Verify database commit was blocked
       expect(mockProvider.lastAssignedAgentId, isNot(equals('agent_002')));
       expect(mockProvider.orders.first.isAssigned, isFalse);
+    });
+
+    testWidgets(
+        '12. Offline delivery agent is displayed as disabled with disabled radio',
+        (tester) async {
+      final mockProvider = MockAdminProvider()
+        ..setMockOrders([unassignedOrder])
+        ..setMockRiders([testRider1, testRider2]);
+
+      await tester.pumpWidget(createOrdersScreenTestWidget(mockProvider));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Assign Agent'));
+      await tester.pumpAndSettle();
+
+      // Find Radio widgets: the one corresponding to agent_002 should have onChanged == null (disabled)
+      final radioFinders = find.byType(Radio<String>);
+      expect(radioFinders, findsNWidgets(2));
+
+      final radio1 = tester.widget<Radio<String>>(radioFinders.first);
+      final radio2 = tester.widget<Radio<String>>(radioFinders.last);
+
+      // radio1 (Amit Kumar, online) is enabled
+      expect(radio1.onChanged, isNotNull);
+      // radio2 (Rajesh Sharma, offline) is disabled
+      expect(radio2.onChanged, isNull);
+
+      // Offline badge is displayed
+      expect(find.text('Offline'), findsOneWidget);
+    });
+
+    testWidgets(
+        '13. Race condition: Rider goes offline after dialog opens -> assignment is rejected',
+        (tester) async {
+      final mockProvider = MockAdminProvider()
+        ..setMockOrders([unassignedOrder])
+        ..setMockRiders([testRider1, testRider3]); // Both online initially
+
+      await tester.pumpWidget(createOrdersScreenTestWidget(mockProvider));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Assign Agent'));
+      await tester.pumpAndSettle();
+
+      // Select Vikram Singh while online
+      await tester.tap(find.text('Vikram Singh'));
+      await tester.pumpAndSettle();
+
+      // Simulate Vikram Singh going offline before Admin clicks assign
+      final updatedVikramOffline = testRider3.copyWith(isOnline: false, status: 'Offline');
+      mockProvider.setMockRiders([testRider1, updatedVikramOffline]);
+      await tester.pumpAndSettle();
+
+      // Admin clicks Assign Agent
+      await tester.tap(find.text('Assign Agent').last);
+      await tester.pumpAndSettle();
+
+      // Verify assignment was rejected and clear snackbar displayed
+      expect(
+        find.text('Cannot assign order: Delivery agent is currently offline'),
+        findsOneWidget,
+      );
+      expect(mockProvider.lastAssignedAgentId, isNot(equals('agent_003')));
+    });
+
+    test('14. Existing orders already assigned to a rider remain assigned even if rider goes offline', () {
+      final orderWithRider2 = unassignedOrder.copyWith(
+        assignedAgentId: testRider2.id,
+        assignedAgentName: testRider2.name,
+        status: OrderStatus.assigned,
+      );
+
+      // testRider2 is offline
+      expect(testRider2.isOnline, isFalse);
+      // Order assignment remains intact
+      expect(orderWithRider2.isAssigned, isTrue);
+      expect(orderWithRider2.assignedAgentId, equals('agent_002'));
+      expect(orderWithRider2.assignedAgentName, equals('Rajesh Sharma'));
+    });
+
+    test('15. MockAdminProvider rejects assignDeliveryAgent if rider is offline', () async {
+      final mockProvider = MockAdminProvider()
+        ..setMockOrders([unassignedOrder])
+        ..setMockRiders([testRider1, testRider2]);
+
+      expect(
+        () => mockProvider.assignDeliveryAgent('ord_101', 'agent_002'),
+        throwsA(isA<StateError>().having(
+          (e) => e.message,
+          'message',
+          contains('Cannot assign order: Delivery agent is currently offline'),
+        )),
+      );
+
+      expect(
+        () => mockProvider.approveAndAssignOrder('ord_101', 'agent_002'),
+        throwsA(isA<StateError>().having(
+          (e) => e.message,
+          'message',
+          contains('Cannot assign order: Delivery agent is currently offline'),
+        )),
+      );
+    });
+  });
+
+  group('OrderService Online-State Enforcement Integration Tests', () {
+    late FakeFirebaseFirestore fakeDb;
+    late OrderService realOrderService;
+
+    setUp(() async {
+      fakeDb = FakeFirebaseFirestore();
+      realOrderService = OrderService(firestore: fakeDb);
+
+      // Seed a confirmed order
+      await fakeDb.collection('orders').doc('ord_test_01').set({
+        'id': 'ord_test_01',
+        'status': 'confirmed',
+        'orderCode': 'SWD101',
+        'userId': 'cust_01',
+        'totalAmount': 500.0,
+      });
+    });
+
+    test('1. Online delivery agent (isOnline: true) is assigned successfully', () async {
+      await fakeDb.collection('delivery_agents').doc('rider_online').set({
+        'uid': 'rider_online',
+        'name': 'Rider Online',
+        'isOnline': true,
+        'isOnDuty': true,
+      });
+
+      await realOrderService.assignDeliveryAgent('ord_test_01', 'rider_online', agentName: 'Rider Online');
+
+      final orderDoc = await fakeDb.collection('orders').doc('ord_test_01').get();
+      expect(orderDoc.data()!['assignedAgentId'], equals('rider_online'));
+      expect(orderDoc.data()!['status'], equals('assigned'));
+    });
+
+    test('2. Offline delivery agent (isOnline: false) is rejected with StateError', () async {
+      await fakeDb.collection('delivery_agents').doc('rider_offline').set({
+        'uid': 'rider_offline',
+        'name': 'Rider Offline',
+        'isOnline': false,
+        'isOnDuty': false,
+      });
+
+      expect(
+        () => realOrderService.assignDeliveryAgent('ord_test_01', 'rider_offline'),
+        throwsA(isA<StateError>().having(
+          (e) => e.message,
+          'message',
+          contains('Cannot assign order: Delivery agent is currently offline'),
+        )),
+      );
+
+      final orderDoc = await fakeDb.collection('orders').doc('ord_test_01').get();
+      expect(orderDoc.data()!['assignedAgentId'], isNull);
+    });
+
+    test('3. Agent with isOnDuty: true but isOnline: false is rejected (isOnDuty not substitute)', () async {
+      await fakeDb.collection('delivery_agents').doc('rider_on_duty_only').set({
+        'uid': 'rider_on_duty_only',
+        'name': 'Rider On Duty Only',
+        'isOnline': false,
+        'isOnDuty': true,
+      });
+
+      expect(
+        () => realOrderService.assignDeliveryAgent('ord_test_01', 'rider_on_duty_only'),
+        throwsA(isA<StateError>().having(
+          (e) => e.message,
+          'message',
+          contains('Cannot assign order: Delivery agent is currently offline'),
+        )),
+      );
+    });
+
+    test('4. Agent in users collection with isOnline: false is rejected', () async {
+      await fakeDb.collection('users').doc('rider_in_users').set({
+        'uid': 'rider_in_users',
+        'name': 'Rider In Users',
+        'role': 'delivery',
+        'isOnline': false,
+      });
+
+      expect(
+        () => realOrderService.assignDeliveryAgent('ord_test_01', 'rider_in_users'),
+        throwsA(isA<StateError>().having(
+          (e) => e.message,
+          'message',
+          contains('Cannot assign order: Delivery agent is currently offline'),
+        )),
+      );
+    });
+
+    test('5. Unassigning an agent clears assignedAgentId without requiring online check', () async {
+      await fakeDb.collection('orders').doc('ord_test_01').update({
+        'assignedAgentId': 'rider_old',
+        'status': 'assigned',
+      });
+
+      await realOrderService.assignDeliveryAgent('ord_test_01', null);
+
+      final orderDoc = await fakeDb.collection('orders').doc('ord_test_01').get();
+      expect(orderDoc.data()!['assignedAgentId'], isNull);
     });
   });
 }

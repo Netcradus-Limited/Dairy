@@ -273,23 +273,18 @@ service cloud.firestore {
       allow delete: if isSuperAdmin() || hasPermission('cancelOrders');
     }
 
-    // Helper: checks whether a delivery agent is online in /delivery_agents or /users
+    // Helper: checks whether a delivery agent is online in /delivery_agents or /users.
+    // Business rule: Delivery agent MUST currently have isOnline == true.
+    // Notice: isOnDuty is NOT treated as a substitute for isOnline.
     function isAgentOnline(agentId) {
       let hasAgentDoc = exists(/databases/$(database)/documents/delivery_agents/$(agentId));
       let agentDoc = hasAgentDoc ? get(/databases/$(database)/documents/delivery_agents/$(agentId)).data : null;
-      let isAgentDocOnline = agentDoc != null && (
-        ('isOnline' in agentDoc && agentDoc.isOnline == true)
-        || ('isOnDuty' in agentDoc && agentDoc.isOnDuty == true)
-      );
-
       let hasUserDoc = exists(/databases/$(database)/documents/users/$(agentId));
       let userDoc = hasUserDoc ? get(/databases/$(database)/documents/users/$(agentId)).data : null;
-      let isUserDocOnline = userDoc != null && (
-        ('isOnline' in userDoc && userDoc.isOnline == true)
-        || ('isOnDuty' in userDoc && userDoc.isOnDuty == true)
-      );
 
-      return isAgentDocOnline || isUserDocOnline;
+      return hasAgentDoc
+          ? (agentDoc != null && ('isOnline' in agentDoc) && agentDoc.isOnline == true)
+          : (hasUserDoc && userDoc != null && ('isOnline' in userDoc) && userDoc.isOnline == true);
     }
 
     // Admin order update validation:

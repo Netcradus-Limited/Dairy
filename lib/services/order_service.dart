@@ -852,7 +852,7 @@ class OrderService {
                 'Order must be confirmed by Admin before assigning a delivery agent.');
           }
 
-          // Enforce online-only assignment rule
+          // Enforce online-only assignment rule: fresh online-state check immediately before writing
           bool isAgentOnline = false;
           bool docFound = false;
           try {
@@ -863,8 +863,7 @@ class OrderService {
             if (agentDoc.exists) {
               docFound = true;
               final agentData = agentDoc.data();
-              isAgentOnline = agentData?['isOnline'] == true ||
-                  agentData?['isOnDuty'] == true;
+              isAgentOnline = agentData?['isOnline'] == true;
             } else {
               final userDoc = await _firestore
                   .collection('users')
@@ -873,11 +872,12 @@ class OrderService {
               if (userDoc.exists) {
                 docFound = true;
                 final userData = userDoc.data();
-                isAgentOnline = userData?['isOnline'] == true ||
-                    userData?['isOnDuty'] == true;
+                isAgentOnline = userData?['isOnline'] == true;
               }
             }
-          } catch (_) {}
+          } catch (e) {
+            if (e is StateError) rethrow;
+          }
 
           if (docFound && !isAgentOnline) {
             throw StateError(
