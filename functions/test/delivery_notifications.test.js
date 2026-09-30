@@ -196,7 +196,7 @@ describe("Delivery Agent -> Admin Notification Backend Unit Tests", () => {
     assert.ok(notif.title.includes("Declined"));
   });
 
-  test("3: Pickup started -> creates Admin notification with pickupStarted", async () => {
+  test("3: Preparing status does NOT emit pickupStarted (pickup is removed from lifecycle)", async () => {
     const orderData = {
       status: "preparing",
       assignedAgentId: "agent_valid_01",
@@ -211,13 +211,9 @@ describe("Delivery Agent -> Admin Notification Backend Unit Tests", () => {
       "accepted"
     );
 
-    assert.equal(result.status, "created");
-    assert.equal(result.eventType, "pickupStarted");
-    assert.equal(result.notificationId, "delivery_ORD-PICKUP-1_pickupStarted");
-
-    const notif = db._store.get("users/admin_uid_01/notifications/delivery_ORD-PICKUP-1_pickupStarted");
-    assert.ok(notif);
-    assert.ok(notif.title.includes("Pickup Started"));
+    assert.equal(result.status, "skipped");
+    assert.equal(result.reason, "not_a_delivery_event");
+    assert.equal(db._store.get("users/admin_uid_01/notifications/delivery_ORD-PICKUP-1_pickupStarted"), undefined);
   });
 
   test("4: Delivery started -> creates Admin notification with deliveryStarted", async () => {

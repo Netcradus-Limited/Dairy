@@ -9,7 +9,9 @@ import '../providers/user_provider.dart';
 import '../widgets/app_header.dart';
 import '../widgets/sidebar_navigation.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../models/notification_item.dart';
 import '../models/staff_member.dart';
+import '../providers/notification_provider.dart';
 import 'categories/categories_screen.dart';
 import 'customers/customers_screen.dart';
 import 'dashboard/dashboard_screen.dart';
@@ -33,6 +35,8 @@ class AdminMainShell extends ConsumerStatefulWidget {
 
 class _AdminMainShellState extends ConsumerState<AdminMainShell> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final Set<String> _seenNotificationIds = {};
+  bool _initialNotificationsLoaded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -101,6 +105,108 @@ class _AdminMainShellState extends ConsumerState<AdminMainShell> {
     }
 
     final adminProv = provider.Provider.of<AdminProvider>(context);
+
+    // Listen to real-time incoming notifications for visible in-app alerts
+    ref.listen<AsyncValue<List<NotificationItem>>>(
+      userNotificationsStreamProvider,
+      (previous, next) {
+        next.whenData((notifications) {
+          if (!_initialNotificationsLoaded) {
+            _seenNotificationIds.addAll(notifications.map((n) => n.id));
+            _initialNotificationsLoaded = true;
+            return;
+          }
+
+          final newUnreads = notifications
+              .where((n) => !n.isRead && !_seenNotificationIds.contains(n.id))
+              .toList();
+
+          for (final notif in newUnreads) {
+            _seenNotificationIds.add(notif.id);
+            if (!mounted) continue;
+
+            final messenger = ScaffoldMessenger.maybeOf(context);
+            if (messenger == null) continue;
+
+            messenger.showSnackBar(
+              SnackBar(
+                behavior: SnackBarBehavior.floating,
+                margin: const EdgeInsets.all(16),
+                backgroundColor: const Color(0xFF1E293B),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: Color(0xFF334155)),
+                ),
+                duration: const Duration(seconds: 6),
+                content: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        notif.type.icon,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            notif.title,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            notif.body,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              color: const Color(0xFF94A3B8),
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                action: SnackBarAction(
+                  label: 'View',
+                  textColor: AppColors.primary,
+                  onPressed: () async {
+                    final effectiveUid = ref.read(effectiveUserIdProvider);
+                    if (effectiveUid.isNotEmpty) {
+                      try {
+                        await ref
+                            .read(notificationRepositoryProvider)
+                            .markAsRead(effectiveUid, notif.id);
+                      } catch (_) {}
+                    }
+                    adminProv.setNavIndex(5);
+                    if (notif.orderId != null && notif.orderId!.isNotEmpty) {
+                      adminProv.setSearchQuery(notif.orderId!);
+                    }
+                  },
+                ),
+              ),
+            );
+          }
+        });
+      },
+    );
 
     Widget getActiveScreen(int index) {
       switch (index) {

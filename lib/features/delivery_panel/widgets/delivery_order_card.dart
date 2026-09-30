@@ -51,7 +51,7 @@ class DeliveryOrderCard extends StatelessWidget {
     switch (order.status) {
       case DeliveryOrderStatus.delivered:
         return DeliveryChipType.delivered;
-      case DeliveryOrderStatus.pickup:
+      case DeliveryOrderStatus.preparing:
       case DeliveryOrderStatus.outForDelivery:
         return DeliveryChipType.inProgress;
       case DeliveryOrderStatus.accepted:
@@ -69,7 +69,7 @@ class DeliveryOrderCard extends StatelessWidget {
     switch (order.status) {
       case DeliveryOrderStatus.delivered:
         return 'Delivered';
-      case DeliveryOrderStatus.pickup:
+      case DeliveryOrderStatus.preparing:
       case DeliveryOrderStatus.outForDelivery:
         return 'In Progress';
       case DeliveryOrderStatus.accepted:

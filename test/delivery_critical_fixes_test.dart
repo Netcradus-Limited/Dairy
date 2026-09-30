@@ -118,7 +118,7 @@ void main() {
       expect(find.text('Start Pickup'), findsNothing);
     });
 
-    testWidgets('accepted status renders Start Pickup CTA', (tester) async {
+    testWidgets('accepted status renders Awaiting Kitchen Preparing card (Option A)', (tester) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
@@ -144,7 +144,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Start Pickup'), findsOneWidget);
+      expect(find.text('Order Accepted — Awaiting Kitchen Preparing'), findsOneWidget);
+      expect(find.text('Start Pickup'), findsNothing);
       expect(find.text('Accept Order'), findsNothing);
       expect(find.text('Decline Order'), findsNothing);
     });

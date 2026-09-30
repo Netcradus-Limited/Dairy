@@ -135,6 +135,8 @@ class Order {
       orderType.toLowerCase() == 'subscription' ||
       (subscriptionId != null && subscriptionId!.isNotEmpty);
 
+  bool get isAccepted => acceptedAt != null;
+
   /// The customer-facing 6-character order code (e.g. "KRT482").
   /// Format: LLLNNN (3 uppercase letters + 3 digits).
   /// Falls back deterministically to a formatted 6-character code from [id]
@@ -744,10 +746,9 @@ OrderStatus orderStatusFromString(String status) {
     case 'confirmed':
       return OrderStatus.confirmed;
     case 'assigned':
-      return OrderStatus.assigned;
     case 'accepted':
+      return OrderStatus.assigned;
     case 'preparing':
-    case 'pickup':
       return OrderStatus.preparing;
     case 'out for delivery':
     case 'outfordelivery':

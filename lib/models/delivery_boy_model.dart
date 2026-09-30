@@ -10,7 +10,7 @@ enum DeliveryStatus {
 enum DeliveryOrderStatus {
   pendingAcceptance,
   accepted,
-  pickup,
+  preparing,
   outForDelivery,
   awaitingAdminConfirmation,
   delivered,
@@ -23,8 +23,8 @@ enum DeliveryOrderStatus {
         return 'Pending Acceptance';
       case DeliveryOrderStatus.accepted:
         return 'Accepted';
-      case DeliveryOrderStatus.pickup:
-        return 'Pickup';
+      case DeliveryOrderStatus.preparing:
+        return 'Preparing Fresh';
       case DeliveryOrderStatus.outForDelivery:
         return 'Out for Delivery';
       case DeliveryOrderStatus.awaitingAdminConfirmation:
@@ -44,7 +44,7 @@ enum DeliveryOrderStatus {
         return const Color(0xFFF59E0B);
       case DeliveryOrderStatus.accepted:
         return const Color(0xFF3D7FE8);
-      case DeliveryOrderStatus.pickup:
+      case DeliveryOrderStatus.preparing:
         return const Color(0xFFA855F7);
       case DeliveryOrderStatus.outForDelivery:
         return const Color(0xFF0284C7);

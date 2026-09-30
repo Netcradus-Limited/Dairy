@@ -1105,12 +1105,16 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                   color: textSecondary,
                                 ),
                               ),
-                              Text(
-                                order.deliverySlot,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: textPrimary,
+                              Flexible(
+                                child: Text(
+                                  order.deliverySlot,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: textPrimary,
+                                  ),
+                                  textAlign: TextAlign.right,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
@@ -1126,12 +1130,16 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                   color: textSecondary,
                                 ),
                               ),
-                              Text(
-                                order.paymentMode,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: textPrimary,
+                              Flexible(
+                                child: Text(
+                                  order.paymentMode,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: textPrimary,
+                                  ),
+                                  textAlign: TextAlign.right,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
@@ -1225,6 +1233,96 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
+  Widget _buildAdminStatusAction(
+    BuildContext context,
+    AdminProvider provider,
+    DairyOrder order,
+    Color textPrimary,
+    Color textSecondary,
+    Color cardBg,
+  ) {
+    switch (order.status) {
+      case OrderStatus.pending:
+        return FilledButton.icon(
+          onPressed: _updating
+              ? null
+              : () => _updateStatus(
+                    context,
+                    provider,
+                    order.id,
+                    OrderStatus.confirmed,
+                  ),
+          icon: const Icon(Icons.check_circle_outline, size: 14),
+          label: const Text('Confirm',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+          ),
+        );
+
+      case OrderStatus.confirmed:
+        return StatusBadge.fromOrderStatus(order.status);
+
+      case OrderStatus.assigned:
+        if (order.isAccepted) {
+          return FilledButton.icon(
+            onPressed: _updating
+                ? null
+                : () => _updateStatus(
+                      context,
+                      provider,
+                      order.id,
+                      OrderStatus.preparing,
+                    ),
+            icon: const Icon(Icons.kitchen_outlined, size: 14),
+            label: const Text('Set Preparing',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF2563EB),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+            ),
+          );
+        }
+        return Tooltip(
+          message: 'Awaiting delivery agent acceptance',
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              StatusBadge.fromOrderStatus(order.status),
+              const SizedBox(width: 4),
+              Icon(Icons.hourglass_empty_rounded, size: 14, color: textSecondary),
+            ],
+          ),
+        );
+
+      case OrderStatus.preparing:
+      case OrderStatus.outForDelivery:
+        return StatusBadge.fromOrderStatus(order.status);
+
+      case OrderStatus.delivered:
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            StatusBadge.fromOrderStatus(order.status),
+            const SizedBox(width: 4),
+            Icon(Icons.lock_rounded, size: 13, color: textSecondary),
+          ],
+        );
+
+      case OrderStatus.cancelled:
+        return StatusBadge.fromOrderStatus(order.status);
+    }
+  }
+
   Widget _buildAgentAssignmentCell(
     BuildContext context,
     AdminProvider provider,
@@ -1234,6 +1332,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
     Color textMuted,
     Color cardBorder,
   ) {
+    final isDeliveredOrCancelled =
+        order.status == OrderStatus.delivered || order.status == OrderStatus.cancelled;
+
     if (order.isAssigned) {
       final assignedName =
           order.assignedAgentName != null && order.assignedAgentName!.isNotEmpty
@@ -1245,42 +1346,46 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       ?.name ??
                   'Agent (${order.assignedAgentId})');
 
-      return InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () => _showAssignAgentDialog(context, provider, order),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColors.deliveriesPurpleBg,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: AppColors.deliveriesPurple.withValues(alpha: 0.3),
-            ),
+      final canReassign = !isDeliveredOrCancelled;
+
+      final content = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isDeliveredOrCancelled
+              ? Colors.grey.withValues(alpha: 0.08)
+              : AppColors.deliveriesPurpleBg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isDeliveredOrCancelled
+                ? cardBorder
+                : AppColors.deliveriesPurple.withValues(alpha: 0.3),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.directions_bike_rounded,
-                size: 15,
-                color: AppColors.deliveriesPurple,
-              ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      assignedName,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: textPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isDeliveredOrCancelled ? Icons.lock_outline : Icons.directions_bike_rounded,
+              size: 15,
+              color: isDeliveredOrCancelled ? textMuted : AppColors.deliveriesPurple,
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    assignedName,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: isDeliveredOrCancelled ? textSecondary : textPrimary,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (canReassign)
                     Text(
                       'Tap to reassign',
                       style: GoogleFonts.plusJakartaSans(
@@ -1289,9 +1394,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
+            ),
+            if (canReassign) ...[
               const SizedBox(width: 4),
               const Icon(
                 Icons.swap_horiz_rounded,
@@ -1299,28 +1405,53 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 color: AppColors.deliveriesPurple,
               ),
             ],
-          ),
+          ],
         ),
+      );
+
+      if (canReassign) {
+        return InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => _showAssignAgentDialog(context, provider, order),
+          child: content,
+        );
+      }
+      return content;
+    }
+
+    if (isDeliveredOrCancelled) {
+      return Text(
+        '—',
+        style: GoogleFonts.plusJakartaSans(fontSize: 12, color: textMuted),
       );
     }
 
     final isPending = order.status == OrderStatus.pending;
+    if (isPending) {
+      return Text(
+        'Confirm first',
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: textMuted,
+        ),
+      );
+    }
+
     return OutlinedButton.icon(
       onPressed: () => _showAssignAgentDialog(context, provider, order),
-      icon: Icon(
-        isPending
-            ? Icons.verified_user_outlined
-            : Icons.person_add_alt_1_outlined,
+      icon: const Icon(
+        Icons.person_add_alt_1_outlined,
         size: 14,
       ),
-      label: Text(
-        isPending ? 'Approve & Assign' : 'Assign Agent',
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+      label: const Text(
+        'Assign Agent',
+        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
       ),
       style: OutlinedButton.styleFrom(
-        foregroundColor: isPending ? AppColors.revenueGreen : AppColors.primary,
-        side: BorderSide(
-          color: isPending ? AppColors.revenueGreen : AppColors.primary,
+        foregroundColor: AppColors.primary,
+        side: const BorderSide(
+          color: AppColors.primary,
         ),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         shape: RoundedRectangleBorder(
@@ -1696,39 +1827,18 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         ),
                       ),
                     ),
-                    // Status Action Dropdown
+                    // Status Action
                     Expanded(
                       flex: 2,
                       child: Align(
                         alignment: Alignment.centerRight,
-                        child: PopupMenuButton<OrderStatus>(
-                          initialValue: order.status,
-                          color: cardBg,
-                          onSelected: (newStatus) => _updateStatus(
-                            context,
-                            provider,
-                            order.id,
-                            newStatus,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              StatusBadge.fromOrderStatus(order.status),
-                              const SizedBox(width: 4),
-                              Icon(Icons.arrow_drop_down,
-                                  size: 18, color: textSecondary),
-                            ],
-                          ),
-                          itemBuilder: (ctx) => OrderStatus.values.map((s) {
-                            return PopupMenuItem(
-                              value: s,
-                              child: Text(
-                                s.displayName,
-                                style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 13, color: textPrimary),
-                              ),
-                            );
-                          }).toList(),
+                        child: _buildAdminStatusAction(
+                          context,
+                          provider,
+                          order,
+                          textPrimary,
+                          textSecondary,
+                          cardBg,
                         ),
                       ),
                     ),
@@ -1817,34 +1927,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      PopupMenuButton<OrderStatus>(
-                        initialValue: order.status,
-                        color: cardBg,
-                        onSelected: (newStatus) => _updateStatus(
-                          context,
-                          provider,
-                          order.id,
-                          newStatus,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            StatusBadge.fromOrderStatus(order.status),
-                            const SizedBox(width: 2),
-                            Icon(Icons.arrow_drop_down,
-                                size: 16, color: textSecondary),
-                          ],
-                        ),
-                        itemBuilder: (ctx) => OrderStatus.values.map((s) {
-                          return PopupMenuItem(
-                            value: s,
-                            child: Text(
-                              s.displayName,
-                              style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 13, color: textPrimary),
-                            ),
-                          );
-                        }).toList(),
+                      _buildAdminStatusAction(
+                        context,
+                        provider,
+                        order,
+                        textPrimary,
+                        textSecondary,
+                        cardBg,
                       ),
                     ],
                   ),

@@ -1071,54 +1071,31 @@ void main() {
       expect(notif['metadata']['eventType'], 'orderDeclined');
     });
 
-    test('3: Pickup started → Admin notification created', () async {
+    test('3: Preparing status does not create pickupStarted notification', () async {
       final notificationsCreated = <Map<String, dynamic>>[];
-      Future<void> mockSendNotificationToAdmins({
-        required String title,
-        required String body,
-        required NotificationType type,
-        String? orderId,
-        String? assignedAgentId,
-        String? route,
-        bool isActionable = false,
-        Map<String, dynamic>? metadata,
-        String? senderUid,
+      Future<void> mockDispatchOrderEvent({
+        required String status,
+        required String previousStatus,
+        required String orderId,
       }) async {
+        // Preparing status is kitchen preparation (Option A) and does not emit delivery/pickupStarted events
+        if (status == 'preparing') {
+          return;
+        }
         notificationsCreated.add({
-          'title': title,
-          'body': body,
-          'type': type,
-          'isRead': false,
-          'isActionable': isActionable,
           'orderId': orderId,
-          'route': route,
-          'metadata': metadata,
-          'senderUid': senderUid,
+          'status': status,
         });
       }
 
-      const orderId = 'ORD-PICKUP-101';
-      await mockSendNotificationToAdmins(
-        title: 'Pickup Started 🚐',
-        body: '$customerName: Agent started pickup for order #$orderId',
-        type: NotificationType.delivery,
+      const orderId = 'ORD-PREPARING-101';
+      await mockDispatchOrderEvent(
+        status: 'preparing',
+        previousStatus: 'accepted',
         orderId: orderId,
-        assignedAgentId: 'agent_99',
-        route: '/delivery',
-        isActionable: true,
-        metadata: {
-          'source': 'delivery',
-          'orderId': orderId,
-          'eventType': 'pickupStarted',
-          'agentId': 'agent_99',
-        },
-        senderUid: customerId,
       );
 
-      expect(notificationsCreated.length, 1);
-      final notif = notificationsCreated.first;
-      expect(notif['title'], 'Pickup Started 🚐');
-      expect(notif['metadata']['eventType'], 'pickupStarted');
+      expect(notificationsCreated.isEmpty, isTrue);
     });
 
     test('4: Delivery started → Admin notification created', () async {

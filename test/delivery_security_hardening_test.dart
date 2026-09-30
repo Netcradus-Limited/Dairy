@@ -76,17 +76,15 @@ void main() {
                   'accepted',
                   'confirmed',
                   'preparing',
-                  'pickup',
                   'outfordelivery',
                   'out for delivery',
                   'cancelled'
                 ].contains(toLower);
 
         final fromPreparing =
-            (fromLower == 'preparing' || fromLower == 'pickup') &&
+            (fromLower == 'preparing') &&
                 [
                   'preparing',
-                  'pickup',
                   'outfordelivery',
                   'out for delivery',
                   'cancelled'
@@ -121,7 +119,6 @@ void main() {
               'accepted',
               'confirmed',
               'preparing',
-              'pickup',
               'outfordelivery',
               'out for delivery'
             ].contains((requestData['status'] as String?)?.toLowerCase());
@@ -224,7 +221,7 @@ void main() {
           ),
           isFalse,
           reason:
-              'Bypassing acceptance and pickup directly to delivered must be blocked',
+              'Bypassing acceptance directly to delivered must be blocked',
         );
       });
 

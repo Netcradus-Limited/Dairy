@@ -78,13 +78,13 @@ class _DeliveryMapTabState extends ConsumerState<DeliveryMapTab> {
         ref.watch(deliveryActiveOrdersStreamProvider).asData?.value ?? [];
     final agentLocationAsync = ref.watch(deliveryAgentLocationStreamProvider);
 
-    // Pick current active delivery order (pickup or out for delivery)
+    // Pick current active delivery order (preparing or out for delivery)
     DeliveryOrder? activeOrder;
     if (activeOrders.isNotEmpty) {
       activeOrder = activeOrders.firstWhere(
         (o) =>
             o.status == DeliveryOrderStatus.outForDelivery ||
-            o.status == DeliveryOrderStatus.pickup,
+            o.status == DeliveryOrderStatus.preparing,
         orElse: () => activeOrders.first,
       );
     }

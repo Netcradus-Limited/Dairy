@@ -100,7 +100,7 @@ void main() {
           items: ['Butter 500g x1'],
           amount: 250.0,
           deliveryFee: 15.0,
-          status: DeliveryOrderStatus.pickup,
+          status: DeliveryOrderStatus.preparing,
           orderTime: now.subtract(const Duration(minutes: 15)),
           distance: '2.5 km',
           estimatedTime: '18 mins',

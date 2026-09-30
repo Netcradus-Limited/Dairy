@@ -224,6 +224,48 @@ class OrderService {
       }
     }
 
+    // Dispatch real-time Admin notification for new order
+    try {
+      final notifRepo = NotificationRepository(firestore: _firestore);
+      final paymentMode = paymentMethod.trim().isNotEmpty
+          ? paymentMethod.trim()
+          : 'Cash on Delivery';
+      final formattedAmount = totals.total.toStringAsFixed(
+          totals.total.truncateToDouble() == totals.total ? 0 : 2);
+      final notifBody =
+          'New Order #$orderCode from $resolvedCustomerName - ₹$formattedAmount ($paymentMode)';
+
+      await notifRepo.sendNotificationToAdmins(
+        title: 'New Order Received 🛒',
+        body: notifBody,
+        type: NotificationType.order,
+        orderId: docRef.id,
+        route: '/admin/orders',
+        isActionable: true,
+        metadata: {
+          'source': 'order_created',
+          'orderId': docRef.id,
+          'orderCode': orderCode,
+          'customerName': resolvedCustomerName,
+          'customerPhone': resolvedCustomerPhone,
+          'totalAmount': totals.total,
+          'paymentMethod': paymentMode,
+          'category': 'order',
+        },
+        senderUid: authoritativeUid,
+        notificationId: 'order_${docRef.id}_created',
+      );
+      if (kDebugMode) {
+        debugPrint(
+            '[NOTIFY ADMIN] Dispatched new order notification for ${docRef.id}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint(
+            '[NOTIFY ADMIN ERROR] Failed to dispatch new order notification: $e');
+      }
+    }
+
     return order;
   }
 
@@ -271,10 +313,14 @@ class OrderService {
   }
 
   /// Updates an order's status in Firestore.
-  /// Enforces state machine: Pending orders must be confirmed before proceeding.
-  /// When the status becomes [OrderStatus.delivered], the trusted backend Cloud Function
-  /// handles calculating and creating the delivery earning server-side.
-  Future<void> updateOrderStatus(String orderId, OrderStatus status) async {
+  /// Enforces strict sequential state machine:
+  /// PENDING -> CONFIRMED -> ASSIGNED -> ACCEPTED -> PREPARING -> OUT_FOR_DELIVERY -> DELIVERED
+  /// DELIVERED is permanently locked against any status changes.
+  Future<void> updateOrderStatus(
+    String orderId,
+    OrderStatus status, {
+    bool callerIsAdmin = false,
+  }) async {
     final cleanOrderId = orderId.trim();
     if (cleanOrderId.isEmpty) throw ArgumentError('orderId cannot be empty');
 
@@ -289,17 +335,67 @@ class OrderService {
             (doc.data()?['status'] as String?)?.toLowerCase() ?? '';
         final targetStatusStr = orderStatusToString(status).toLowerCase();
 
-        // Enforce workflow: pending orders must be confirmed before proceeding to later states
-        if ((currentStatusStr == 'pending' || currentStatusStr == 'placed') &&
-            targetStatusStr != 'confirmed' &&
-            targetStatusStr != 'cancelled' &&
-            targetStatusStr != 'pending') {
+        // 1. Permanent terminal lock: DELIVERED and CANCELLED orders can never be modified
+        if (currentStatusStr == 'delivered' || currentStatusStr == 'cancelled') {
           throw StateError(
-              'Pending orders must be confirmed by Admin before proceeding to ${orderStatusToString(status)}.');
+              'Cannot change status of a terminal order ($currentStatusStr): $cleanOrderId.');
         }
 
-        // Idempotent check: if already in the target status, skip redundant update
+        // 2. Prohibit Admin from forcing delivery-agent-only states
+        if (callerIsAdmin &&
+            (status == OrderStatus.outForDelivery || status == OrderStatus.delivered)) {
+          throw StateError(
+              'Admin cannot set ${orderStatusToString(status)}. Only the assigned delivery agent can perform this action.');
+        }
+
+        // 3. Strict state machine transitions (cannot skip required states)
         if (currentStatusStr != targetStatusStr) {
+          switch (status) {
+            case OrderStatus.placed:
+              throw StateError('Cannot revert order to Pending.');
+            case OrderStatus.confirmed:
+              if (currentStatusStr != 'pending' && currentStatusStr != 'placed') {
+                throw StateError(
+                    'Order can only be confirmed from Pending status (current: $currentStatusStr).');
+              }
+              break;
+            case OrderStatus.assigned:
+              if (currentStatusStr != 'confirmed') {
+                throw StateError(
+                    'Order can only be assigned from Confirmed status (current: $currentStatusStr).');
+              }
+              break;
+            case OrderStatus.preparing:
+              final isAccepted = currentStatusStr == 'accepted' ||
+                  (currentStatusStr == 'assigned' && doc.data()?['acceptedAt'] != null);
+              if (!isAccepted) {
+                throw StateError(
+                    'Cannot set to Preparing: Order must be accepted by the delivery agent first (current status: $currentStatusStr).');
+              }
+              break;
+            case OrderStatus.outForDelivery:
+              if (currentStatusStr != 'preparing') {
+                throw StateError(
+                    'Cannot start delivery: Order must be in Preparing status (current status: $currentStatusStr).');
+              }
+              break;
+            case OrderStatus.delivered:
+              final normStatus = currentStatusStr.replaceAll('_', '').replaceAll(' ', '');
+              if (normStatus != 'outfordelivery') {
+                throw StateError(
+                    'Cannot mark delivered: Order must be Out for Delivery (current status: $currentStatusStr).');
+              }
+              break;
+            case OrderStatus.cancelled:
+              final normStatus = currentStatusStr.replaceAll('_', '').replaceAll(' ', '');
+              if (normStatus == 'outfordelivery' ||
+                  normStatus == 'delivered' ||
+                  normStatus == 'cancelled') {
+                throw StateError('Cannot cancel order in $currentStatusStr status.');
+              }
+              break;
+          }
+
           await docRef.update({
             'status': orderStatusToString(status),
             if (status == OrderStatus.confirmed && doc.data()?['approvedAt'] == null)
@@ -328,6 +424,68 @@ class OrderService {
             });
           }
         } catch (_) {}
+
+        // Notify Admin and Customer when order is out for delivery
+        if (status == OrderStatus.outForDelivery && currentStatusStr != targetStatusStr) {
+          try {
+            final orderData = doc.data();
+            final orderCode = (orderData?['orderCode'] as String?)?.trim();
+            final displayCode = (orderCode != null && orderCode.isNotEmpty)
+                ? orderCode
+                : Order.formatFallbackOrderCode(cleanOrderId);
+            final agentId =
+                (orderData?['assignedAgentId'] as String?)?.trim() ?? '';
+            final agentName =
+                (orderData?['assignedAgentName'] as String?)?.trim() ?? '';
+            final effectiveAgentName =
+                agentName.isNotEmpty ? agentName : 'Delivery Agent';
+            final customerId = (orderData?['userId'] as String?)?.trim();
+
+            final notifRepo = NotificationRepository(firestore: _firestore);
+
+            // 1. Notify Admin: "Order #XXXX is now out for delivery."
+            await notifRepo.sendNotificationToAdmins(
+              title: 'Out for Delivery 🚚',
+              body:
+                  'Order #$displayCode is now out for delivery by $effectiveAgentName.',
+              type: NotificationType.delivery,
+              orderId: cleanOrderId,
+              assignedAgentId: agentId.isNotEmpty ? agentId : null,
+              route: '/admin/orders',
+              isActionable: true,
+              metadata: {
+                'source': 'delivery',
+                'orderId': cleanOrderId,
+                'orderCode': displayCode,
+                'eventType': 'deliveryStarted',
+                'agentId': agentId,
+                'agentName': effectiveAgentName,
+                'status': 'outForDelivery',
+                'category': 'delivery',
+              },
+              senderUid: agentId.isNotEmpty ? agentId : 'system',
+              notificationId: 'delivery_${cleanOrderId}_deliveryStarted',
+            );
+
+            // 2. Notify Customer: "Your order #XXXX is now out for delivery!"
+            if (customerId != null && customerId.isNotEmpty) {
+              await notifRepo.sendNotificationToUser(
+                targetUserId: customerId,
+                title: 'Order Out for Delivery 🚚',
+                body: 'Your order #$displayCode is now out for delivery!',
+                type: NotificationType.order,
+                createdBy: agentId.isNotEmpty ? agentId : 'system',
+                orderId: cleanOrderId,
+                route: '/orders/$cleanOrderId',
+                isActionable: true,
+                trackInAdminHistory: false,
+                notificationId: 'order_${cleanOrderId}_outForDelivery',
+              );
+            }
+          } catch (e) {
+            debugPrint('[OUT FOR DELIVERY NOTIFY ERROR] $e');
+          }
+        }
       });
     } catch (e) {
       if (e is StateError || e is ArgumentError) rethrow;
@@ -387,6 +545,13 @@ class OrderService {
         if (currentAssignedAgentId != cleanAgentId) {
           throw StateError(
               'Order $cleanOrderId is not assigned to delivery agent $cleanAgentId.');
+        }
+
+        // Strict state machine: must be out for delivery
+        final normalizedStatus = currentStatus.replaceAll('_', '').replaceAll(' ', '');
+        if (normalizedStatus != 'outfordelivery') {
+          throw StateError(
+              'Cannot mark delivered: Order $cleanOrderId must be Out for Delivery (current status: $currentStatus).');
         }
 
         customerUid = (data?['userId'] as String?)?.trim();
@@ -607,12 +772,24 @@ class OrderService {
           return;
         }
 
+        // Terminal state check
+        if (currentStatus == 'delivered' || currentStatus == 'cancelled') {
+          throw StateError(
+              'Cannot accept order in terminal state ($currentStatus): $cleanOrderId.');
+        }
+
         // Security & Concurrency guard: order MUST be assigned to this exact agent
         if (currentAssignedAgentId == null ||
             currentAssignedAgentId.isEmpty ||
             currentAssignedAgentId != cleanAgentId) {
           throw StateError(
               'Order is not assigned to delivery agent $cleanAgentId.');
+        }
+
+        // Must be in assigned status
+        if (currentStatus != 'assigned') {
+          throw StateError(
+              'Order must be in Assigned status to be accepted (current: $currentStatus).');
         }
 
         transaction.update(docRef, {
@@ -622,6 +799,52 @@ class OrderService {
         });
       });
     });
+
+    // Notify Admin: "Delivery agent accepted Order #XXXX."
+    try {
+      final doc = await _firestore.collection('orders').doc(cleanOrderId).get();
+      final orderData = doc.data();
+      final orderCode = (orderData?['orderCode'] as String?)?.trim();
+      final displayCode = (orderCode != null && orderCode.isNotEmpty)
+          ? orderCode
+          : Order.formatFallbackOrderCode(cleanOrderId);
+
+      String agentName =
+          (orderData?['assignedAgentName'] as String?)?.trim() ?? '';
+      if (agentName.isEmpty) {
+        final agentDoc =
+            await _firestore.collection('users').doc(cleanAgentId).get();
+        if (agentDoc.exists) {
+          agentName = (agentDoc.data()?['name'] as String?)?.trim() ?? '';
+        }
+      }
+      final effectiveName = agentName.isNotEmpty ? agentName : 'Delivery agent';
+
+      final notifRepo = NotificationRepository(firestore: _firestore);
+      await notifRepo.sendNotificationToAdmins(
+        title: 'Order Accepted 📦',
+        body: 'Delivery agent $effectiveName accepted Order #$displayCode.',
+        type: NotificationType.delivery,
+        orderId: cleanOrderId,
+        assignedAgentId: cleanAgentId,
+        route: '/admin/orders',
+        isActionable: true,
+        metadata: {
+          'source': 'delivery',
+          'orderId': cleanOrderId,
+          'orderCode': displayCode,
+          'eventType': 'orderAccepted',
+          'agentId': cleanAgentId,
+          'agentName': effectiveName,
+          'status': 'accepted',
+          'category': 'delivery',
+        },
+        senderUid: cleanAgentId,
+        notificationId: 'delivery_${cleanOrderId}_orderAccepted',
+      );
+    } catch (e) {
+      debugPrint('[ACCEPT ORDER NOTIFY ADMIN ERROR] $e');
+    }
   }
 
   /// Releases an order assigned to an agent: verifies ownership, clears the
@@ -845,11 +1068,21 @@ class OrderService {
         final data = snapshot.data();
         final currentStatus = (data?['status'] as String?)?.toLowerCase() ?? '';
 
+        // Permanent terminal lock: DELIVERED and CANCELLED orders can never be modified or reassigned
+        if (currentStatus == 'delivered' || currentStatus == 'cancelled') {
+          throw StateError(
+              'Cannot modify or reassign a $currentStatus order: order is permanently locked.');
+        }
+
         if (isAssigning) {
           // Admin cannot assign an agent to an unapproved Pending order
           if (currentStatus == 'pending' || currentStatus == 'placed') {
             throw StateError(
                 'Order must be confirmed by Admin before assigning a delivery agent.');
+          }
+          if (currentStatus != 'confirmed' && currentStatus != 'assigned') {
+            throw StateError(
+                'Order can only be assigned when in Confirmed or Assigned status (current: $currentStatus).');
           }
 
           // Enforce online-only assignment rule: fresh online-state check immediately before writing
@@ -901,24 +1134,41 @@ class OrderService {
             final displayCode = (orderCode != null && orderCode.isNotEmpty)
                 ? orderCode
                 : Order.formatFallbackOrderCode(cleanOrderId);
+            final customerName =
+                (data?['customerName'] as String?)?.trim() ?? 'Customer';
+            final deliveryAddr =
+                (data?['deliveryAddress'] as Map<String, dynamic>?)?['streetArea'] ?? '';
 
             final notifRepo = NotificationRepository(firestore: _firestore);
             await notifRepo.sendNotificationToUser(
               targetUserId: cleanAgentId,
               title: 'New Delivery Assignment',
-              body: 'You have been assigned order #$displayCode for delivery.',
+              body:
+                  'You have been assigned order #$displayCode ($customerName${deliveryAddr.toString().isNotEmpty ? ', $deliveryAddr' : ''}) for delivery.',
               type: NotificationType.delivery,
               createdBy: adminUid ?? 'admin',
               orderId: cleanOrderId,
               assignedAgentId: cleanAgentId,
               route: '/delivery/orders/$cleanOrderId',
               isActionable: true,
+              notificationId: 'delivery_${cleanOrderId}_assigned',
+              metadata: {
+                'source': 'delivery_assignment',
+                'orderId': cleanOrderId,
+                'orderCode': displayCode,
+                'customerName': customerName,
+                'category': 'delivery',
+              },
             );
           } catch (notifErr) {
             debugPrint(
                 'OrderService: Could not dispatch assignment notification: $notifErr');
           }
         } else {
+          if (currentStatus != 'assigned') {
+            throw StateError(
+                'Order can only be unassigned when in Assigned status (current: $currentStatus).');
+          }
           // Unassigning returns the order to confirmed state
           final Map<String, dynamic> updateData = {
             'assignedAgentId': null,

@@ -387,6 +387,11 @@ class NotificationService {
     // 2. Admin RBAC & Route handling
     if (user.isAdmin) {
       if (explicitRoute != null && explicitRoute.isNotEmpty) {
+        if ((explicitRoute == '/delivery' || explicitRoute.startsWith('/delivery')) &&
+            orderId != null &&
+            orderId.isNotEmpty) {
+          return '/admin/orders';
+        }
         return explicitRoute;
       }
       if (orderId != null && orderId.isNotEmpty) {

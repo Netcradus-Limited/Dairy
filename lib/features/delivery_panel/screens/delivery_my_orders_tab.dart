@@ -68,10 +68,10 @@ class _DeliveryMyOrdersTabState extends ConsumerState<DeliveryMyOrdersTab>
       ...todayHistoryOrders,
     ];
 
-    // 2. In Progress: Pickup + Out for Delivery
+    // 2. In Progress: Preparing + Out for Delivery
     final inProgressOrders = activeOrders
         .where((o) =>
-            o.status == DeliveryOrderStatus.pickup ||
+            o.status == DeliveryOrderStatus.preparing ||
             o.status == DeliveryOrderStatus.outForDelivery)
         .toList();
 

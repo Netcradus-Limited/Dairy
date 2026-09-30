@@ -398,7 +398,7 @@ class _DeliveryOrderDetailViewState
   String _statusLabel(OrderStatus status) {
     switch (status) {
       case OrderStatus.preparing:
-        return 'Preparing / Pickup';
+        return 'Preparing Fresh';
       case OrderStatus.outForDelivery:
         return 'Out for Delivery';
       case OrderStatus.delivered:
@@ -414,8 +414,8 @@ class _DeliveryOrderDetailViewState
     switch (status) {
       case DeliveryOrderStatus.outForDelivery:
         return 'Out for Delivery';
-      case DeliveryOrderStatus.pickup:
-        return 'Pickup in Progress';
+      case DeliveryOrderStatus.preparing:
+        return 'Preparing Fresh';
       case DeliveryOrderStatus.accepted:
         return 'Order Accepted';
       case DeliveryOrderStatus.awaitingAdminConfirmation:
@@ -433,10 +433,10 @@ class _DeliveryOrderDetailViewState
     switch (status) {
       case DeliveryOrderStatus.outForDelivery:
         return 'Please deliver the order to the customer';
-      case DeliveryOrderStatus.pickup:
-        return 'Please pick up the fresh items from the dairy hub';
+      case DeliveryOrderStatus.preparing:
+        return 'Kitchen is preparing fresh items. Ready to start delivery soon.';
       case DeliveryOrderStatus.accepted:
-        return 'Order is assigned to you. Proceed to store pickup.';
+        return 'Order is accepted. Awaiting kitchen preparation.';
       case DeliveryOrderStatus.awaitingAdminConfirmation:
         return 'Delivery completed. Awaiting admin review and confirmation.';
       case DeliveryOrderStatus.delivered:
@@ -1082,6 +1082,45 @@ class _DeliveryOrderDetailViewState
       );
     }
 
+    if (order.status == DeliveryOrderStatus.accepted) {
+      return Container(
+        width: double.infinity,
+        height: 52,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEFF6FF),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(
+            color: const Color(0xFF93C5FD),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.kitchen_outlined,
+              color: Color(0xFF2563EB),
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                'Order Accepted — Awaiting Kitchen Preparing',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1D4ED8),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (order.isAwaitingAdminConfirmation ||
         order.status == DeliveryOrderStatus.awaitingAdminConfirmation) {
       return Container(
@@ -1127,10 +1166,10 @@ class _DeliveryOrderDetailViewState
 
     switch (order.status) {
       case DeliveryOrderStatus.accepted:
-        label = 'Start Pickup';
-        action = () => _transitionOrder(order, OrderStatus.preparing);
+        label = 'Awaiting Kitchen Preparing';
+        action = null;
         break;
-      case DeliveryOrderStatus.pickup:
+      case DeliveryOrderStatus.preparing:
         label = 'Start Delivery';
         action = () => _transitionOrder(order, OrderStatus.outForDelivery);
         break;

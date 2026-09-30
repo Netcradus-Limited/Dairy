@@ -7,7 +7,7 @@ abstract class AppStrings {
   static const String companyName = 'SAWARIYA SARKAR DAIRY LLP';
   static const String businessAddress =
       'Ground Floor, Khewat No. 253/260, Farukh Nagar Road, Tajnagar, Gurugram, Haryana';
-  static const String officialWebsite = 'https://sawariyassarkar.com';
+  static const String officialWebsite = 'https://sawariyasdairy.com';
   static const String paymentMethodNote = 'CASH ON DELIVERY ONLY';
 
   // Support & Contact
@@ -15,12 +15,12 @@ abstract class AppStrings {
   static const String supportPhone = '9896703884';
   static const String supportEmailSubject = 'Sawariya Dairy Customer Support';
 
-  // Legal & Policy URLs (Official Domain: sawariyassarkar.com)
-  static const String privacyPolicyUrl = 'https://sawariyassarkar.com/privacy-policy';
-  static const String termsConditionsUrl = 'https://sawariyassarkar.com/terms-and-conditions';
-  static const String refundPolicyUrl = 'https://sawariyassarkar.com/refund-policy';
-  static const String deliveryPolicyUrl = 'https://sawariyassarkar.com/delivery-policy';
-  static const String accountDeletionUrl = 'https://sawariyassarkar.com/delete-account';
+  // Legal & Policy URLs (Official Domain: sawariyasdairy.com)
+  static const String privacyPolicyUrl = 'https://sawariyasdairy.com/privacy-policy';
+  static const String termsConditionsUrl = 'https://sawariyasdairy.com/terms-and-conditions';
+  static const String refundPolicyUrl = 'https://sawariyasdairy.com/refund-policy';
+  static const String deliveryPolicyUrl = 'https://sawariyasdairy.com/delivery-policy';
+  static const String accountDeletionUrl = 'https://sawariyasdairy.com/delete-account';
 
   // Navigation
   static const String navHome = 'Home';

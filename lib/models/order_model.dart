@@ -41,6 +41,7 @@ class DairyOrder {
   final String paymentMode;
   final String? assignedAgentId;
   final String? assignedAgentName;
+  final DateTime? acceptedAt;
   final String orderType;
   final String? subscriptionId;
 
@@ -58,9 +59,12 @@ class DairyOrder {
     required this.paymentMode,
     this.assignedAgentId,
     this.assignedAgentName,
+    this.acceptedAt,
     this.orderType = 'normal',
     this.subscriptionId,
   });
+
+  bool get isAccepted => acceptedAt != null;
 
   bool get isSubscription =>
       orderType.toLowerCase() == 'subscription' ||
@@ -89,6 +93,7 @@ class DairyOrder {
     String? paymentMode,
     Object? assignedAgentId = _sentinel,
     Object? assignedAgentName = _sentinel,
+    DateTime? acceptedAt,
     String? orderType,
     String? subscriptionId,
   }) {
@@ -110,6 +115,7 @@ class DairyOrder {
       assignedAgentName: identical(assignedAgentName, _sentinel)
           ? this.assignedAgentName
           : assignedAgentName as String?,
+      acceptedAt: acceptedAt ?? this.acceptedAt,
       orderType: orderType ?? this.orderType,
       subscriptionId: subscriptionId ?? this.subscriptionId,
     );

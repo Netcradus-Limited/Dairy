@@ -204,10 +204,10 @@ void main() {
     });
   });
 
-  // ─── Group 2: Status Transitions (Pickup, Out for Delivery, Delivered) ────
+  // ─── Group 2: Status Transitions (Preparing, Out for Delivery, Delivered) ────
 
-  group('Pickup & Delivery Transitions', () {
-    test('Accepted -> Preparing (Pickup Started)', () async {
+  group('Preparing & Delivery Transitions', () {
+    test('Accepted -> Preparing', () async {
       await seedOrder(
         orderId: 'ORD_05',
         status: 'accepted',

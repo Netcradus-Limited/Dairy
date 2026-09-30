@@ -32,6 +32,7 @@ import '../../features/subscription/subscriptions_screen.dart';
 import '../../features/subscription/edit_subscription_screen.dart';
 import '../../providers/notification_provider.dart';
 import '../../services/notification_service.dart';
+import '../../services/fcm_service.dart';
 import 'auth_refresh.dart';
 
 /// Global root navigator key for deep-link / push notification navigation.
@@ -275,25 +276,39 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'orders',
-            builder: (context, state) => provider.MultiProvider(
-              providers: [
-                provider.ChangeNotifierProvider(create: (_) {
-                  final p = AdminProvider();
-                  p.setNavIndex(5);
-                  return p;
-                }),
-              ],
-              child: provider.Consumer<AdminProvider>(
-                builder: (context, adminProvider, child) {
-                  return Theme(
-                    data: adminProvider.isDarkMode
-                        ? AdminTheme.darkTheme
-                        : AdminTheme.lightTheme,
-                    child: const AdminMainShell(),
-                  );
-                },
-              ),
-            ),
+            builder: (context, state) {
+              final queryOrderId = state.uri.queryParameters['orderId'];
+              final tappedOrderId = ref.read(lastTappedOrderIdProvider);
+              final effectiveOrderId =
+                  (queryOrderId != null && queryOrderId.trim().isNotEmpty)
+                      ? queryOrderId.trim()
+                      : (tappedOrderId.trim().isNotEmpty
+                          ? tappedOrderId.trim()
+                          : null);
+
+              return provider.MultiProvider(
+                providers: [
+                  provider.ChangeNotifierProvider(create: (_) {
+                    final p = AdminProvider();
+                    p.setNavIndex(5);
+                    if (effectiveOrderId != null && effectiveOrderId.isNotEmpty) {
+                      p.setSearchQuery(effectiveOrderId);
+                    }
+                    return p;
+                  }),
+                ],
+                child: provider.Consumer<AdminProvider>(
+                  builder: (context, adminProvider, child) {
+                    return Theme(
+                      data: adminProvider.isDarkMode
+                          ? AdminTheme.darkTheme
+                          : AdminTheme.lightTheme,
+                      child: const AdminMainShell(),
+                    );
+                  },
+                ),
+              );
+            },
           ),
         ],
       ),

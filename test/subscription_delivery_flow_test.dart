@@ -267,7 +267,9 @@ void main() {
       expect(orderSnap.data()!['status'], 'accepted');
       expect(orderSnap.data()!['assignedAgentId'], 'agent_raghav');
 
-      // 4. Driver transitions to out for delivery
+      // 4. Admin sets preparing, then Driver transitions to out for delivery
+      await orderService.updateOrderStatus(
+          genOrder.id, OrderStatus.preparing);
       await orderService.updateOrderStatus(
           genOrder.id, OrderStatus.outForDelivery);
       orderSnap =

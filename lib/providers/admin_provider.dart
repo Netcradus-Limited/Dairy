@@ -535,6 +535,7 @@ class AdminProvider extends ChangeNotifier {
       paymentMode: o.paymentMethod,
       assignedAgentId: agentId,
       assignedAgentName: agentName,
+      acceptedAt: o.acceptedAt,
       orderType: o.orderType,
       subscriptionId: o.subscriptionId,
     );
@@ -1181,9 +1182,16 @@ class AdminProvider extends ChangeNotifier {
   /// change. The UI is refreshed by the live orders stream (no optimistic
   /// update), so a failed write leaves the status unchanged in the UI.
   Future<void> updateOrderStatus(String orderId, OrderStatus newStatus) async {
+    final serviceStatus = _mapToServiceStatus(newStatus);
+    if (serviceStatus == order.OrderStatus.outForDelivery ||
+        serviceStatus == order.OrderStatus.delivered) {
+      throw StateError(
+          'Admin cannot set order to ${order.orderStatusToString(serviceStatus)}. Only the assigned delivery agent can perform this action.');
+    }
     await _orderService.updateOrderStatus(
       orderId,
-      _mapToServiceStatus(newStatus),
+      serviceStatus,
+      callerIsAdmin: true,
     );
   }
 

@@ -12,7 +12,7 @@ import '../providers/notification_provider.dart';
 /// and contextual navigation for dairy operations.
 class AdminNotificationDropdown extends ConsumerWidget {
   final VoidCallback? onClose;
-  final void Function(int navIndex)? onNavigate;
+  final void Function(int navIndex, [String? orderId])? onNavigate;
 
   const AdminNotificationDropdown({
     super.key,
@@ -39,9 +39,12 @@ class AdminNotificationDropdown extends ConsumerWidget {
             padding: const EdgeInsets.only(bottom: 16),
             child: AdminNotificationDropdown(
               onClose: () => Navigator.of(ctx).pop(),
-              onNavigate: (index) {
+              onNavigate: (index, [orderId]) {
                 Navigator.of(ctx).pop();
                 provider.setNavIndex(index);
+                if (orderId != null && orderId.trim().isNotEmpty) {
+                  provider.setSearchQuery(orderId.trim());
+                }
               },
             ),
           ),
@@ -76,9 +79,12 @@ class AdminNotificationDropdown extends ConsumerWidget {
                   clipBehavior: Clip.antiAlias,
                   child: AdminNotificationDropdown(
                     onClose: () => Navigator.of(ctx).pop(),
-                    onNavigate: (index) {
+                    onNavigate: (index, [orderId]) {
                       Navigator.of(ctx).pop();
                       provider.setNavIndex(index);
+                      if (orderId != null && orderId.trim().isNotEmpty) {
+                        provider.setSearchQuery(orderId.trim());
+                      }
                     },
                   ),
                 ),
@@ -122,6 +128,10 @@ class AdminNotificationDropdown extends ConsumerWidget {
   }
 
   int _resolveNavIndexForNotification(NotificationItem notif) {
+    // If notification relates to an order, route to Orders & Dispatch Management
+    if (notif.orderId != null && notif.orderId!.trim().isNotEmpty) {
+      return 5; // Orders & Dispatch Management screen
+    }
     // Contextual routing based on notification type and payload
     switch (notif.type) {
       case NotificationType.order:
@@ -382,7 +392,7 @@ class AdminNotificationDropdown extends ConsumerWidget {
                                   final targetIndex =
                                       _resolveNavIndexForNotification(notif);
                                   if (onNavigate != null) {
-                                    onNavigate!(targetIndex);
+                                    onNavigate!(targetIndex, notif.orderId);
                                   } else if (onClose != null) {
                                     onClose!();
                                   }

@@ -6,6 +6,7 @@ import '../../core/constants/app_colors.dart';
 import '../../models/order.dart';
 import '../../models/address.dart';
 import '../../providers/delivery_provider.dart';
+import '../../providers/order_provider.dart';
 
 /// Single tracking step on the timeline
 class _TrackingStep {
@@ -31,13 +32,22 @@ class OrderTrackingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentStep = order.status.stepIndex;
-    final isCancelled = order.isCancelled;
+    // Watch customerOrdersProvider for live real-time Firestore updates
+    final asyncOrders = ref.watch(customerOrdersProvider);
+    final currentOrder = asyncOrders.when(
+      data: (orders) =>
+          orders.firstWhere((o) => o.id == order.id, orElse: () => order),
+      loading: () => order,
+      error: (_, __) => order,
+    );
+
+    final currentStep = currentOrder.status.stepIndex;
+    final isCancelled = currentOrder.isCancelled;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Order #${order.displayOrderCode}'),
+        title: Text('Order #${currentOrder.displayOrderCode}'),
         elevation: 0,
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.textPrimary,
@@ -94,7 +104,7 @@ class OrderTrackingScreen extends ConsumerWidget {
                             Text(
                               isCancelled
                                   ? 'Order Cancelled'
-                                  : order.status.label,
+                                  : currentOrder.status.label,
                               style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.bold,
@@ -105,7 +115,7 @@ class OrderTrackingScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              order.estimatedDeliveryTime,
+                              currentOrder.estimatedDeliveryTime,
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textSecondary,
@@ -118,13 +128,13 @@ class OrderTrackingScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                if (order.status == OrderStatus.outForDelivery &&
-                    order.assignedAgentId != null &&
-                    order.assignedAgentId!.isNotEmpty) ...[
+                if (currentOrder.status == OrderStatus.outForDelivery &&
+                    currentOrder.assignedAgentId != null &&
+                    currentOrder.assignedAgentId!.isNotEmpty) ...[
                   _LiveTrackingMapCard(
-                    agentId: order.assignedAgentId!,
-                    deliveryAddress: order.deliveryAddress,
-                    orderId: order.id,
+                    agentId: currentOrder.assignedAgentId!,
+                    deliveryAddress: currentOrder.deliveryAddress,
+                    orderId: currentOrder.id,
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -274,7 +284,7 @@ class OrderTrackingScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        order.deliveryAddress.fullName,
+                        currentOrder.deliveryAddress.fullName,
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -283,7 +293,7 @@ class OrderTrackingScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        order.deliveryAddress.fullAddressText,
+                        currentOrder.deliveryAddress.fullAddressText,
                         style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.textSecondary,
@@ -292,7 +302,7 @@ class OrderTrackingScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        order.deliveryAddress.mobileNumber,
+                        currentOrder.deliveryAddress.mobileNumber,
                         style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.textPrimary,
@@ -309,7 +319,7 @@ class OrderTrackingScreen extends ConsumerWidget {
                   title: 'Payment Method',
                   icon: Icons.payment_rounded,
                   child: Text(
-                    order.paymentMethod,
+                    currentOrder.paymentMethod,
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,

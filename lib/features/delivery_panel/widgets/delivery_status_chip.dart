@@ -28,7 +28,7 @@ class DeliveryStatusChip extends StatelessWidget {
         type: DeliveryChipType.delivered,
       );
     } else if (lower.contains('progress') ||
-        lower.contains('pickup') ||
+        lower.contains('preparing') ||
         lower.contains('out')) {
       return const DeliveryStatusChip(
         label: 'In Progress',

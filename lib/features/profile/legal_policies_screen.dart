@@ -311,7 +311,7 @@ SAWARIYA SARKAR DAIRY LLP
 • Support Email: support@sawariyasdairy.com
 • Support Phone: 9896703884
 • Business Address: Ground Floor, Khewat No. 253/260, Farukh Nagar Road, Tajnagar, Gurugram, Haryana
-• Official Website: https://sawariyassarkar.com
+• Official Website: https://sawariyasdairy.com
 ''';
 
   static const String _termsContent = '''
@@ -355,7 +355,7 @@ By accessing or using Sawariya Dairy, you agree to be bound by these Terms and C
 • Support Email: support@sawariyasdairy.com
 • Support Phone: 9896703884
 • Business Address: Ground Floor, Khewat No. 253/260, Farukh Nagar Road, Tajnagar, Gurugram, Haryana
-• Official Website: https://sawariyassarkar.com
+• Official Website: https://sawariyasdairy.com
 ''';
 
   static const String _refundContent = '''
@@ -385,7 +385,7 @@ By accessing or using Sawariya Dairy, you agree to be bound by these Terms and C
 • Support Email: support@sawariyasdairy.com
 • Support Phone: 9896703884
 • Business Address: Ground Floor, Khewat No. 253/260, Farukh Nagar Road, Tajnagar, Gurugram, Haryana
-• Official Website: https://sawariyassarkar.com
+• Official Website: https://sawariyasdairy.com
 ''';
 
   static const String _deliveryContent = '''
@@ -416,7 +416,7 @@ By accessing or using Sawariya Dairy, you agree to be bound by these Terms and C
 • Support Email: support@sawariyasdairy.com
 • Support Phone: 9896703884
 • Business Address: Ground Floor, Khewat No. 253/260, Farukh Nagar Road, Tajnagar, Gurugram, Haryana
-• Official Website: https://sawariyassarkar.com
+• Official Website: https://sawariyasdairy.com
 ''';
 
   static const String _accountDeletionContent = '''
@@ -443,6 +443,6 @@ SAWARIYA SARKAR DAIRY LLP
 • Support Email: support@sawariyasdairy.com
 • Support Phone: 9896703884
 • Business Address: Ground Floor, Khewat No. 253/260, Farukh Nagar Road, Tajnagar, Gurugram, Haryana
-• Official Website: https://sawariyassarkar.com
+• Official Website: https://sawariyasdairy.com
 ''';
 }

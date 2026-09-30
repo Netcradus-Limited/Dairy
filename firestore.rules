@@ -269,8 +269,9 @@ service cloud.firestore {
           || (isSignedIn() && canCustomerCancelOrder())
           || (isDelivery() && canUpdateAssignedOrder());
 
-      // Only Super Admins or authorized staff may delete orders
-      allow delete: if isSuperAdmin() || hasPermission('cancelOrders');
+      // Only Super Admins or authorized staff may delete non-delivered orders
+      allow delete: if (isSuperAdmin() || hasPermission('cancelOrders'))
+          && !(resource.data.status.lower() in ['delivered']);
     }
 
     // Helper: checks whether a delivery agent is online in /delivery_agents or /users.
@@ -288,9 +289,30 @@ service cloud.firestore {
     }
 
     // Admin order update validation:
-    // 1. Ensures admin cannot assign an agent while order is still in Pending state (must be Confirmed first).
-    // 2. Enforces that an order's assigned agent can only be updated if the targeted agent has isOnline == true.
+    // 1. Permanent terminal lock: DELIVERED and CANCELLED orders can never be modified or reassigned.
+    // 2. Admin cannot force OUT_FOR_DELIVERY or DELIVERED (delivery-agent only actions).
+    // 3. Admin cannot set PREPARING before delivery agent acceptance.
+    // 4. Ensures admin cannot assign an agent while order is in Pending state (must be Confirmed first).
+    // 5. Enforces that an order's assigned agent can only be updated if the targeted agent has isOnline == true.
     function canAdminUpdateOrder() {
+      let currentStatus = ('status' in resource.data) ? resource.data.status.lower() : '';
+      let targetStatus = ('status' in request.resource.data) ? request.resource.data.status.lower() : currentStatus;
+
+      // Permanent terminal lock on delivered and cancelled orders
+      let isCurrentTerminal = currentStatus in ['delivered', 'cancelled'];
+
+      // Admin must NEVER set OUT_FOR_DELIVERY or DELIVERED
+      let setsRestrictedStatus = targetStatus in ['outfordelivery', 'out for delivery', 'delivered'];
+
+      // Valid admin lifecycle transitions:
+      let statusChanged = currentStatus != targetStatus;
+      let validTransition = !statusChanged
+          || (currentStatus in ['pending', 'placed'] && targetStatus in ['confirmed', 'cancelled'])
+          || (currentStatus == 'confirmed' && targetStatus in ['assigned', 'cancelled'])
+          || (currentStatus == 'assigned' && targetStatus in ['cancelled'])
+          || (currentStatus == 'accepted' && targetStatus in ['preparing', 'cancelled'])
+          || (currentStatus == 'preparing' && targetStatus in ['cancelled']);
+
       let targetAgentId = ('assignedAgentId' in request.resource.data)
           && request.resource.data.assignedAgentId != null
           && request.resource.data.assignedAgentId != ''
@@ -310,19 +332,18 @@ service cloud.firestore {
               : null);
 
       let isAssigning = targetAgentId != null && (prevAgentId == null || prevAgentId != targetAgentId);
-      let isCurrentPending = ('status' in resource.data) && resource.data.status.lower() in ['pending', 'placed'];
+      let isCurrentPending = currentStatus in ['pending', 'placed'];
 
-      // Assigning an agent to an unapproved pending order is strictly forbidden.
-      // Additionally, only ONLINE delivery agents (isOnline == true) can be assigned.
-      return isAssigning
-          ? (!isCurrentPending && isAgentOnline(targetAgentId))
-          : true;
+      return !isCurrentTerminal
+          && !setsRestrictedStatus
+          && validTransition
+          && (isAssigning ? (!isCurrentPending && isAgentOnline(targetAgentId)) : true);
     }
 
     // Customer cancellation guard
     function canCustomerCancelOrder() {
       let isMine = resource.data.userId == request.auth.uid;
-      let isCancellable = resource.data.status in ['Pending', 'pending', 'placed', 'Placed', 'confirmed', 'Confirmed', 'accepted', 'Accepted', 'assigned', 'Assigned'];
+      let isCancellable = resource.data.status in ['Pending', 'pending', 'placed', 'Placed', 'confirmed', 'Confirmed'];
       let changed = request.resource.data.diff(resource.data).affectedKeys();
       let setsCancelled = request.resource.data.status in ['cancelled', 'Cancelled'];
 
@@ -333,8 +354,6 @@ service cloud.firestore {
     }
 
     // Valid delivery status transition state machine for Delivery Agents
-    // Valid delivery status transition state machine for Delivery Agents
-    // Note: Delivery agents can mark 'delivered' directly when completing delivery.
     function isAssignedDeliveryAgentForOrder(orderId) {
       return isDelivery()
           && orderId != null
@@ -348,18 +367,14 @@ service cloud.firestore {
       let toLower = (toStatus is string) ? toStatus.lower() : '';
 
       let isUnchanged = fromLower == toLower;
-      let isNonTerminal = !(fromLower in ['delivered', 'cancelled']);
-      let toDelivered = (toLower == 'delivered') && isNonTerminal;
-      let fromAssigned = (fromLower in ['assigned', 'confirmed'])
-          && (toLower in ['assigned', 'accepted', 'confirmed', 'preparing', 'pickup', 'outfordelivery', 'out for delivery', 'delivered', 'cancelled']);
-      let fromAccepted = (fromLower in ['accepted'])
-          && (toLower in ['accepted', 'preparing', 'pickup', 'outfordelivery', 'out for delivery', 'delivered', 'cancelled']);
-      let fromPreparing = (fromLower in ['preparing', 'pickup'])
-          && (toLower in ['preparing', 'pickup', 'outfordelivery', 'out for delivery', 'delivered', 'cancelled']);
-      let fromOutForDelivery = (fromLower in ['outfordelivery', 'out for delivery'])
-          && (toLower in ['outfordelivery', 'out for delivery', 'delivered', 'cancelled']);
+      // Option A: Agent accepts assigned order -> accepted
+      let assignedToAccepted = (fromLower == 'assigned') && (toLower == 'accepted');
+      // Agent starts delivery: preparing -> outfordelivery
+      let preparingToOutForDelivery = (fromLower == 'preparing') && (toLower in ['outfordelivery', 'out for delivery']);
+      // Agent marks delivered: outfordelivery -> delivered
+      let outForDeliveryToDelivered = (fromLower in ['outfordelivery', 'out for delivery']) && (toLower == 'delivered');
 
-      return isUnchanged || toDelivered || fromAssigned || fromAccepted || fromPreparing || fromOutForDelivery;
+      return isUnchanged || assignedToAccepted || preparingToOutForDelivery || outForDeliveryToDelivered;
     }
 
     // Delivery-agent order mutation guard:
@@ -373,7 +388,8 @@ service cloud.firestore {
       // Agent can release/decline the order back to 'confirmed' / unassigned for Admin reassignment
       let releases = ('assignedAgentId' in request.resource.data)
           && (request.resource.data.assignedAgentId == null || request.resource.data.assignedAgentId == '')
-          && (request.resource.data.status.lower() in ['confirmed', 'pending', 'placed']);
+          && (request.resource.data.status.lower() == 'confirmed')
+          && (resource.data.status.lower() == 'assigned');
 
       // Agent can request delivery completion (awaiting admin confirmation)
       let requestsCompletion = ('deliveryCompletionRequested' in request.resource.data)

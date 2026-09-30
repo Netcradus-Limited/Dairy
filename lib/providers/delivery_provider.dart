@@ -73,9 +73,11 @@ DeliveryOrder deliveryOrderFromOrder(Order order) {
     case OrderStatus.confirmed:
       status = DeliveryOrderStatus.pendingAcceptance;
     case OrderStatus.assigned:
-      status = DeliveryOrderStatus.pendingAcceptance;
+      status = order.acceptedAt != null
+          ? DeliveryOrderStatus.accepted
+          : DeliveryOrderStatus.pendingAcceptance;
     case OrderStatus.preparing:
-      status = DeliveryOrderStatus.pickup;
+      status = DeliveryOrderStatus.preparing;
     case OrderStatus.outForDelivery:
       status = DeliveryOrderStatus.outForDelivery;
     case OrderStatus.delivered:
@@ -251,7 +253,7 @@ final deliveryActiveOrdersStreamProvider =
           .map<DeliveryOrder>(deliveryOrderFromOrder)
           .where((DeliveryOrder o) =>
               o.status == DeliveryOrderStatus.accepted ||
-              o.status == DeliveryOrderStatus.pickup ||
+              o.status == DeliveryOrderStatus.preparing ||
               o.status == DeliveryOrderStatus.outForDelivery ||
               o.status == DeliveryOrderStatus.awaitingAdminConfirmation)
           .toList());

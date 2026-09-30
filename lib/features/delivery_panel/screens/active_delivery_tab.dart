@@ -43,7 +43,7 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
         final activeOrders = orders
             .where((o) =>
                 o.status == DeliveryOrderStatus.accepted ||
-                o.status == DeliveryOrderStatus.pickup ||
+                o.status == DeliveryOrderStatus.preparing ||
                 o.status == DeliveryOrderStatus.outForDelivery)
             .toList();
 
@@ -518,45 +518,38 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
               ),
             ),
             const SizedBox(height: 10),
-            SizedBox(
+            Container(
               width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: isProcessing
-                    ? null
-                    : () {
-                        _transitionOrder(order, OrderStatus.preparing);
-                      },
-                icon: isProcessing
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.inventory_2_rounded, size: 18),
-                label: Text(
-                  isProcessing ? 'Starting Pickup...' : 'Start Pickup',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.kitchen_outlined,
+                      color: Color(0xFF2563EB), size: 18),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      'Accepted — Awaiting Kitchen Preparing',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: const Color(0xFF1D4ED8),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.success,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+                ],
               ),
             ),
           ],
         );
 
-      case DeliveryOrderStatus.pickup:
+      case DeliveryOrderStatus.preparing:
         return Column(
           children: [
             buildSecondaryRow(

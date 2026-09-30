@@ -541,16 +541,18 @@ async function processDeliveryEventNotification(db, orderData, orderId, previous
   // 3. Security verification: Verify the agent exists and has delivery privileges
   const userSnap = await db.collection("users").doc(assignedAgentId).get();
   let isAuthorizedAgent = false;
+  let agentUserData = null;
 
   if (userSnap.exists) {
-    const userData = userSnap.data();
-    const userRole = userData && userData.role ? String(userData.role).toLowerCase().trim() : "";
+    agentUserData = userSnap.data();
+    const userRole = agentUserData && agentUserData.role ? String(agentUserData.role).toLowerCase().trim() : "";
     if (["delivery", "admin", "owner", "superadmin", "delivery_agent", "driver"].includes(userRole)) {
       isAuthorizedAgent = true;
     }
   } else {
     const agentSnap = await db.collection("delivery_agents").doc(assignedAgentId).get();
     if (agentSnap.exists) {
+      agentUserData = agentSnap.data();
       isAuthorizedAgent = true;
     }
   }
@@ -584,27 +586,21 @@ async function processDeliveryEventNotification(db, orderData, orderId, previous
   ) {
     eventType = "orderDeclined";
   }
-  // PICKUP START: Moves to 'preparing' or 'pickup'
-  else if (newStatus === "preparing" || newStatus === "pickup") {
-    if (["accepted", "confirmed", "pending", "placed", ""].includes(previousStatusLower)) {
-      eventType = "pickupStarted";
-    }
-  }
-  // DELIVERY START: Moves to 'outfordelivery' or 'out for delivery'
+  // DELIVERY START: Strictly moves from 'preparing' to 'outfordelivery'
   else if (newStatus === "outfordelivery" || newStatus === "out for delivery") {
-    if (["preparing", "pickup", "accepted", "confirmed", ""].includes(previousStatusLower)) {
+    if (previousStatusLower === "preparing") {
       eventType = "deliveryStarted";
     }
   }
-  // DELIVERY CONFIRMED: Moves to 'delivered'
+  // DELIVERY CONFIRMED: Strictly moves from 'outfordelivery' to 'delivered'
   else if (newStatus === "delivered") {
-    if (["outfordelivery", "out for delivery", "preparing", "pickup", "accepted", "confirmed", ""].includes(previousStatusLower)) {
+    if (previousStatusLower === "outfordelivery" || previousStatusLower === "out for delivery") {
       eventType = "deliveryConfirmed";
     }
   }
   // DELIVERY FAILED / CANCELLED: Moves to 'cancelled' or 'failed'
   else if (newStatus === "cancelled" || newStatus === "failed") {
-    if (["outfordelivery", "out for delivery", "preparing", "pickup", "accepted", "confirmed", ""].includes(previousStatusLower)) {
+    if (["outfordelivery", "out for delivery", "preparing", "accepted", "confirmed", ""].includes(previousStatusLower)) {
       eventType = "deliveryFailed";
     }
   }
@@ -652,13 +648,18 @@ async function processDeliveryEventNotification(db, orderData, orderId, previous
   // 6. Build notification content specific to the delivery event
   const customerName = String(orderData.customerName || orderData.customer_name || "Customer").trim();
   const customerId = String(orderData.customerId || orderData.customer_id || "customer").trim();
+  const agentName =
+    (agentUserData && (agentUserData.name || agentUserData.displayName)) ||
+    orderData.agentName ||
+    orderData.assignedAgentName ||
+    "Delivery Agent";
 
   let title, body, route;
 
   switch (eventType) {
     case "orderAccepted":
       title = "Order Accepted 📦";
-      body = `${customerName}: Agent accepted order #${cleanOrderId}`;
+      body = `Delivery agent ${agentName} accepted Order #${cleanOrderId}.`;
       route = "/delivery";
       break;
     case "orderDeclined":
@@ -666,14 +667,9 @@ async function processDeliveryEventNotification(db, orderData, orderId, previous
       body = `${customerName}: Agent declined order #${cleanOrderId}`;
       route = "/delivery";
       break;
-    case "pickupStarted":
-      title = "Pickup Started 🚐";
-      body = `${customerName}: Agent started pickup for order #${cleanOrderId}`;
-      route = "/delivery";
-      break;
     case "deliveryStarted":
       title = "Delivery Started 🚚";
-      body = `${customerName}: Agent started delivery for order #${cleanOrderId}`;
+      body = `Order #${cleanOrderId} is now out for delivery.`;
       route = "/delivery";
       break;
     case "deliveryCompletionRequested":
@@ -683,7 +679,7 @@ async function processDeliveryEventNotification(db, orderData, orderId, previous
       break;
     case "deliveryConfirmed":
       title = "Delivery Confirmed ✅";
-      body = `${customerName}: Order #${cleanOrderId} delivered successfully`;
+      body = `Order #${cleanOrderId} has been delivered.`;
       route = "/admin/orders";
       break;
     case "deliveryFailed":
@@ -736,6 +732,40 @@ async function processDeliveryEventNotification(db, orderData, orderId, previous
       console.log(`[Delivery Event Notify] Created admin notification at users/${adminUid}/notifications/${notifDocId}`);
     } catch (writeErr) {
       console.error(`[Delivery Event Notify] Failed to write notification for admin ${adminUid}: ${writeErr.message}`);
+    }
+  }
+
+  // Also notify the customer when delivery is started (out for delivery)
+  if (eventType === "deliveryStarted" && customerId && customerId !== "customer") {
+    try {
+      const orderCode = String(orderData.orderCode || cleanOrderId).trim();
+      const custNotifId = `order_${cleanOrderId}_outForDelivery`;
+      await db.collection("users").doc(customerId).collection("notifications").doc(custNotifId).set({
+        notificationId: custNotifId,
+        id: custNotifId,
+        title: "Order Out For Delivery 🚚",
+        body: `Your order #${orderCode} is now out for delivery!`,
+        type: "order",
+        category: "order",
+        timestamp: FieldValue.serverTimestamp(),
+        isRead: false,
+        isActionable: true,
+        route: `/orders/${cleanOrderId}`,
+        createdBy: assignedAgentId || "system",
+        userId: customerId,
+        orderId: cleanOrderId,
+        eventType: "deliveryStarted",
+        metadata: {
+          source: "delivery",
+          orderId: cleanOrderId,
+          agentId: assignedAgentId,
+          status: "outForDelivery",
+          category: "order",
+        },
+      }, { merge: true });
+      console.log(`[Delivery Event Notify] Created customer outForDelivery notification at users/${customerId}/notifications/${custNotifId}`);
+    } catch (custErr) {
+      console.warn(`[Delivery Event Notify] Customer outForDelivery notification error: ${custErr.message}`);
     }
   }
 
@@ -839,6 +869,147 @@ exports.notifyAdminsOnDeliveryEvent = onDocumentUpdated(
 );
 
 exports.processDeliveryEventNotification = processDeliveryEventNotification;
+
+/**
+ * Core business logic for creating Admin notifications when a new customer order is placed.
+ * Queries the users collection for valid Admin accounts and creates an idempotent Admin notification
+ * under users/{adminUid}/notifications/order_{orderId}_created.
+ *
+ * @param {FirebaseFirestore.Firestore} db - Firestore database instance
+ * @param {object|null} orderData - Document data from orders/{orderId}
+ * @param {string} orderId - Document ID of the order
+ * @returns {Promise<{status: string, reason?: string, count?: number, adminUids?: string[], notificationId?: string}>}
+ */
+async function processOrderCreatedNotification(db, orderData, orderId) {
+  if (!orderData) {
+    console.warn(`[Order Created Notify] Order ${orderId} has no data; skipping.`);
+    return { status: "skipped", reason: "no_data" };
+  }
+
+  const cleanOrderId = String(orderId || "").trim();
+  if (!cleanOrderId) {
+    console.warn("[Order Created Notify] Missing order ID; skipping.");
+    return { status: "skipped", reason: "missing_order_id" };
+  }
+
+  // Discover genuine Admin accounts from the users collection by role / flag
+  const adminUids = new Set();
+  const validAdminRoles = ["admin", "owner", "superadmin", "Admin", "ADMIN", "Owner", "Superadmin"];
+
+  try {
+    const roleSnap = await db.collection("users").where("role", "in", validAdminRoles).get();
+    for (const doc of roleSnap.docs) {
+      if (doc.id && doc.id.trim()) {
+        adminUids.add(doc.id.trim());
+      }
+    }
+  } catch (err) {
+    console.warn(`[Order Created Notify] Error querying users by role: ${err.message}`);
+  }
+
+  try {
+    const isAdminSnap = await db.collection("users").where("isAdmin", "==", true).get();
+    for (const doc of isAdminSnap.docs) {
+      if (doc.id && doc.id.trim()) {
+        adminUids.add(doc.id.trim());
+      }
+    }
+  } catch (err) {
+    console.warn(`[Order Created Notify] Error querying users by isAdmin: ${err.message}`);
+  }
+
+  if (adminUids.size === 0) {
+    console.warn(`[Order Created Notify] No admin accounts found for order ${cleanOrderId}.`);
+    return { status: "skipped", reason: "no_admins_found", count: 0, adminUids: [] };
+  }
+
+  const orderCode = String(orderData.orderCode || cleanOrderId).trim();
+  const customerName = String(orderData.customerName || orderData.customer_name || "Customer").trim();
+  const customerId = String(orderData.customerId || orderData.customer_id || "customer").trim();
+  const totalAmount = Number(orderData.totalAmount || orderData.total || orderData.amount || 0);
+  const formattedAmount = totalAmount % 1 === 0 ? totalAmount.toFixed(0) : totalAmount.toFixed(2);
+  const paymentMethod = String(
+    orderData.paymentMethod || orderData.paymentMode || orderData.payment_mode || "COD"
+  ).toUpperCase();
+
+  const title = "New Order Received 🛒";
+  const body = `New order #${orderCode} placed by ${customerName} (₹${formattedAmount}, ${paymentMethod})`;
+
+  const notifDocId = `order_${cleanOrderId}_created`;
+  const uidsList = Array.from(adminUids);
+  let writeCount = 0;
+
+  for (const adminUid of uidsList) {
+    const notifRef = db.collection("users").doc(adminUid).collection("notifications").doc(notifDocId);
+
+    const payload = {
+      notificationId: notifDocId,
+      id: notifDocId,
+      title: title,
+      body: body,
+      type: "order",
+      category: "order",
+      timestamp: FieldValue.serverTimestamp(),
+      isRead: false,
+      isActionable: true,
+      route: "/admin/orders",
+      createdBy: customerId,
+      userId: adminUid,
+      orderId: cleanOrderId,
+      metadata: {
+        source: "order",
+        orderId: cleanOrderId,
+        orderCode: orderCode,
+        customerName: customerName,
+        totalAmount: totalAmount,
+        paymentMethod: paymentMethod,
+        category: "order",
+      },
+    };
+
+    try {
+      await notifRef.set(payload, { merge: true });
+      writeCount++;
+      console.log(`[Order Created Notify] Created admin notification at users/${adminUid}/notifications/${notifDocId}`);
+    } catch (writeErr) {
+      console.error(`[Order Created Notify] Failed to write notification for admin ${adminUid}: ${writeErr.message}`);
+    }
+  }
+
+  return {
+    status: "created",
+    count: writeCount,
+    adminUids: uidsList,
+    notificationId: notifDocId,
+  };
+}
+
+/**
+ * Triggered whenever a new order document is created in orders/{orderId}.
+ * Discovers active Admin users and creates an idempotent Admin notification under
+ * users/{adminUid}/notifications/order_{orderId}_created.
+ */
+exports.notifyAdminsOnOrderCreated = onDocumentCreated(
+  {
+    region: "asia-south2",
+    document: "orders/{orderId}",
+  },
+  async (event) => {
+    if (!event.data) {
+      console.warn("No document data found in order creation event; skipping.");
+      return;
+    }
+
+    const orderData = event.data.data();
+    const orderId = event.params.orderId;
+
+    const db = getFirestore();
+    await processOrderCreatedNotification(db, orderData, orderId);
+  }
+);
+
+exports.processOrderCreatedNotification = processOrderCreatedNotification;
+
 
 /**
  * Calculates the next delivery date based on frequency.
