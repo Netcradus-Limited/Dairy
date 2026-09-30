@@ -25,6 +25,8 @@ import '../../features/product/product_details_screen.dart';
 import '../../features/shop/shop_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/profile/customer_support_screen.dart';
+import '../../features/profile/legal_policies_screen.dart';
+import '../../features/profile/terms_and_conditions_screen.dart';
 import '../../screens/settings/settings_screen.dart';
 import '../../models/product.dart';
 import '../../providers/user_provider.dart';
@@ -62,14 +64,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           path == '/otp' ||
           path == '/splash' ||
           path == '/onboarding';
+      final isPublicWebPath = path == '/terms-and-conditions' ||
+          path == '/privacy-policy' ||
+          path == '/refund-policy' ||
+          path == '/delivery-policy' ||
+          path == '/delete-account';
 
       String? targetRoute;
 
-      // 1. Unauthenticated users: redirect any protected path to /login
+      // 1. Unauthenticated users: allow auth paths and public web paths, redirect others to /login
       if (!isLoggedIn) {
-        targetRoute = isAuthPath ? null : '/login';
+        targetRoute = (isAuthPath || isPublicWebPath) ? null : '/login';
       }
-      // 2. Authenticated users:
+      // 2. Public legal routes for authenticated users: stay on the page
+      else if (isPublicWebPath) {
+        targetRoute = null;
+      }
+      // 3. Authenticated users on auth screens:
       // If currently on an auth/onboarding screen, redirect to pending notification or their role's home panel
       else if (isAuthPath) {
         final pendingDest = ref.read(pendingNotificationDestinationProvider);
@@ -228,6 +239,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/edit-subscription',
         builder: (context, state) => const EditSubscriptionScreen(),
+      ),
+      GoRoute(
+        path: '/terms-and-conditions',
+        builder: (context, state) => const TermsAndConditionsScreen(),
+      ),
+      GoRoute(
+        path: '/privacy-policy',
+        builder: (context, state) =>
+            const LegalPoliciesScreen(initialTabIndex: 0),
+      ),
+      GoRoute(
+        path: '/refund-policy',
+        builder: (context, state) =>
+            const LegalPoliciesScreen(initialTabIndex: 2),
+      ),
+      GoRoute(
+        path: '/delivery-policy',
+        builder: (context, state) =>
+            const LegalPoliciesScreen(initialTabIndex: 3),
+      ),
+      GoRoute(
+        path: '/delete-account',
+        builder: (context, state) =>
+            const LegalPoliciesScreen(initialTabIndex: 4),
       ),
       GoRoute(
         path: '/admin',

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -6,10 +7,12 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/constants/app_strings.dart';
 import 'account_deletion_screen.dart';
+import 'terms_and_conditions_screen.dart';
 
 /// Screen displaying in-app legal policies, store disclosures, and web links.
 class LegalPoliciesScreen extends StatelessWidget {
-  const LegalPoliciesScreen({super.key});
+  final int initialTabIndex;
+  const LegalPoliciesScreen({super.key, this.initialTabIndex = 0});
 
   Future<void> _openUrl(BuildContext context, String url) async {
     try {
@@ -38,62 +41,275 @@ class LegalPoliciesScreen extends StatelessWidget {
     }
   }
 
+  void _handleBackOrHome(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/home');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 5,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          title: Text(
-            'Legal & Policies',
-            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+      initialIndex: initialTabIndex,
+      child: Title(
+        title: 'Legal & Policies | Sawariya Dairy',
+        color: AppColors.primary,
+        child: Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            centerTitle: false,
+            title: Text(
+              'Legal & Policies',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+              ),
+            ),
+            backgroundColor: AppColors.surface,
+            foregroundColor: AppColors.textPrimary,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded),
+              tooltip: 'Back',
+              onPressed: () => _handleBackOrHome(context),
+            ),
+            actions: [
+              IconButton(
+                onPressed: () => context.go('/home'),
+                icon: const Icon(Icons.home_outlined),
+                tooltip: 'Home',
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 4),
+            ],
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(48),
+              child: Container(
+                decoration: const BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: AppColors.border, width: 1),
+                  ),
+                ),
+                child: TabBar(
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  labelColor: AppColors.primary,
+                  unselectedLabelColor: AppColors.textSecondary,
+                  indicatorColor: AppColors.primary,
+                  indicatorWeight: 3,
+                  labelStyle: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13.5,
+                  ),
+                  unselectedLabelStyle: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13.5,
+                  ),
+                  tabs: const [
+                    Tab(text: 'Privacy Policy'),
+                    Tab(text: 'Terms & Conditions'),
+                    Tab(text: 'Refund & Cancellation'),
+                    Tab(text: 'Delivery Policy'),
+                    Tab(text: 'Account Deletion'),
+                  ],
+                ),
+              ),
+            ),
           ),
-          backgroundColor: AppColors.surface,
-          foregroundColor: AppColors.textPrimary,
-          elevation: 0,
-          bottom: const TabBar(
-            isScrollable: true,
-            labelColor: AppColors.primary,
-            unselectedLabelColor: AppColors.textSecondary,
-            indicatorColor: AppColors.primary,
-            tabs: [
-              Tab(text: 'Privacy Policy'),
-              Tab(text: 'Terms & Conditions'),
-              Tab(text: 'Refund & Cancellation'),
-              Tab(text: 'Delivery Policy'),
-              Tab(text: 'Account Deletion'),
+          body: TabBarView(
+            children: [
+              _buildPolicyTab(
+                context: context,
+                title: 'Privacy Policy',
+                webUrl: AppStrings.privacyPolicyUrl,
+                content: _privacyPolicyContent,
+              ),
+              _buildPolicyTab(
+                context: context,
+                title: 'Terms & Conditions',
+                webUrl: AppStrings.termsConditionsUrl,
+                content: _termsContent,
+              ),
+              _buildPolicyTab(
+                context: context,
+                title: 'Refund & Cancellation Policy',
+                webUrl: AppStrings.refundPolicyUrl,
+                content: _refundContent,
+              ),
+              _buildPolicyTab(
+                context: context,
+                title: 'Delivery Policy',
+                webUrl: AppStrings.deliveryPolicyUrl,
+                content: _deliveryContent,
+              ),
+              _buildAccountDeletionTab(context),
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            _buildPolicyTab(
-              context: context,
-              title: 'Privacy Policy',
-              webUrl: AppStrings.privacyPolicyUrl,
-              content: _privacyPolicyContent,
+      ),
+    );
+  }
+
+  Widget _buildTabHeader({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required String buttonLabel,
+    required VoidCallback onButtonPressed,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSizes.p16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Sawariya Dairy',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'COD ONLY',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF92400E),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isCompact = constraints.maxWidth < 540;
+              final actionButton = OutlinedButton.icon(
+                onPressed: onButtonPressed,
+                icon: const Icon(Icons.open_in_browser, size: 16),
+                label: Text(buttonLabel),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  textStyle: GoogleFonts.plusJakartaSans(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              );
+
+              if (isCompact) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    actionButton,
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                        height: 1.25,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  actionButton,
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
             ),
-            _buildPolicyTab(
-              context: context,
-              title: 'Terms & Conditions',
-              webUrl: AppStrings.termsConditionsUrl,
-              content: _termsContent,
-            ),
-            _buildPolicyTab(
-              context: context,
-              title: 'Refund & Cancellation Policy',
-              webUrl: AppStrings.refundPolicyUrl,
-              content: _refundContent,
-            ),
-            _buildPolicyTab(
-              context: context,
-              title: 'Delivery Policy',
-              webUrl: AppStrings.deliveryPolicyUrl,
-              content: _deliveryContent,
-            ),
-            _buildAccountDeletionTab(context),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContentCard(String content) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSizes.p20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: SelectableText(
+        content,
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: 13.5,
+          height: 1.65,
+          color: AppColors.textPrimary,
         ),
       ),
     );
@@ -106,59 +322,26 @@ class LegalPoliciesScreen extends StatelessWidget {
     required String content,
   }) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSizes.p20),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSizes.p16,
+        vertical: AppSizes.p20,
+      ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
+          constraints: const BoxConstraints(maxWidth: 860),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () => _openUrl(context, webUrl),
-                    icon: const Icon(Icons.open_in_browser, size: 16),
-                    label: const Text('Open Online'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      textStyle: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                ],
+              _buildTabHeader(
+                context: context,
+                title: title,
+                subtitle: 'Entity: SAWARIYA SARKAR DAIRY LLP',
+                buttonLabel: 'Open Online',
+                onButtonPressed: () => _openUrl(context, webUrl),
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Entity: SAWARIYA SARKAR DAIRY LLP',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const Divider(height: 24),
-              Text(
-                content,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13.5,
-                  height: 1.6,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSizes.p16),
+              _buildContentCard(content),
+              const SizedBox(height: AppSizes.p32),
             ],
           ),
         ),
@@ -168,65 +351,33 @@ class LegalPoliciesScreen extends StatelessWidget {
 
   Widget _buildAccountDeletionTab(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSizes.p20),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSizes.p16,
+        vertical: AppSizes.p20,
+      ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
+          constraints: const BoxConstraints(maxWidth: 860),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Account Deletion & Data Retention',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () => _openUrl(context, AppStrings.accountDeletionUrl),
-                    icon: const Icon(Icons.open_in_browser, size: 16),
-                    label: const Text('Web Request'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      textStyle: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                ],
+              _buildTabHeader(
+                context: context,
+                title: 'Account Deletion & Data Retention',
+                subtitle: 'Entity: SAWARIYA SARKAR DAIRY LLP',
+                buttonLabel: 'Web Request',
+                onButtonPressed: () =>
+                    _openUrl(context, AppStrings.accountDeletionUrl),
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Entity: SAWARIYA SARKAR DAIRY LLP',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const Divider(height: 24),
-              Text(
-                _accountDeletionContent,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13.5,
-                  height: 1.6,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSizes.p16),
+              _buildContentCard(_accountDeletionContent),
+              const SizedBox(height: AppSizes.p16),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(AppSizes.p16),
+                padding: const EdgeInsets.all(AppSizes.p20),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFEF2F2),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: const Color(0xFFFCA5A5)),
                 ),
                 child: Column(
@@ -235,7 +386,7 @@ class LegalPoliciesScreen extends StatelessWidget {
                     Text(
                       'Ready to delete your account?',
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF991B1B),
                       ),
@@ -244,12 +395,13 @@ class LegalPoliciesScreen extends StatelessWidget {
                     Text(
                       'You can initiate permanent account deletion immediately inside the app. All active subscriptions will be cancelled.',
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
+                        fontSize: 13.5,
+                        height: 1.5,
                         color: const Color(0xFF7F1D1D),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
                       onPressed: () {
                         Navigator.push(
                           context,
@@ -258,16 +410,22 @@ class LegalPoliciesScreen extends StatelessWidget {
                           ),
                         );
                       },
+                      icon: const Icon(Icons.delete_forever, size: 18),
+                      label: const Text('Proceed to Account Deletion'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.statusCancelled,
                         foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                        textStyle: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                      child: const Text('Proceed to Account Deletion'),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSizes.p32),
             ],
           ),
         ),
@@ -314,49 +472,7 @@ SAWARIYA SARKAR DAIRY LLP
 • Official Website: https://sawariyasdairy.com
 ''';
 
-  static const String _termsContent = '''
-1. ACCEPTANCE OF TERMS
-By accessing or using Sawariya Dairy, you agree to be bound by these Terms and Conditions governed by SAWARIYA SARKAR DAIRY LLP ("Sawariya Dairy").
-
-2. ACCOUNT REGISTRATION & ACCURACY
-• You must provide a valid Indian mobile number to register and receive OTP verification. You are responsible for maintaining the security of your device.
-• Customers must provide an accurate delivery address and a reachable phone number to ensure successful delivery.
-
-3. PAYMENT METHOD (CASH ON DELIVERY ONLY)
-• The app currently supports CASH ON DELIVERY ONLY.
-• Payment must be made directly to the delivery partner upon receipt of goods. Online payment gateways are not supported.
-
-4. SERVICE AREAS & OPERATIONAL AVAILABILITY
-• Delivery is available only in active Sawariya Dairy service areas [BUSINESS DECISION REQUIRED: Specify Active Service Zones / Cities].
-• Available delivery slots are shown according to operational availability [BUSINESS DECISION REQUIRED: Specify Delivery Operating Hours].
-
-5. PERISHABLE GOODS & RETURN RESTRICTIONS
-• All milk, curd, paneer, and related dairy items are fresh, perishable food products.
-• Fresh/perishable dairy products generally cannot be returned after successful delivery.
-• No refund is provided solely because a customer changes their mind after successful delivery of a perishable product.
-
-6. SUBSCRIPTIONS & CANCELLATIONS
-• Subscription deliveries may be paused or skipped only when the applicable cutoff allows it [BUSINESS DECISION REQUIRED: Specify Daily Cutoff Time, e.g., 8:00 PM previous day].
-• Customers may cancel an order before it enters preparation/delivery, subject to its current order status.
-• Once a fresh/perishable order enters preparation or dispatch, cancellation may not be available.
-• Subscription cancellation affects future eligible deliveries and does not automatically cancel already prepared or dispatched orders.
-
-7. COMPLAINTS & ISSUE REPORTING
-• Missing, damaged, leaking, spoiled, incorrect, or undelivered items can be reported to Support.
-• Customers should report delivery/product issues within 24 hours of the scheduled delivery and provide photographs where relevant.
-• Sawariya Dairy may verify the order before approving a replacement or appropriate resolution.
-
-8. GOVERNING LAW & JURISDICTION
-• These terms are governed by the laws of India.
-• Any disputes are subject to the exclusive jurisdiction of the courts at [BUSINESS DECISION REQUIRED: Specify Legal Jurisdiction City, e.g., Gurugram, Haryana].
-
-9. CONTACT INFORMATION
-• Company: SAWARIYA SARKAR DAIRY LLP
-• Support Email: support@sawariyasdairy.com
-• Support Phone: 9896703884
-• Business Address: Ground Floor, Khewat No. 253/260, Farukh Nagar Road, Tajnagar, Gurugram, Haryana
-• Official Website: https://sawariyasdairy.com
-''';
+  static String get _termsContent => TermsAndConditionsScreen.termsText;
 
   static const String _refundContent = '''
 1. PAYMENT METHOD (COD ONLY)

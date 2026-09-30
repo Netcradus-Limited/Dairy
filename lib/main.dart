@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/localization/app_language.dart';
@@ -16,6 +17,9 @@ import 'services/subscription_test_helper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Use path-based URL strategy so deep links like /terms-and-conditions
+  // are visible to GoRouter instead of being discarded as base-path segments.
+  usePathUrlStrategy();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   if (kDebugMode && kIsWeb) {
     setupSubscriptionWebBridge();
