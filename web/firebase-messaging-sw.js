@@ -20,10 +20,12 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Received background message:', payload);
   const notificationTitle = payload?.notification?.title || payload?.data?.title || 'Sawariya Dairy';
+  const tag = payload?.data?.notificationId || payload?.data?.orderId || 'dairy_alert';
   const notificationOptions = {
     body: payload?.notification?.body || payload?.data?.body || '',
     icon: '/favicon.png',
     badge: '/favicon.png',
+    tag: tag,
     data: payload?.data || {}
   };
 
@@ -33,13 +35,19 @@ messaging.onBackgroundMessage((payload) => {
 // Handle notification click to bring app window to focus or open it
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const urlToOpen = new URL('/#/delivery', self.location.origin).href;
+  const rawTarget = event.notification?.data?.link ||
+                    (event.notification?.data?.click_action && event.notification.data.click_action.startsWith('http') ? event.notification.data.click_action : null) ||
+                    'https://sawariyasdairy.com/';
+
+  const urlToOpen = (rawTarget.startsWith('http://') || rawTarget.startsWith('https://'))
+    ? rawTarget
+    : new URL(rawTarget, self.location.origin).href;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (let i = 0; i < windowClients.length; i++) {
         const client = windowClients[i];
-        if ((client.url === urlToOpen || client.url.includes('/#/delivery')) && 'focus' in client) {
+        if ((client.url === urlToOpen || client.url.includes('/#/delivery') || client.url.includes(self.location.origin)) && 'focus' in client) {
           return client.focus();
         }
       }

@@ -220,17 +220,33 @@ class LegalPoliciesScreen extends StatelessWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               final isCompact = constraints.maxWidth < 540;
-              final actionButton = OutlinedButton.icon(
-                onPressed: onButtonPressed,
-                icon: const Icon(Icons.open_in_browser, size: 16),
-                label: Text(buttonLabel),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: const BorderSide(color: AppColors.primary),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  textStyle: GoogleFonts.plusJakartaSans(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
+              final buttonMaxWidth = isCompact
+                  ? constraints.maxWidth
+                  : (constraints.maxWidth * 0.45).clamp(160.0, 240.0);
+
+              final actionButton = ConstrainedBox(
+                constraints: BoxConstraints(
+                  minWidth: 0,
+                  maxWidth: buttonMaxWidth,
+                ),
+                child: OutlinedButton.icon(
+                  onPressed: onButtonPressed,
+                  icon: const Icon(Icons.open_in_browser, size: 16),
+                  label: Text(
+                    buttonLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    minimumSize: const Size(0, 38),
+                    maximumSize: Size(buttonMaxWidth, 44),
+                    textStyle: GoogleFonts.plusJakartaSans(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               );

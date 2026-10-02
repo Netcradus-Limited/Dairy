@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../core/constants/fcm_constants.dart';
 import '../repositories/notification_repository.dart';
 
 /// FCM Service handling token management, permission, and message routing for
@@ -57,7 +58,9 @@ class FCMService {
   /// Call [getCurrentToken] async method for the actual token fetch.
   Future<String?> getCurrentToken() async {
     try {
-      return await _messaging.getToken();
+      return await _messaging.getToken(
+        vapidKey: kIsWeb ? webVapidPublicKey : null,
+      );
     } catch (e) {
       debugPrint('[FCM] Error in getCurrentToken: $e');
       return null;
@@ -205,7 +208,9 @@ class FCMService {
 
     String? token;
     try {
-      token = await _messaging.getToken();
+      token = await _messaging.getToken(
+        vapidKey: kIsWeb ? webVapidPublicKey : null,
+      );
     } catch (e) {
       debugPrint('[FCM] Error getting token in _saveTokenIfAuthorized: $e');
     }

@@ -137,6 +137,9 @@ describe("FCM Push Notification Backend Unit Tests", () => {
     assert.equal(sent.data.type, "order");
     assert.equal(sent.data.notificationId, "notif_001");
     assert.equal(sent.android.notification.channelId, "order_alerts");
+    assert.equal(sent.webpush.fcmOptions.link, "https://sawariyasdairy.com/");
+    assert.equal(sent.webpush.notification.click_action, "https://sawariyasdairy.com/");
+    assert.equal(sent.data.link, "https://sawariyasdairy.com/");
   });
 
   test("Dispatches FCM notifications to multi-device user successfully", async () => {

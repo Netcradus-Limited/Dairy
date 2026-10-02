@@ -92,6 +92,22 @@ function createMockFirestore() {
             },
           };
         },
+        async get() {
+          const docs = [];
+          for (const [key, value] of store.entries()) {
+            if (key.startsWith(`${colName}/`) && key.split("/").length === 2) {
+              const docId = key.split("/")[1];
+              docs.push({
+                id: docId,
+                exists: true,
+                data() {
+                  return JSON.parse(JSON.stringify(value));
+                },
+              });
+            }
+          }
+          return { docs, empty: docs.length === 0, size: docs.length };
+        },
       };
     },
   };
@@ -272,5 +288,47 @@ describe("Order Lifecycle Notifications Suite", () => {
     const res2 = await processOrderCreatedNotification(db, {}, "");
     assert.equal(res2.status, "skipped");
     assert.equal(res2.reason, "missing_order_id");
+  });
+
+  test("7: Admin provisioned in admins collection (via uid or docId) receives order created notification", async () => {
+    // Clear users collection admins to ensure it resolves from admins collection
+    db._store.delete("users/admin_uid_01");
+    db._store.delete("users/owner_uid_02");
+
+    // Seed pre-provisioned admins in admins collection
+    db._store.set("admins/+919999999999", {
+      uid: "provisioned_admin_uid_99",
+      phone: "+919999999999",
+      role: "admin",
+    });
+    db._store.set("admins/direct_admin_uid_77", {
+      name: "Direct Admin",
+      role: "superadmin",
+    });
+
+    const orderData = {
+      orderCode: "ORD-5544",
+      customerName: "Priya Sharma",
+      customerId: "customer_priya",
+      totalAmount: 600,
+      paymentMethod: "COD",
+    };
+
+    const result = await processOrderCreatedNotification(db, orderData, "order_xyz_789");
+
+    assert.equal(result.status, "created");
+    assert.equal(result.notificationId, "order_order_xyz_789_created");
+    assert.ok(result.adminUids.includes("provisioned_admin_uid_99"));
+    assert.ok(result.adminUids.includes("direct_admin_uid_77"));
+
+    const notif1 = db._store.get("users/provisioned_admin_uid_99/notifications/order_order_xyz_789_created");
+    assert.ok(notif1);
+    assert.equal(notif1.title, "New Order Received 🛒");
+    assert.ok(notif1.body.includes("ORD-5544"));
+    assert.ok(notif1.body.includes("Priya Sharma"));
+    assert.equal(notif1.route, "/admin/orders");
+
+    const notif2 = db._store.get("users/direct_admin_uid_77/notifications/order_order_xyz_789_created");
+    assert.ok(notif2);
   });
 });

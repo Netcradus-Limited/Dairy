@@ -224,7 +224,9 @@ class OrderService {
       }
     }
 
-    // Dispatch real-time Admin notification for new order
+    // Dispatch real-time Admin notification for new order (client-side fallback/tests).
+    // In production with Firestore rules, backend Cloud Function `notifyAdminsOnOrderCreated`
+    // triggers on orders/{orderId} creation and authoritatively creates the admin notification.
     try {
       final notifRepo = NotificationRepository(firestore: _firestore);
       final paymentMode = paymentMethod.trim().isNotEmpty

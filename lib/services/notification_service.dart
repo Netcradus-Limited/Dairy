@@ -14,6 +14,8 @@ import '../models/user.dart';
 import '../providers/notification_provider.dart';
 import '../providers/user_provider.dart';
 import 'fcm_service.dart';
+import '../core/constants/fcm_constants.dart';
+import 'web_notification/web_notification.dart';
 
 /// Represents an incoming order-related push alert.
 class OrderAlert {
@@ -141,6 +143,19 @@ class NotificationService {
   String? _lastProcessedSignature;
   DateTime? _lastProcessedTimestamp;
   bool _hasProcessedInitialMessage = false;
+  final Set<String> _recentlyShownWebNotifIds = <String>{};
+
+  bool _isDuplicateWebNotification(String id) {
+    if (id.isEmpty) return false;
+    if (_recentlyShownWebNotifIds.contains(id)) {
+      return true;
+    }
+    _recentlyShownWebNotifIds.add(id);
+    Timer(const Duration(seconds: 15), () {
+      _recentlyShownWebNotifIds.remove(id);
+    });
+    return false;
+  }
 
   static const AndroidNotificationChannel channel = AndroidNotificationChannel(
     'order_alerts',
@@ -248,7 +263,9 @@ class NotificationService {
   /// The current FCM registration token.
   Future<String?> getToken() async {
     try {
-      return await _messaging.getToken();
+      return await _messaging.getToken(
+        vapidKey: kIsWeb ? webVapidPublicKey : null,
+      );
     } catch (e) {
       debugPrint('[FCM TOKEN] getToken error: $e');
       return null;
@@ -556,12 +573,42 @@ class NotificationService {
 
   /// Displays high-importance local notification for incoming message.
   Future<void> _showLocalNotification(RemoteMessage message) async {
-    if (kIsWeb) return;
     final notification = message.notification;
     final title = notification?.title ??
         message.data['title']?.toString() ??
         'Sawariya Dairy';
     final body = notification?.body ?? message.data['body']?.toString() ?? '';
+
+    if (kIsWeb) {
+      final notifId = message.messageId ??
+          message.data['notificationId']?.toString() ??
+          message.data['notifId']?.toString() ??
+          '${message.data['orderId']}_${message.data['route']}';
+
+      if (_isDuplicateWebNotification(notifId)) {
+        debugPrint(
+            '[FCM WEB FOREGROUND] Duplicate notification ignored: $notifId');
+        return;
+      }
+
+      showWebNotification(
+        title: title,
+        body: body,
+        icon: '/favicon.png',
+        tag: notifId.isNotEmpty ? notifId : 'order_alerts',
+        data: message.data,
+        onClick: () {
+          final dest = NotificationDestination.fromPayload(
+            message.data,
+            messageId: message.messageId,
+            title: title,
+            body: body,
+          );
+          handleNotificationTap(dest);
+        },
+      );
+      return;
+    }
 
     final payloadString = jsonEncode(message.data);
 

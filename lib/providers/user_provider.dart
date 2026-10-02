@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -11,6 +11,7 @@ import '../core/auth/app_role.dart';
 import '../core/router/auth_refresh.dart';
 import '../models/staff_member.dart';
 import '../models/user.dart';
+import '../core/constants/fcm_constants.dart';
 
 const User guestUser = User(
   id: '',
@@ -1038,7 +1039,9 @@ class UserNotifier extends StateNotifier<User> {
     if (uid.isEmpty) return;
     try {
       final messaging = FirebaseMessaging.instance;
-      final token = await messaging.getToken();
+      final token = await messaging.getToken(
+        vapidKey: kIsWeb ? webVapidPublicKey : null,
+      );
       final firestore = _firestore;
       if (token != null && token.isNotEmpty && firestore != null) {
         await firestore.collection('users').doc(uid).set({
@@ -1058,7 +1061,9 @@ class UserNotifier extends StateNotifier<User> {
     if (uid.isEmpty) return;
     try {
       final messaging = FirebaseMessaging.instance;
-      final token = await messaging.getToken();
+      final token = await messaging.getToken(
+        vapidKey: kIsWeb ? webVapidPublicKey : null,
+      );
       final firestore = _firestore;
       if (token != null && token.isNotEmpty && firestore != null) {
         await firestore.collection('users').doc(uid).set({

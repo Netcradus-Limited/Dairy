@@ -237,6 +237,7 @@ async function processSendPushNotification(db, messaging, notifData, userId, not
         type: type,
         isActionable: isActionable,
         click_action: "FLUTTER_NOTIFICATION_CLICK",
+        link: "https://sawariyasdairy.com/",
       },
       android: {
         priority: "high",
@@ -258,6 +259,21 @@ async function processSendPushNotification(db, messaging, notifData, userId, not
             sound: "default",
             badge: 1,
           },
+        },
+      },
+      webpush: {
+        headers: {
+          Urgency: "high",
+        },
+        notification: {
+          title: title,
+          body: body,
+          icon: "/favicon.png",
+          badge: "/favicon.png",
+          click_action: "https://sawariyasdairy.com/",
+        },
+        fcmOptions: {
+          link: "https://sawariyasdairy.com/",
         },
       },
     };
@@ -350,12 +366,30 @@ async function processComplaintCreatedNotification(db, complaintData, complaintI
     return { status: "skipped", reason: "missing_complaint_id" };
   }
 
-  // Discover genuine Admin accounts from the users collection by role / flag.
-  // Note: Only genuine user document IDs (Firebase Auth UIDs) are collected.
-  // Role strings like "owner" or "admin" are NEVER used as UIDs.
+  // Discover genuine Admin accounts from admins collection and users collection
   const adminUids = new Set();
-  const validAdminRoles = ["admin", "owner", "superadmin", "Admin", "ADMIN", "Owner", "Superadmin"];
+  const validAdminRoles = [
+    "admin", "owner", "superadmin", "manager", "dispatcher",
+    "Admin", "ADMIN", "Owner", "Superadmin", "Manager", "Dispatcher"
+  ];
 
+  // 1. Primary query: read from admins collection (pre-provisioned staff / admins)
+  try {
+    const adminSnap = await db.collection("admins").get();
+    for (const doc of adminSnap.docs) {
+      const data = doc.data() || {};
+      const uid = String(data.uid || "").trim();
+      if (uid) {
+        adminUids.add(uid);
+      } else if (doc.id && !doc.id.startsWith("+") && doc.id.trim()) {
+        adminUids.add(doc.id.trim());
+      }
+    }
+  } catch (err) {
+    console.warn(`[Complaint Notify] Error querying admins collection: ${err.message}`);
+  }
+
+  // 2. Query users collection by role
   try {
     const roleSnap = await db.collection("users").where("role", "in", validAdminRoles).get();
     for (const doc of roleSnap.docs) {
@@ -367,6 +401,7 @@ async function processComplaintCreatedNotification(db, complaintData, complaintI
     console.warn(`[Complaint Notify] Error querying users by role: ${err.message}`);
   }
 
+  // 3. Query users collection by isAdmin flag
   try {
     const isAdminSnap = await db.collection("users").where("isAdmin", "==", true).get();
     for (const doc of isAdminSnap.docs) {
@@ -612,12 +647,30 @@ async function processDeliveryEventNotification(db, orderData, orderId, previous
     return { status: "skipped", reason: "not_a_delivery_event" };
   }
 
-  // 5. Discover genuine Admin accounts from the users collection by role / flag.
-  // Note: Only genuine user document IDs (Firebase Auth UIDs) are collected.
-  // Role strings like "owner" or "admin" are NEVER used as UIDs.
+  // 5. Discover genuine Admin accounts from admins collection and users collection
   const adminUids = new Set();
-  const validAdminRoles = ["admin", "owner", "superadmin", "Admin", "ADMIN", "Owner", "Superadmin"];
+  const validAdminRoles = [
+    "admin", "owner", "superadmin", "manager", "dispatcher",
+    "Admin", "ADMIN", "Owner", "Superadmin", "Manager", "Dispatcher"
+  ];
 
+  // 1. Primary query: read from admins collection (pre-provisioned staff / admins)
+  try {
+    const adminSnap = await db.collection("admins").get();
+    for (const doc of adminSnap.docs) {
+      const data = doc.data() || {};
+      const uid = String(data.uid || "").trim();
+      if (uid) {
+        adminUids.add(uid);
+      } else if (doc.id && !doc.id.startsWith("+") && doc.id.trim()) {
+        adminUids.add(doc.id.trim());
+      }
+    }
+  } catch (err) {
+    console.warn(`[Delivery Event Notify] Error querying admins collection: ${err.message}`);
+  }
+
+  // 2. Query users collection by role
   try {
     const roleSnap = await db.collection("users").where("role", "in", validAdminRoles).get();
     for (const doc of roleSnap.docs) {
@@ -629,6 +682,7 @@ async function processDeliveryEventNotification(db, orderData, orderId, previous
     console.warn(`[Delivery Event Notify] Error querying users by role: ${err.message}`);
   }
 
+  // 3. Query users collection by isAdmin flag
   try {
     const isAdminSnap = await db.collection("users").where("isAdmin", "==", true).get();
     for (const doc of isAdminSnap.docs) {
@@ -892,10 +946,30 @@ async function processOrderCreatedNotification(db, orderData, orderId) {
     return { status: "skipped", reason: "missing_order_id" };
   }
 
-  // Discover genuine Admin accounts from the users collection by role / flag
+  // Discover genuine Admin accounts from admins collection and users collection
   const adminUids = new Set();
-  const validAdminRoles = ["admin", "owner", "superadmin", "Admin", "ADMIN", "Owner", "Superadmin"];
+  const validAdminRoles = [
+    "admin", "owner", "superadmin", "manager", "dispatcher",
+    "Admin", "ADMIN", "Owner", "Superadmin", "Manager", "Dispatcher"
+  ];
 
+  // 1. Primary query: read from admins collection (pre-provisioned staff / admins)
+  try {
+    const adminSnap = await db.collection("admins").get();
+    for (const doc of adminSnap.docs) {
+      const data = doc.data() || {};
+      const uid = String(data.uid || "").trim();
+      if (uid) {
+        adminUids.add(uid);
+      } else if (doc.id && !doc.id.startsWith("+") && doc.id.trim()) {
+        adminUids.add(doc.id.trim());
+      }
+    }
+  } catch (err) {
+    console.warn(`[Order Created Notify] Error querying admins collection: ${err.message}`);
+  }
+
+  // 2. Query users collection by role
   try {
     const roleSnap = await db.collection("users").where("role", "in", validAdminRoles).get();
     for (const doc of roleSnap.docs) {
@@ -907,6 +981,7 @@ async function processOrderCreatedNotification(db, orderData, orderId) {
     console.warn(`[Order Created Notify] Error querying users by role: ${err.message}`);
   }
 
+  // 3. Query users collection by isAdmin flag
   try {
     const isAdminSnap = await db.collection("users").where("isAdmin", "==", true).get();
     for (const doc of isAdminSnap.docs) {
@@ -1115,7 +1190,9 @@ async function processDailySubscriptionOrders(db, options = {}) {
         skippedCount++;
         continue;
       }
-    } catch (_) {}
+    } catch (_) {
+      // Ignored: skipped_dates doc does not exist
+    }
 
     // 5. Deterministic deduplication check: sub_{subId}_{YYYYMMDD}
     const orderDocId = `sub_${subId}_${dateKey}`;
@@ -1160,7 +1237,9 @@ async function processDailySubscriptionOrders(db, options = {}) {
             addressMap.streetArea = udata.address;
           }
         }
-      } catch (_) {}
+      } catch (_) {
+        // Ignored: fallback user doc lookup
+      }
     }
 
     const product = sub.product || {};
@@ -1307,6 +1386,7 @@ async function processAdminBroadcast(db, messaging, broadcastData) {
           route: route,
           type: "promotional",
           click_action: "FLUTTER_NOTIFICATION_CLICK",
+          link: "https://sawariyasdairy.com/",
         },
         android: {
           priority: "high",
@@ -1323,6 +1403,21 @@ async function processAdminBroadcast(db, messaging, broadcastData) {
               sound: "default",
               badge: 1,
             },
+          },
+        },
+        webpush: {
+          headers: {
+            Urgency: "high",
+          },
+          notification: {
+            title: title,
+            body: body,
+            icon: "/favicon.png",
+            badge: "/favicon.png",
+            click_action: "https://sawariyasdairy.com/",
+          },
+          fcmOptions: {
+            link: "https://sawariyasdairy.com/",
           },
         },
       };
@@ -1360,7 +1455,9 @@ async function processAdminBroadcast(db, messaging, broadcastData) {
         userId: userId,
         timestamp: FieldValue.serverTimestamp(),
       }, { merge: true });
-    } catch (_) {}
+    } catch (_) {
+      // Ignored: broadcast notification write error
+    }
   }
 
   // Prune invalid/stale tokens
@@ -1369,7 +1466,9 @@ async function processAdminBroadcast(db, messaging, broadcastData) {
       await db.collection("users").doc(uid).update({
         fcmTokens: FieldValue.arrayRemove(...staleTokens),
       });
-    } catch (_) {}
+    } catch (_) {
+      // Ignored: token cleanup error
+    }
   }
 
   return {

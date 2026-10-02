@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:dairy_app/services/notification_service.dart';
 import 'package:dairy_app/models/notification_item.dart';
+import 'package:dairy_app/core/constants/fcm_constants.dart';
+import 'package:dairy_app/services/web_notification/web_notification.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -159,6 +161,30 @@ void main() {
       expect(content.contains('325042169664'), isTrue);
       expect(content.contains('firebase.initializeApp'), isTrue);
       expect(content.contains('onBackgroundMessage'), isTrue);
+      expect(content.contains('sawariyasdairy.com'), isTrue,
+          reason: 'Service worker notification click must target sawariyasdairy.com');
+      expect(content.contains('tag'), isTrue,
+          reason: 'Service worker must set notification tag for deduplication');
+    });
+
+    test('webVapidPublicKey constant matches expected public VAPID key', () {
+      expect(
+        webVapidPublicKey,
+        'BPWTTiEQ90L4k_gNolAAAq2rwrCyLs3Fq6njVmZg8NLiXEBWNVOCbPAE7PJMRizs_zEJXI4GprJcrg8kQQvybSw',
+      );
+    });
+
+    test('showWebNotification can be invoked safely on non-web platform', () {
+      expect(
+        () => showWebNotification(
+          title: 'Test Notification',
+          body: 'Test Body',
+          tag: 'test_tag',
+          data: {'orderId': 'ORD-123'},
+          onClick: () {},
+        ),
+        returnsNormally,
+      );
     });
   });
 }
