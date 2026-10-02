@@ -68,7 +68,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           path == '/privacy-policy' ||
           path == '/refund-policy' ||
           path == '/delivery-policy' ||
-          path == '/delete-account';
+          path == '/delete-account' ||
+          path == '/dpdp' ||
+          path == '/data-protection';
 
       String? targetRoute;
 
@@ -263,6 +265,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/delete-account',
         builder: (context, state) =>
             const LegalPoliciesScreen(initialTabIndex: 4),
+      ),
+      GoRoute(
+        path: '/dpdp',
+        builder: (context, state) =>
+            const LegalPoliciesScreen(initialTabIndex: 5),
+      ),
+      GoRoute(
+        path: '/data-protection',
+        builder: (context, state) =>
+            const LegalPoliciesScreen(initialTabIndex: 5),
       ),
       GoRoute(
         path: '/admin',

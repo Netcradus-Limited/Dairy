@@ -1,45 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/constants/app_strings.dart';
 import 'account_deletion_screen.dart';
+import 'dpdp_data_protection_screen.dart';
 import 'terms_and_conditions_screen.dart';
 
 /// Screen displaying in-app legal policies, store disclosures, and web links.
 class LegalPoliciesScreen extends StatelessWidget {
   final int initialTabIndex;
   const LegalPoliciesScreen({super.key, this.initialTabIndex = 0});
-
-  Future<void> _openUrl(BuildContext context, String url) async {
-    try {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Could not open $url'),
-              backgroundColor: AppColors.primary,
-            ),
-          );
-        }
-      }
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not open $url'),
-            backgroundColor: AppColors.primary,
-          ),
-        );
-      }
-    }
-  }
 
   void _handleBackOrHome(BuildContext context) {
     if (context.canPop()) {
@@ -52,8 +25,8 @@ class LegalPoliciesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 5,
-      initialIndex: initialTabIndex,
+      length: 6,
+      initialIndex: initialTabIndex.clamp(0, 5),
       child: Title(
         title: 'Legal & Policies | Sawariya Dairy',
         color: AppColors.primary,
@@ -114,6 +87,7 @@ class LegalPoliciesScreen extends StatelessWidget {
                     Tab(text: 'Refund & Cancellation'),
                     Tab(text: 'Delivery Policy'),
                     Tab(text: 'Account Deletion'),
+                    Tab(text: 'DPDP & Data Protection'),
                   ],
                 ),
               ),
@@ -124,28 +98,25 @@ class LegalPoliciesScreen extends StatelessWidget {
               _buildPolicyTab(
                 context: context,
                 title: 'Privacy Policy',
-                webUrl: AppStrings.privacyPolicyUrl,
                 content: _privacyPolicyContent,
               ),
               _buildPolicyTab(
                 context: context,
                 title: 'Terms & Conditions',
-                webUrl: AppStrings.termsConditionsUrl,
                 content: _termsContent,
               ),
               _buildPolicyTab(
                 context: context,
                 title: 'Refund & Cancellation Policy',
-                webUrl: AppStrings.refundPolicyUrl,
                 content: _refundContent,
               ),
               _buildPolicyTab(
                 context: context,
                 title: 'Delivery Policy',
-                webUrl: AppStrings.deliveryPolicyUrl,
                 content: _deliveryContent,
               ),
               _buildAccountDeletionTab(context),
+              _buildDpdpTab(context),
             ],
           ),
         ),
@@ -157,8 +128,6 @@ class LegalPoliciesScreen extends StatelessWidget {
     required BuildContext context,
     required String title,
     required String subtitle,
-    required String buttonLabel,
-    required VoidCallback onButtonPressed,
   }) {
     return Container(
       width: double.infinity,
@@ -217,78 +186,14 @@ class LegalPoliciesScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isCompact = constraints.maxWidth < 540;
-              final buttonMaxWidth = isCompact
-                  ? constraints.maxWidth
-                  : (constraints.maxWidth * 0.45).clamp(160.0, 240.0);
-
-              final actionButton = ConstrainedBox(
-                constraints: BoxConstraints(
-                  minWidth: 0,
-                  maxWidth: buttonMaxWidth,
-                ),
-                child: OutlinedButton.icon(
-                  onPressed: onButtonPressed,
-                  icon: const Icon(Icons.open_in_browser, size: 16),
-                  label: Text(
-                    buttonLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    minimumSize: const Size(0, 38),
-                    maximumSize: Size(buttonMaxWidth, 44),
-                    textStyle: GoogleFonts.plusJakartaSans(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              );
-
-              if (isCompact) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                        height: 1.25,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    actionButton,
-                  ],
-                );
-              }
-
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                        height: 1.25,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  actionButton,
-                ],
-              );
-            },
+          Text(
+            title,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+              height: 1.25,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -334,7 +239,6 @@ class LegalPoliciesScreen extends StatelessWidget {
   Widget _buildPolicyTab({
     required BuildContext context,
     required String title,
-    required String webUrl,
     required String content,
   }) {
     return SingleChildScrollView(
@@ -352,8 +256,6 @@ class LegalPoliciesScreen extends StatelessWidget {
                 context: context,
                 title: title,
                 subtitle: 'Entity: SAWARIYA SARKAR DAIRY LLP',
-                buttonLabel: 'Open Online',
-                onButtonPressed: () => _openUrl(context, webUrl),
               ),
               const SizedBox(height: AppSizes.p16),
               _buildContentCard(content),
@@ -381,9 +283,6 @@ class LegalPoliciesScreen extends StatelessWidget {
                 context: context,
                 title: 'Account Deletion & Data Retention',
                 subtitle: 'Entity: SAWARIYA SARKAR DAIRY LLP',
-                buttonLabel: 'Web Request',
-                onButtonPressed: () =>
-                    _openUrl(context, AppStrings.accountDeletionUrl),
               ),
               const SizedBox(height: AppSizes.p16),
               _buildContentCard(_accountDeletionContent),
@@ -441,6 +340,33 @@ class LegalPoliciesScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: AppSizes.p32),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDpdpTab(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSizes.p16,
+        vertical: AppSizes.p20,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 860),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              buildDpdpHeaderCard(),
+              const SizedBox(height: AppSizes.p16),
+              buildDpdpStagingNoticeCard(),
+              const SizedBox(height: AppSizes.p16),
+              buildDpdpContentCard(dpdpDataProtectionContent),
+              const SizedBox(height: AppSizes.p16),
+              buildDpdpContactCard(),
               const SizedBox(height: AppSizes.p32),
             ],
           ),

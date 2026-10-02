@@ -156,6 +156,8 @@ void main() {
       expect(registeredPaths.contains('/refund-policy'), isTrue);
       expect(registeredPaths.contains('/delivery-policy'), isTrue);
       expect(registeredPaths.contains('/delete-account'), isTrue);
+      expect(registeredPaths.contains('/dpdp'), isTrue);
+      expect(registeredPaths.contains('/data-protection'), isTrue);
     });
 
     testWidgets('Unauthenticated visitor can access /privacy-policy and see LegalPoliciesScreen at Tab 0',
@@ -336,7 +338,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('Privacy Policy'), findsWidgets);
-      expect(find.text('Open Online'), findsOneWidget);
+      expect(find.text('Open Online'), findsNothing);
 
       // Verify title is rendered with appropriate horizontal width
       final titleFinder = find.byWidgetPredicate(
@@ -359,7 +361,7 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 6; i++) {
         await tester.pumpWidget(
           MaterialApp(
             home: LegalPoliciesScreen(initialTabIndex: i),

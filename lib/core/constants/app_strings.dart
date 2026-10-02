@@ -21,6 +21,7 @@ abstract class AppStrings {
   static const String refundPolicyUrl = 'https://sawariyasdairy.com/refund-policy';
   static const String deliveryPolicyUrl = 'https://sawariyasdairy.com/delivery-policy';
   static const String accountDeletionUrl = 'https://sawariyasdairy.com/delete-account';
+  static const String dpdpPolicyUrl = 'https://sawariyasdairy.com/dpdp';
 
   // Navigation
   static const String navHome = 'Home';
