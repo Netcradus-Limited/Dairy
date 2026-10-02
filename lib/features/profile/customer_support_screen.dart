@@ -15,15 +15,12 @@ import '../../providers/user_provider.dart';
 import '../../widgets/status_badge.dart';
 
 // ── Support Contact Configuration ─────────────────────────────────────────────
-// Replace these with official contact values when available:
-// e.g. const String SUPPORT_PHONE = '+91XXXXXXXXXX';
-//      const String SUPPORT_WHATSAPP = '+91XXXXXXXXXX';
 // ignore: constant_identifier_names
-const String SUPPORT_PHONE = '';
+const String SUPPORT_PHONE = AppStrings.supportPhone;
 // ignore: constant_identifier_names
 const String SUPPORT_EMAIL = AppStrings.supportEmail;
 // ignore: constant_identifier_names
-const String SUPPORT_WHATSAPP = '';
+const String SUPPORT_WHATSAPP = AppStrings.supportWhatsapp;
 
 const List<String> _complaintCategories = [
   'Late Delivery',
@@ -441,7 +438,10 @@ class _CustomerSupportScreenState extends ConsumerState<CustomerSupportScreen> {
       return;
     }
 
-    final cleanPhone = whatsappTarget.replaceAll(RegExp(r'[^\d]'), '');
+    var cleanPhone = whatsappTarget.replaceAll(RegExp(r'[^\d]'), '');
+    if (cleanPhone.length == 10) {
+      cleanPhone = '91$cleanPhone';
+    }
     final waUri = Uri.parse(
       'https://wa.me/$cleanPhone?text=${Uri.encodeComponent('Hi Sawariya Dairy, I need help with my order.')}',
     );

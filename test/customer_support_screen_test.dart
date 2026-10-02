@@ -15,10 +15,14 @@ void main() {
   const String expectedSubject = 'Sawariya Dairy Customer Support';
 
   group('Customer Support Centralized Configuration & Mailto URI Tests', () {
-    test('AppStrings contains correct company support email and subject', () {
+    test('AppStrings contains correct company support contacts', () {
       expect(AppStrings.supportEmail, equals(expectedSupportEmail));
       expect(AppStrings.supportEmailSubject, equals(expectedSubject));
       expect(SUPPORT_EMAIL, equals(expectedSupportEmail));
+      expect(AppStrings.supportPhone, equals('9896703884'));
+      expect(AppStrings.supportWhatsapp, equals('9896703884'));
+      expect(SUPPORT_PHONE, equals('9896703884'));
+      expect(SUPPORT_WHATSAPP, equals('9896703884'));
     });
 
     test('Mailto URI format is constructed correctly without Gmail URLs', () {
@@ -120,8 +124,9 @@ void main() {
       expect(find.text(expectedSupportEmail), findsOneWidget);
       expect(find.text('Email: Not configured yet'), findsNothing);
 
-      // Verify Phone placeholder remains unchanged since unconfigured
-      expect(find.text('Phone: Not configured yet'), findsOneWidget);
+      // Verify Support Phone is displayed in the contact card
+      expect(find.text('9896703884'), findsOneWidget);
+      expect(find.text('Phone: Not configured yet'), findsNothing);
     });
 
     group('Web Platform Behavior (kIsWeb == true)', () {
@@ -414,6 +419,97 @@ void main() {
             widget is TextFormField && widget.controller?.text == customerEmail,
       );
       expect(emailFields, findsOneWidget);
+    });
+
+    testWidgets(
+        'Tapping Call button attempts tel: URI and copies phone number',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: CustomerSupportScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final callButton = find.widgetWithText(InkWell, 'Call');
+      expect(callButton, findsOneWidget);
+      await tester.tap(callButton);
+      await tester.pumpAndSettle();
+
+      // Verify clipboard setData was called with 9896703884
+      final clipboardSetCalls = platformCalls
+          .where((call) => call.method == 'Clipboard.setData')
+          .toList();
+      expect(clipboardSetCalls.isNotEmpty, isTrue);
+      expect(
+        clipboardSetCalls.last.arguments,
+        equals({'text': '9896703884'}),
+      );
+
+      // Verify url_launcher was called with tel:9896703884
+      expect(urlLauncherCalls.isNotEmpty, isTrue);
+      final launchedCall = urlLauncherCalls.firstWhere(
+        (call) => call.method == 'launch' || call.method == 'canLaunch',
+      );
+      expect(launchedCall.arguments['url'], equals('tel:9896703884'));
+    });
+
+    testWidgets(
+        'Tapping WhatsApp button launches wa.me with 919896703884',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: CustomerSupportScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final whatsappButton = find.widgetWithText(InkWell, 'WhatsApp');
+      expect(whatsappButton, findsOneWidget);
+      await tester.tap(whatsappButton);
+      await tester.pumpAndSettle();
+
+      // Verify url_launcher was called with wa.me/919896703884
+      expect(urlLauncherCalls.isNotEmpty, isTrue);
+      final launchedCall = urlLauncherCalls.firstWhere(
+        (call) => call.method == 'launch' || call.method == 'canLaunch',
+      );
+      final url = launchedCall.arguments['url'] as String;
+      expect(url, startsWith('https://wa.me/919896703884'));
+    });
+
+    testWidgets(
+        'Tapping phone copy icon in contact card copies support phone directly',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: CustomerSupportScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final copyIcons = find.byIcon(Icons.copy_rounded);
+      expect(copyIcons, findsWidgets);
+
+      // First copy icon is beside phone number
+      await tester.tap(copyIcons.first);
+      await tester.pumpAndSettle();
+
+      final clipboardSetCalls = platformCalls
+          .where((call) => call.method == 'Clipboard.setData')
+          .toList();
+      expect(clipboardSetCalls.isNotEmpty, isTrue);
+      expect(
+        clipboardSetCalls.last.arguments,
+        equals({'text': '9896703884'}),
+      );
+      expect(find.text('Support phone copied'), findsOneWidget);
     });
   });
 }

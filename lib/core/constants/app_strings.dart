@@ -13,6 +13,7 @@ abstract class AppStrings {
   // Support & Contact
   static const String supportEmail = 'support@sawariyasdairy.com';
   static const String supportPhone = '9896703884';
+  static const String supportWhatsapp = '9896703884';
   static const String supportEmailSubject = 'Sawariya Dairy Customer Support';
 
   // Legal & Policy URLs (Official Domain: sawariyasdairy.com)
