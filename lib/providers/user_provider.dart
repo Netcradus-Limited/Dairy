@@ -85,6 +85,13 @@ class UserNotifier extends StateNotifier<User> {
   }
 
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSubscription;
+  final Completer<void> _sessionLoadedCompleter = Completer<void>();
+
+  /// Future that completes when the initial session has been read from local storage.
+  Future<void> get sessionLoaded => _sessionLoadedCompleter.future;
+
+  /// Whether the initial session has finished loading.
+  bool get isSessionLoaded => _sessionLoadedCompleter.isCompleted;
 
   UserNotifier() : super(guestUser) {
     loadSession();
@@ -667,6 +674,10 @@ class UserNotifier extends StateNotifier<User> {
     } catch (e) {
       // Fallback to guest user on error
       state = guestUser;
+    } finally {
+      if (!_sessionLoadedCompleter.isCompleted) {
+        _sessionLoadedCompleter.complete();
+      }
     }
     debugPrint(
         '[PROFILE DEBUG] loadSession: final role=${state.role}, profileImageUrl = ${state.profileImageUrl}');

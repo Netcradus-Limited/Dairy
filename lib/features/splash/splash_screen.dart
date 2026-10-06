@@ -10,7 +10,6 @@ import '../../providers/notification_provider.dart';
 import '../../providers/onboarding_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/notification_service.dart';
-import '../auth/services/auth_video_service.dart';
 
 /// Premium Minimal Animated Splash Screen for Sawariya Dairy
 class SplashScreen extends ConsumerStatefulWidget {
@@ -25,14 +24,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
-  Timer? _navigationTimer;
+  Timer? _minDurationTimer;
+  Timer? _safetyTimeoutTimer;
+  bool _hasNavigated = false;
+  bool _minDurationPassed = false;
 
   @override
   void initState() {
     super.initState();
-
-    // Preload authentication videos early for instant playback on login & otp
-    AuthVideoService.instance.preload();
 
     // Setup smooth fade & scale animations
     _controller = AnimationController(
@@ -54,10 +53,35 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _controller.forward();
 
-    // Navigate after 3 seconds with a cancellable timer
-    _navigationTimer = Timer(const Duration(milliseconds: 3000), () {
+    // Start readiness check: minimum visual duration (600ms) to display brand logo smoothly
+    _minDurationTimer = Timer(const Duration(milliseconds: 600), () {
+      _minDurationPassed = true;
+      _checkReadinessAndNavigate();
+    });
+
+    // Fallback safety timer so splash never hangs if storage or auth is delayed
+    _safetyTimeoutTimer = Timer(const Duration(milliseconds: 1500), () {
+      if (!mounted || _hasNavigated) return;
+      _hasNavigated = true;
       _navigateToNextScreen();
     });
+
+    // Listen for startup auth/session readiness
+    ref.read(userProvider.notifier).sessionLoaded.then((_) {
+      if (mounted) {
+        _checkReadinessAndNavigate();
+      }
+    });
+  }
+
+  void _checkReadinessAndNavigate() {
+    if (!mounted || _hasNavigated) return;
+    if (ref.read(userProvider.notifier).isSessionLoaded && _minDurationPassed) {
+      _hasNavigated = true;
+      _minDurationTimer?.cancel();
+      _safetyTimeoutTimer?.cancel();
+      _navigateToNextScreen();
+    }
   }
 
   Future<void> _navigateToNextScreen() async {
@@ -111,7 +135,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   void dispose() {
-    _navigationTimer?.cancel();
+    _minDurationTimer?.cancel();
+    _safetyTimeoutTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }

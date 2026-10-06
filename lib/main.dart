@@ -2,13 +2,13 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+// ignore: depend_on_referenced_packages
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/localization/app_language.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
-import 'features/auth/services/auth_video_service.dart';
 import 'firebase_options.dart';
 import 'providers/settings_provider.dart';
 import 'services/notification_service.dart';
@@ -29,23 +29,33 @@ void main() async {
   // depend on the Riverpod container.
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-  // Preload authentication videos early for seamless playback
-  AuthVideoService.instance.preload();
-
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends ConsumerWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Initialize FCM + local notifications exactly once (permission + listeners).
-    ref.watch(fcmInitProvider);
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
 
-    // Also initialize the traditional notification service (orderAlertProvider etc).
-    ref.watch(notificationInitProvider);
+class _MyAppState extends ConsumerState<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Deferred background initialization: runs after the first usable frame is painted
+    // so notification registration does not block the first visible screen or trigger
+    // unnecessary rebuilds of MaterialApp.router.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(fcmInitProvider);
+        ref.read(notificationInitProvider);
+      }
+    });
+  }
 
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
     final settings = ref.watch(settingsProvider);
 

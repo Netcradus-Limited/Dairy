@@ -177,7 +177,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 // 2. Hero Promotional Banner ("Pure Goodness, Delivered to Your Doorstep")
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _HeroPromotionalBanner extends StatefulWidget {
+class _HeroPromotionalBanner extends ConsumerStatefulWidget {
   final VoidCallback onTap;
 
   const _HeroPromotionalBanner({
@@ -185,29 +185,34 @@ class _HeroPromotionalBanner extends StatefulWidget {
   });
 
   @override
-  State<_HeroPromotionalBanner> createState() => _HeroPromotionalBannerState();
+  ConsumerState<_HeroPromotionalBanner> createState() =>
+      _HeroPromotionalBannerState();
 }
 
-class _HeroPromotionalBannerState extends State<_HeroPromotionalBanner> {
-  late VideoPlayerController _controller;
+class _HeroPromotionalBannerState
+    extends ConsumerState<_HeroPromotionalBanner> {
+  VideoPlayerController? _controller;
   bool _isInitialized = false;
   bool _hasError = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.asset(
+    final controller = VideoPlayerController.asset(
       'assets/images/homenew2v.mp4',
       videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
     );
-    _controller.initialize().then((_) async {
+    _controller = controller;
+    controller.initialize().then((_) async {
       if (!mounted) return;
-      await _controller.setVolume(0.0);
-      await _controller.setLooping(true);
-      try {
-        await _controller.play();
-      } catch (e) {
-        debugPrint('Banner video autoplay prevented: $e');
+      await controller.setVolume(0.0);
+      await controller.setLooping(true);
+      if (ref.read(navigationProvider) == 0) {
+        try {
+          await controller.play();
+        } catch (e) {
+          debugPrint('Banner video autoplay prevented: $e');
+        }
       }
       if (mounted) {
         setState(() {
@@ -226,12 +231,23 @@ class _HeroPromotionalBannerState extends State<_HeroPromotionalBanner> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(navigationProvider, (previous, next) {
+      final controller = _controller;
+      if (!_isInitialized || controller == null) return;
+      if (next == 0) {
+        controller.play().catchError((_) {});
+      } else {
+        controller.pause().catchError((_) {});
+      }
+    });
+
+    final controller = _controller;
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -250,7 +266,7 @@ class _HeroPromotionalBannerState extends State<_HeroPromotionalBanner> {
           aspectRatio: 2.0,
           child: GestureDetector(
             onTap: widget.onTap,
-            child: (_controller.value.hasError || _hasError)
+            child: (controller == null || controller.value.hasError || _hasError)
                 ? Container(
                     color: Colors.grey[200],
                     padding: const EdgeInsets.all(8),
@@ -275,13 +291,13 @@ class _HeroPromotionalBannerState extends State<_HeroPromotionalBanner> {
                     : FittedBox(
                         fit: BoxFit.cover,
                         child: SizedBox(
-                          width: _controller.value.size.width > 0
-                              ? _controller.value.size.width
+                          width: controller.value.size.width > 0
+                              ? controller.value.size.width
                               : 16,
-                          height: _controller.value.size.height > 0
-                              ? _controller.value.size.height
+                          height: controller.value.size.height > 0
+                              ? controller.value.size.height
                               : 9,
-                          child: VideoPlayer(_controller),
+                          child: VideoPlayer(controller),
                         ),
                       )),
           ),
@@ -548,33 +564,44 @@ class _CategoryPromotionalBannerState
 // Why Choose Us Video Player Widget
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _WhyChooseUsVideo extends StatefulWidget {
+class _WhyChooseUsVideo extends ConsumerStatefulWidget {
   const _WhyChooseUsVideo();
 
   @override
-  State<_WhyChooseUsVideo> createState() => _WhyChooseUsVideoState();
+  ConsumerState<_WhyChooseUsVideo> createState() => _WhyChooseUsVideoState();
 }
 
-class _WhyChooseUsVideoState extends State<_WhyChooseUsVideo> {
-  late VideoPlayerController _controller;
+class _WhyChooseUsVideoState extends ConsumerState<_WhyChooseUsVideo> {
+  VideoPlayerController? _controller;
   bool _isInitialized = false;
   bool _hasError = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.asset(
+    // Defer initialization to after initial frame so hero banner and top content paint immediately
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _initVideo();
+    });
+  }
+
+  void _initVideo() {
+    final controller = VideoPlayerController.asset(
       'assets/images/newhome2.mp4',
       videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
     );
-    _controller.initialize().then((_) async {
+    _controller = controller;
+    controller.initialize().then((_) async {
       if (!mounted) return;
-      await _controller.setVolume(0.0);
-      await _controller.setLooping(true);
-      try {
-        await _controller.play();
-      } catch (e) {
-        debugPrint('Why choose us video autoplay prevented: $e');
+      await controller.setVolume(0.0);
+      await controller.setLooping(true);
+      if (ref.read(navigationProvider) == 0) {
+        try {
+          await controller.play();
+        } catch (e) {
+          debugPrint('Why choose us video autoplay prevented: $e');
+        }
       }
       if (mounted) {
         setState(() {
@@ -593,17 +620,30 @@ class _WhyChooseUsVideoState extends State<_WhyChooseUsVideo> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(navigationProvider, (previous, next) {
+      final controller = _controller;
+      if (!_isInitialized || controller == null) return;
+      if (next == 0) {
+        controller.play().catchError((_) {});
+      } else {
+        controller.pause().catchError((_) {});
+      }
+    });
+
+    final controller = _controller;
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: AspectRatio(
-        aspectRatio: _isInitialized ? _controller.value.aspectRatio : 16 / 9,
-        child: (_controller.value.hasError || _hasError)
+        aspectRatio: (_isInitialized && controller != null)
+            ? controller.value.aspectRatio
+            : 16 / 9,
+        child: (controller == null || controller.value.hasError || _hasError)
             ? Container(
                 color: Colors.grey[200],
                 padding: const EdgeInsets.all(8),
@@ -625,7 +665,7 @@ class _WhyChooseUsVideoState extends State<_WhyChooseUsVideo> {
                       ),
                     ),
                   )
-                : VideoPlayer(_controller)),
+                : VideoPlayer(controller)),
       ),
     );
   }

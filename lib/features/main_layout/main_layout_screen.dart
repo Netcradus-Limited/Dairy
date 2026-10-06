@@ -16,21 +16,30 @@ import '../profile/profile_screen.dart';
 import '../shop/shop_screen.dart';
 
 /// Main Responsive Layout Shell
-class MainLayoutScreen extends ConsumerWidget {
+class MainLayoutScreen extends ConsumerStatefulWidget {
   const MainLayoutScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MainLayoutScreen> createState() => _MainLayoutScreenState();
+}
+
+class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
+  final Set<int> _loadedTabs = {0};
+
+  @override
+  Widget build(BuildContext context) {
     final currentIndex = ref.watch(navigationProvider);
+    _loadedTabs.add(currentIndex);
+
     final cartCount = ref.watch(cartItemCountProvider);
     final deliveryLocation = ref.watch(deliveryLocationDisplayProvider);
     final isDesktop = context.isDesktop;
 
     final List<Widget> pages = [
-      const HomeScreen(), // 0 – Home
-      const ShopScreen(), // 1 – Shop
-      const OrdersScreen(), // 2 – Orders
-      const ProfileScreen(), // 3 – Profile
+      _loadedTabs.contains(0) ? const HomeScreen() : const SizedBox.shrink(),
+      _loadedTabs.contains(1) ? const ShopScreen() : const SizedBox.shrink(),
+      _loadedTabs.contains(2) ? const OrdersScreen() : const SizedBox.shrink(),
+      _loadedTabs.contains(3) ? const ProfileScreen() : const SizedBox.shrink(),
     ];
 
     void handleLocationTap() {

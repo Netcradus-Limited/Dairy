@@ -272,6 +272,35 @@ String formatAddressForHeader(Address a) {
 final currentGpsAddressProvider = FutureProvider<String?>((ref) async {
   try {
     final locationService = ref.read(locationServiceProvider);
+
+    // Fast path: check device's last known location first without waiting for a new GPS fix
+    final lastKnown = await locationService.getLastKnownPosition();
+    if (lastKnown != null &&
+        (lastKnown.latitude != 0.0 || lastKnown.longitude != 0.0)) {
+      final geo = await locationService.reverseGeocode(
+        lastKnown.latitude,
+        lastKnown.longitude,
+      );
+      if (geo != null) {
+        final street = geo.streetOrArea?.trim() ?? '';
+        final city = geo.city?.trim() ?? '';
+        final pin = geo.postalCode?.trim() ?? '';
+        if (street.isNotEmpty &&
+            city.isNotEmpty &&
+            street.toLowerCase() != city.toLowerCase()) {
+          return '$street, $city';
+        } else if (city.isNotEmpty && pin.isNotEmpty) {
+          return '$city, $pin';
+        } else if (city.isNotEmpty) {
+          return city;
+        } else if (street.isNotEmpty) {
+          return street;
+        } else if (geo.state?.trim().isNotEmpty ?? false) {
+          return geo.state!.trim();
+        }
+      }
+    }
+
     final result = await locationService.getCurrentPositionDetailed();
     if (result.status == LocationResultStatus.success &&
         result.position != null) {
@@ -307,7 +336,7 @@ final currentGpsAddressProvider = FutureProvider<String?>((ref) async {
 /// High-level delivery location text for the header app bar.
 /// Priority:
 /// 1. Selected or default saved delivery address
-/// 2. Current reverse-geocoded GPS location
+/// 2. Current reverse-geocoded GPS location (asynchronous)
 /// 3. "Select location"
 final deliveryLocationDisplayProvider = Provider<String>((ref) {
   final selectedAddress = ref.watch(selectedAddressProvider);
@@ -316,6 +345,14 @@ final deliveryLocationDisplayProvider = Provider<String>((ref) {
     if (formatted.isNotEmpty && formatted != 'Select location') {
       return formatted;
     }
+  }
+
+  // If user has an active session and saved addresses are currently loading from Firestore,
+  // do not trigger a GPS hardware/network acquisition while saved addresses are loading.
+  final isLoadingAddresses = ref.watch(addressLoadingProvider);
+  final user = ref.watch(userProvider);
+  if (user.id.isNotEmpty && isLoadingAddresses) {
+    return 'Select location';
   }
 
   final gpsAsync = ref.watch(currentGpsAddressProvider);

@@ -8,6 +8,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/widgets/product_card.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../providers/navigation_provider.dart';
 import '../../providers/product_provider.dart';
 import '../cart/cart_screen.dart';
 import '../product/product_details_screen.dart';
@@ -46,10 +47,12 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
       if (!mounted) return;
       await _videoController.setVolume(0.0);
       await _videoController.setLooping(true);
-      try {
-        await _videoController.play();
-      } catch (e) {
-        debugPrint('Shop video autoplay prevented: $e');
+      if (ref.read(navigationProvider) == 1) {
+        try {
+          await _videoController.play();
+        } catch (e) {
+          debugPrint('Shop video autoplay prevented: $e');
+        }
       }
       if (mounted) {
         setState(() {
@@ -79,6 +82,15 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(navigationProvider, (previous, next) {
+      if (!_isVideoInitialized) return;
+      if (next == 1) {
+        _videoController.play().catchError((_) {});
+      } else {
+        _videoController.pause().catchError((_) {});
+      }
+    });
+
     final allProducts = ref.watch(allProductsProvider);
     final cartQuantities = ref.watch(cartQuantitiesProvider);
     final selectedCategoryId = ref.watch(selectedCategoryProvider);
@@ -631,13 +643,13 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
   Widget _buildBenefitsRow() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEAF5EF),
-        borderRadius: BorderRadius.circular(12),
+      decoration: const BoxDecoration(
+        color: Color(0xFFEAF5EF),
+        borderRadius: BorderRadius.all(Radius.circular(12)),
       ),
-      child: Row(
+      child: const Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: const [
+        children: [
           _BenefitItem(
             icon: Icons.verified_user_outlined,
             title: '100% Pure',

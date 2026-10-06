@@ -162,6 +162,15 @@ class LocationService {
     return Geolocator.getPositionStream(locationSettings: _locationSettings);
   }
 
+  /// Returns the device's last known location cache, if any, without requesting a new GPS hardware fix.
+  Future<Position?> getLastKnownPosition() async {
+    try {
+      return await Geolocator.getLastKnownPosition();
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Returns a single fresh high-accuracy fix, or `null` if location is unavailable.
   Future<Position?> getCurrentPosition() async {
     final result = await getCurrentPositionDetailed();
@@ -531,17 +540,21 @@ class LocationService {
           final addr = decoded['address'];
           if (addr is Map<String, dynamic>) {
             final houseParts = <String>[];
-            if (addr['house_number'] != null)
+            if (addr['house_number'] != null) {
               houseParts.add(addr['house_number'].toString().trim());
-            if (addr['building'] != null)
+            }
+            if (addr['building'] != null) {
               houseParts.add(addr['building'].toString().trim());
-            if (addr['flat'] != null)
+            }
+            if (addr['flat'] != null) {
               houseParts.add(addr['flat'].toString().trim());
+            }
             final house = houseParts.isNotEmpty ? houseParts.join(', ') : null;
 
             final streetParts = <String>[];
-            if (addr['road'] != null)
+            if (addr['road'] != null) {
               streetParts.add(addr['road'].toString().trim());
+            }
             if (addr['suburb'] != null &&
                 !streetParts.contains(addr['suburb'].toString().trim())) {
               streetParts.add(addr['suburb'].toString().trim());
