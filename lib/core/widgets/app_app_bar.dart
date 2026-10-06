@@ -372,6 +372,8 @@ class _AppTopAppBarState extends ConsumerState<AppTopAppBar> {
                   child: Image.asset(
                     'assets/images/newlogo.png',
                     fit: BoxFit.contain,
+                    cacheWidth: 120,
+                    gaplessPlayback: true,
                     errorBuilder: (_, __, ___) => const Icon(
                       Icons.eco_rounded,
                       color: Color(0xFF0F4A2F),
@@ -940,6 +942,8 @@ class _AppTopAppBarState extends ConsumerState<AppTopAppBar> {
                 child: Image.asset(
                   'assets/images/newlogo.png',
                   fit: BoxFit.contain,
+                  cacheWidth: 120,
+                  gaplessPlayback: true,
                   errorBuilder: (_, __, ___) => const Icon(
                     Icons.eco_rounded,
                     color: Color(0xFF0F4A2F),

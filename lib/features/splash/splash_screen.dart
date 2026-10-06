@@ -235,6 +235,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                               width: 112,
                               height: 112,
                               fit: BoxFit.contain,
+                              cacheWidth: 250,
+                              gaplessPlayback: true,
                             ),
                           ),
                         ),

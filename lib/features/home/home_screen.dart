@@ -505,11 +505,21 @@ class _CategoryPromotionalBannerState
   final CarouselSliderController _carouselController =
       CarouselSliderController();
 
-  final List<String> bannerImages = [
+  static const List<String> _bannerImages = [
     'assets/images/1.png',
     'assets/images/2.png',
     'assets/images/3.png',
   ];
+
+  late final List<Widget> _bannerItems;
+
+  @override
+  void initState() {
+    super.initState();
+    _bannerItems = _bannerImages.map((imagePath) {
+      return _BannerSlideItem(imagePath: imagePath);
+    }).toList(growable: false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -526,36 +536,42 @@ class _CategoryPromotionalBannerState
         enlargeCenterPage: false,
         viewportFraction: 1.0,
       ),
-      items: bannerImages.map((imagePath) {
-        return Builder(
-          builder: (BuildContext context) {
+      items: _bannerItems,
+    );
+  }
+}
+
+class _BannerSlideItem extends StatelessWidget {
+  final String imagePath;
+  const _BannerSlideItem({required this.imagePath});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: MediaQuery.of(context).size.width,
+      margin: const EdgeInsets.symmetric(horizontal: 2.0),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: Image.asset(
+          imagePath,
+          fit: BoxFit.cover,
+          gaplessPlayback: true,
+          errorBuilder: (context, error, stackTrace) {
             return Container(
-              width: MediaQuery.of(context).size.width,
-              margin: const EdgeInsets.symmetric(horizontal: 2.0),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: Image.asset(
-                  imagePath,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: const Color(0xFF005F38),
-                      alignment: Alignment.center,
-                      child: Text(
-                        tr('Sawariya Dairy Specials'),
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold),
-                      ),
-                    );
-                  },
+              color: const Color(0xFF005F38),
+              alignment: Alignment.center,
+              child: Text(
+                tr('Sawariya Dairy Specials'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             );
           },
-        );
-      }).toList(),
+        ),
+      ),
     );
   }
 }

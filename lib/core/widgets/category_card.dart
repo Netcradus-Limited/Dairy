@@ -82,6 +82,8 @@ class _CategoryCardState extends State<CategoryCard> {
                           return Image.network(
                             image,
                             fit: BoxFit.contain,
+                            cacheWidth: 320,
+                            gaplessPlayback: true,
                             errorBuilder: (context, error, stackTrace) =>
                                 const Center(
                               child: Icon(Icons.image_outlined,
@@ -92,6 +94,8 @@ class _CategoryCardState extends State<CategoryCard> {
                         return Image.asset(
                           image,
                           fit: BoxFit.contain,
+                          cacheWidth: 320,
+                          gaplessPlayback: true,
                           errorBuilder: (context, error, stackTrace) =>
                               const Center(
                             child: Icon(Icons.image_outlined,
