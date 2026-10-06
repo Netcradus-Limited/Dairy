@@ -214,14 +214,28 @@ class FirestoreProductRepository {
   /// Safely seeds missing default categories and products (including Uple & Water)
   /// to Firestore.  Uses `SetOptions(merge: true)` with deterministic IDs so it
   /// never overwrites existing modified data or duplicates records.
+  ///
+  /// Existence checks are issued concurrently (single round trip) rather than
+  /// sequentially, so seeding never holds up other Firestore traffic.
   Future<void> seedDefaultsIfNeeded() async {
     try {
       final batch = _db.batch();
       bool hasWrites = false;
 
-      for (final entry in _defaultCategories.entries) {
-        final doc = await _categories.doc(entry.key).get();
-        if (!doc.exists) {
+      final categoryEntries = _defaultCategories.entries.toList();
+      final productEntries = _defaultProducts.entries.toList();
+
+      final results = await Future.wait([
+        Future.wait(
+            categoryEntries.map((e) => _categories.doc(e.key).get())),
+        Future.wait(productEntries.map((e) => _products.doc(e.key).get())),
+      ]);
+      final categoryDocs = results[0];
+      final productDocs = results[1];
+
+      for (var i = 0; i < categoryEntries.length; i++) {
+        if (!categoryDocs[i].exists) {
+          final entry = categoryEntries[i];
           batch.set(
             _categories.doc(entry.key),
             entry.value,
@@ -231,9 +245,9 @@ class FirestoreProductRepository {
         }
       }
 
-      for (final entry in _defaultProducts.entries) {
-        final doc = await _products.doc(entry.key).get();
-        if (!doc.exists) {
+      for (var i = 0; i < productEntries.length; i++) {
+        if (!productDocs[i].exists) {
+          final entry = productEntries[i];
           batch.set(
             _products.doc(entry.key),
             entry.value,

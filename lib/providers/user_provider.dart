@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:flutter/scheduler.dart' show SchedulerBinding;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -65,6 +66,45 @@ class PhoneAuthUtils {
   }
 }
 
+/// Result of a single best-effort Firestore lookup issued concurrently during
+/// role resolution. [unwrap] rethrows the original error so the sequential
+/// evaluation keeps exactly the same try/catch semantics as before.
+class _Lookup<T> {
+  final T? _value;
+  final Object? _error;
+  const _Lookup.ok(T value)
+      : _value = value,
+        _error = null;
+  const _Lookup.failed(Object error)
+      : _value = null,
+        _error = error;
+
+  T unwrap() {
+    final err = _error;
+    if (err != null) throw err;
+    return _value as T;
+  }
+}
+
+Future<_Lookup<T>> _safeLookup<T>(Future<T> Function() run) async {
+  try {
+    return _Lookup<T>.ok(await run());
+  } catch (e) {
+    return _Lookup<T>.failed(e);
+  }
+}
+
+/// Outcome of authoritative role resolution.
+///
+/// [userDoc] is the `users/{uid}` snapshot fetched during resolution. It is
+/// only populated when resolution performed NO linking/migration writes, so it
+/// is safe to reuse instead of re-reading the same document.
+class _RoleResolution {
+  final String role;
+  final DocumentSnapshot<Map<String, dynamic>>? userDoc;
+  const _RoleResolution(this.role, {this.userDoc});
+}
+
 /// Current user profile state notifier that supports SharedPreferences persistence and Firestore sync.
 class UserNotifier extends StateNotifier<User> {
   static const String _sessionKey = 'user_session';
@@ -121,6 +161,29 @@ class UserNotifier extends StateNotifier<User> {
     required String uid,
     String? phone,
     String? currentRole,
+    DocumentSnapshot<Map<String, dynamic>>? prefetchedUserDoc,
+  }) async {
+    final resolution = await _resolveAuthoritativeRoleDetailed(
+      uid: uid,
+      phone: phone,
+      currentRole: currentRole,
+      prefetchedUserDoc: prefetchedUserDoc,
+    );
+    return resolution.role;
+  }
+
+  /// Same resolution as [_resolveAuthoritativeRole], additionally returning the
+  /// `users/{uid}` snapshot when it can be safely reused.
+  ///
+  /// All independent lookups are started concurrently (one network round trip
+  /// instead of ~10 sequential ones), but results are evaluated in the exact
+  /// same priority order as before, and linking writes are only performed for
+  /// the winning match.
+  Future<_RoleResolution> _resolveAuthoritativeRoleDetailed({
+    required String uid,
+    String? phone,
+    String? currentRole,
+    DocumentSnapshot<Map<String, dynamic>>? prefetchedUserDoc,
   }) async {
     final firestore = _firestore;
     final fbUser = _auth?.currentUser;
@@ -141,7 +204,7 @@ class UserNotifier extends StateNotifier<User> {
       debugPrint(
           '[AUTH ROLE DEBUG] Admin lookup result: FOUND by phone number ($effectivePhone -> normalized: $normalizedPhone, role: ${phoneRole.value})');
       debugPrint('[AUTH ROLE DEBUG] Detected role: ${phoneRole.value}');
-      return phoneRole.value;
+      return _RoleResolution(phoneRole.value);
     }
 
     if (firestore == null || uid.isEmpty) {
@@ -151,8 +214,62 @@ class UserNotifier extends StateNotifier<User> {
       debugPrint(
           '[AUTH ROLE DEBUG] Admin lookup result: Firestore unavailable or empty UID. Falling back to: $safeRole');
       debugPrint('[AUTH ROLE DEBUG] Detected role: $safeRole');
-      return safeRole;
+      return _RoleResolution(safeRole);
     }
+
+    // Start every independent lookup concurrently. Each is error-isolated and
+    // evaluated below in strict priority order via [_Lookup.unwrap].
+    final hasPhoneVariants = phoneVariants.isNotEmpty;
+    final hasNormalizedPhone = hasPhoneVariants && normalizedPhone.isNotEmpty;
+    final adminDocByUidF = _safeLookup(
+        () => firestore.collection('admins').doc(uid).get());
+    final adminQueryByUidF = _safeLookup(() => firestore
+        .collection('admins')
+        .where('uid', isEqualTo: uid)
+        .limit(1)
+        .get());
+    final adminQueryByPhoneF = hasPhoneVariants
+        ? _safeLookup(() => firestore
+            .collection('admins')
+            .where('phone', whereIn: phoneVariants)
+            .limit(1)
+            .get())
+        : null;
+    final adminDocByPhoneF = hasNormalizedPhone
+        ? _safeLookup(
+            () => firestore.collection('admins').doc(normalizedPhone).get())
+        : null;
+    final agentDocByUidF = _safeLookup(
+        () => firestore.collection('delivery_agents').doc(uid).get());
+    final agentQueryByUidF = _safeLookup(() => firestore
+        .collection('delivery_agents')
+        .where('uid', isEqualTo: uid)
+        .limit(1)
+        .get());
+    final agentQueryByPhoneF = hasPhoneVariants
+        ? _safeLookup(() => firestore
+            .collection('delivery_agents')
+            .where('phone', whereIn: phoneVariants)
+            .limit(1)
+            .get())
+        : null;
+    final agentDocByPhoneF = hasNormalizedPhone
+        ? _safeLookup(() => firestore
+            .collection('delivery_agents')
+            .doc(normalizedPhone)
+            .get())
+        : null;
+    final userDocF = prefetchedUserDoc != null
+        ? Future.value(
+            _Lookup<DocumentSnapshot<Map<String, dynamic>>>.ok(
+                prefetchedUserDoc))
+        : _safeLookup(() => firestore.collection('users').doc(uid).get());
+    final orphanQueryF = hasPhoneVariants
+        ? _safeLookup(() => firestore
+            .collection('users')
+            .where('phone', whereIn: phoneVariants)
+            .get())
+        : null;
 
     // 2. Check `admins` collection
     try {
@@ -209,22 +326,18 @@ class UserNotifier extends StateNotifier<User> {
       }
 
       // 2a. Check by direct doc ID == uid
-      final adminDocByUid = await firestore.collection('admins').doc(uid).get();
+      final adminDocByUid = (await adminDocByUidF).unwrap();
       if (adminDocByUid.exists && adminDocByUid.data() != null) {
         final data = adminDocByUid.data()!;
         final resolvedRole = await linkAdminMatch(data, uid);
         debugPrint(
             '[AUTH ROLE DEBUG] Admin lookup result: FOUND in admins collection by doc ID (docId: $uid, data: $data)');
         debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
-        return resolvedRole;
+        return _RoleResolution(resolvedRole);
       }
 
       // 2b. Check by `uid` field
-      final adminQueryByUid = await firestore
-          .collection('admins')
-          .where('uid', isEqualTo: uid)
-          .limit(1)
-          .get();
+      final adminQueryByUid = (await adminQueryByUidF).unwrap();
       if (adminQueryByUid.docs.isNotEmpty) {
         final doc = adminQueryByUid.docs.first;
         final data = doc.data();
@@ -232,16 +345,12 @@ class UserNotifier extends StateNotifier<User> {
         debugPrint(
             '[AUTH ROLE DEBUG] Admin lookup result: FOUND in admins collection by uid field (docId: ${doc.id}, data: $data)');
         debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
-        return resolvedRole;
+        return _RoleResolution(resolvedRole);
       }
 
       // 2c. Check by phone field match (e.g. test_admin doc with phone: "+919999999999")
       if (phoneVariants.isNotEmpty) {
-        final adminQueryByPhone = await firestore
-            .collection('admins')
-            .where('phone', whereIn: phoneVariants)
-            .limit(1)
-            .get();
+        final adminQueryByPhone = (await adminQueryByPhoneF!).unwrap();
         if (adminQueryByPhone.docs.isNotEmpty) {
           final doc = adminQueryByPhone.docs.first;
           final data = doc.data();
@@ -249,20 +358,19 @@ class UserNotifier extends StateNotifier<User> {
           debugPrint(
               '[AUTH ROLE DEBUG] Admin lookup result: FOUND in admins collection by phone field match (docId: ${doc.id}, matchedPhone: ${data['phone']})');
           debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
-          return resolvedRole;
+          return _RoleResolution(resolvedRole);
         }
 
         // 2d. Check by doc ID == normalized phone
         if (normalizedPhone.isNotEmpty) {
-          final adminDocByPhone =
-              await firestore.collection('admins').doc(normalizedPhone).get();
+          final adminDocByPhone = (await adminDocByPhoneF!).unwrap();
           if (adminDocByPhone.exists && adminDocByPhone.data() != null) {
             final data = adminDocByPhone.data()!;
             final resolvedRole = await linkAdminMatch(data, adminDocByPhone.id);
             debugPrint(
                 '[AUTH ROLE DEBUG] Admin lookup result: FOUND in admins collection by doc ID==phone (docId: ${adminDocByPhone.id}, data: $data)');
             debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
-            return resolvedRole;
+            return _RoleResolution(resolvedRole);
           }
         }
       }
@@ -332,23 +440,18 @@ class UserNotifier extends StateNotifier<User> {
       }
 
       // 3a. Check by direct doc ID == uid
-      final agentDocByUid =
-          await firestore.collection('delivery_agents').doc(uid).get();
+      final agentDocByUid = (await agentDocByUidF).unwrap();
       if (agentDocByUid.exists && agentDocByUid.data() != null) {
         final data = agentDocByUid.data()!;
         final resolvedRole = await linkDeliveryAgentMatch(data, uid);
         debugPrint(
             '[AUTH ROLE DEBUG] Admin lookup result: NOT admin. FOUND in delivery_agents by doc ID ($uid)');
         debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
-        return resolvedRole;
+        return _RoleResolution(resolvedRole);
       }
 
       // 3b. Check by `uid` field
-      final agentQueryByUid = await firestore
-          .collection('delivery_agents')
-          .where('uid', isEqualTo: uid)
-          .limit(1)
-          .get();
+      final agentQueryByUid = (await agentQueryByUidF).unwrap();
       if (agentQueryByUid.docs.isNotEmpty) {
         final doc = agentQueryByUid.docs.first;
         final data = doc.data();
@@ -356,16 +459,12 @@ class UserNotifier extends StateNotifier<User> {
         debugPrint(
             '[AUTH ROLE DEBUG] Admin lookup result: NOT admin. FOUND in delivery_agents by uid field (${doc.id})');
         debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
-        return resolvedRole;
+        return _RoleResolution(resolvedRole);
       }
 
       // 3c. Check by phone field match
       if (phoneVariants.isNotEmpty) {
-        final agentQueryByPhone = await firestore
-            .collection('delivery_agents')
-            .where('phone', whereIn: phoneVariants)
-            .limit(1)
-            .get();
+        final agentQueryByPhone = (await agentQueryByPhoneF!).unwrap();
         if (agentQueryByPhone.docs.isNotEmpty) {
           final doc = agentQueryByPhone.docs.first;
           final data = doc.data();
@@ -373,22 +472,19 @@ class UserNotifier extends StateNotifier<User> {
           debugPrint(
               '[AUTH ROLE DEBUG] Admin lookup result: NOT admin. FOUND in delivery_agents by phone field match (${doc.id})');
           debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
-          return resolvedRole;
+          return _RoleResolution(resolvedRole);
         }
 
         // 3d. Check by doc ID == normalized phone
         if (normalizedPhone.isNotEmpty) {
-          final agentDocByPhone = await firestore
-              .collection('delivery_agents')
-              .doc(normalizedPhone)
-              .get();
+          final agentDocByPhone = (await agentDocByPhoneF!).unwrap();
           if (agentDocByPhone.exists && agentDocByPhone.data() != null) {
             final data = agentDocByPhone.data()!;
             final resolvedRole = await linkDeliveryAgentMatch(data, agentDocByPhone.id);
             debugPrint(
                 '[AUTH ROLE DEBUG] Admin lookup result: NOT admin. FOUND in delivery_agents by doc ID==phone (${agentDocByPhone.id})');
             debugPrint('[AUTH ROLE DEBUG] Detected role: $resolvedRole');
-            return resolvedRole;
+            return _RoleResolution(resolvedRole);
           }
         }
       }
@@ -397,8 +493,10 @@ class UserNotifier extends StateNotifier<User> {
     }
 
     // 4. Check `users` collection for role on users/{uid}
+    DocumentSnapshot<Map<String, dynamic>>? fetchedUserDoc;
     try {
-      final userDoc = await firestore.collection('users').doc(uid).get();
+      final userDoc = (await userDocF).unwrap();
+      fetchedUserDoc = userDoc;
       if (userDoc.exists && userDoc.data() != null) {
         final data = userDoc.data()!;
         final rawRole = data['role'] as String?;
@@ -408,7 +506,7 @@ class UserNotifier extends StateNotifier<User> {
             debugPrint(
                 '[AUTH ROLE DEBUG] Role lookup: Found privileged role in users/$uid with role=$rawRole (clean: $cleanRole)');
             debugPrint('[AUTH ROLE DEBUG] Detected role: $cleanRole');
-            return cleanRole;
+            return _RoleResolution(cleanRole, userDoc: userDoc);
           }
         }
       }
@@ -421,10 +519,7 @@ class UserNotifier extends StateNotifier<User> {
     // atomically copy its role, profile fields, status to users/{uid} and safely clean up the orphan.
     try {
       if (phoneVariants.isNotEmpty) {
-        final staffQuery = await firestore
-            .collection('users')
-            .where('phone', whereIn: phoneVariants)
-            .get();
+        final staffQuery = (await orphanQueryF!).unwrap();
         for (final sDoc in staffQuery.docs) {
           if (sDoc.id != uid) {
             final sData = sDoc.data();
@@ -513,7 +608,7 @@ class UserNotifier extends StateNotifier<User> {
                       '[AUTH ROLE DEBUG] Migration verified & orphaned doc ${sDoc.id} safely removed.');
                 }
 
-                return cleanRole;
+                return _RoleResolution(cleanRole);
               }
             }
           }
@@ -528,7 +623,9 @@ class UserNotifier extends StateNotifier<User> {
     debugPrint(
         '[AUTH ROLE DEBUG] Admin lookup result: NOT found in privileged collections. Defaulting to: $fallbackRole');
     debugPrint('[AUTH ROLE DEBUG] Detected role: $fallbackRole');
-    return fallbackRole;
+    // No linking/migration writes happened on this path, so the users/{uid}
+    // snapshot fetched above is still current and can be reused by callers.
+    return _RoleResolution(fallbackRole, userDoc: fetchedUserDoc);
   }
 
   void _startUserDocListener(String uid) {
@@ -668,7 +765,11 @@ class UserNotifier extends StateNotifier<User> {
         if (state.id.isNotEmpty) {
           _syncFromFirestore(state.id);
           _startUserDocListener(state.id);
-          _syncFcmToken(state.id);
+          // FCM token registration is deferred until after the first frame so
+          // getToken() (service worker / VAPID on web) never competes with the
+          // first visible screen. FcmService/NotificationService also register
+          // the token post-frame; this remains as a best-effort safety net.
+          _scheduleDeferredFcmTokenSync(state.id);
         }
       }
     } catch (e) {
@@ -688,13 +789,17 @@ class UserNotifier extends StateNotifier<User> {
     final firestore = _firestore;
     if (firestore == null) return;
     try {
-      final resolvedRole = await _resolveAuthoritativeRole(
+      final resolution = await _resolveAuthoritativeRoleDetailed(
         uid: uid,
         phone: state.phone,
         currentRole: state.role,
       );
+      final resolvedRole = resolution.role;
 
-      final doc = await firestore.collection('users').doc(uid).get();
+      // Reuse the users/{uid} snapshot fetched during role resolution when no
+      // linking writes occurred; otherwise re-read to pick up linked fields.
+      final doc = resolution.userDoc ??
+          await firestore.collection('users').doc(uid).get();
       if (doc.exists) {
         final data = doc.data();
         if (data != null) {
@@ -809,6 +914,7 @@ class UserNotifier extends StateNotifier<User> {
           phone: user.phone,
           currentRole:
               doc.exists ? (doc.data()?['role'] as String?) : user.role,
+          prefetchedUserDoc: doc,
         );
 
         if (doc.exists) {
@@ -1043,6 +1149,24 @@ class UserNotifier extends StateNotifier<User> {
       final sessionJson = jsonEncode(user.toMap());
       await prefs.setString(_sessionKey, sessionJson);
     } catch (_) {}
+  }
+
+  /// Runs [_syncFcmToken] after the next frame has been rendered, and only if
+  /// the same user is still signed in at that point.
+  void _scheduleDeferredFcmTokenSync(String uid) {
+    if (uid.isEmpty) return;
+    void run() {
+      if (mounted && state.id == uid) {
+        _syncFcmToken(uid);
+      }
+    }
+
+    try {
+      SchedulerBinding.instance.endOfFrame.then((_) => run());
+    } catch (_) {
+      // Binding unavailable (e.g. pure unit tests): fall back to async.
+      Future<void>.delayed(Duration.zero, run);
+    }
   }
 
   /// Synchronizes FCM token with user profile in Firestore

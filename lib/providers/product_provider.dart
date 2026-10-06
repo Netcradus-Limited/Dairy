@@ -6,9 +6,14 @@ import '../repositories/firestore_product_repository.dart';
 export 'cart_provider.dart';
 
 /// Provides the Cloud Firestore-backed product/category repository.
+///
+/// Auto-seeding is disabled here: this provider backs customer-facing screens,
+/// and customers cannot write the catalog under Firestore rules. Missing
+/// defaults are already merged client-side by the repository streams. Seeding
+/// of default catalog documents runs from `AdminProvider` (admin routes only).
 final firestoreProductRepoProvider =
     Provider<FirestoreProductRepository>((ref) {
-  return FirestoreProductRepository();
+  return FirestoreProductRepository(null, false);
 });
 
 // ─── Category stream from Firestore ─────────────────────────────────────────
