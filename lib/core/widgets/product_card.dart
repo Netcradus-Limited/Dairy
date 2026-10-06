@@ -123,6 +123,8 @@ class _ProductCardState extends State<ProductCard> {
                                 img = Image.asset(
                                   image,
                                   fit: BoxFit.contain,
+                                  cacheWidth: 320,
+                                  gaplessPlayback: true,
                                   errorBuilder: (context, error, stackTrace) {
                                     debugPrint(
                                         'ProductCard: Image.asset failed for "$image": $error');
@@ -138,7 +140,12 @@ class _ProductCardState extends State<ProductCard> {
                                     categoryKey: p.categoryId);
                                 img = (fallback != null &&
                                         fallback.startsWith('assets/'))
-                                    ? Image.asset(fallback, fit: BoxFit.contain)
+                                    ? Image.asset(
+                                        fallback,
+                                        fit: BoxFit.contain,
+                                        cacheWidth: 320,
+                                        gaplessPlayback: true,
+                                      )
                                     : const Icon(
                                         Icons.image_not_supported_outlined,
                                         size: 32,

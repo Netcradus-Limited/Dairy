@@ -26,15 +26,6 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
   bool _isVideoInitialized = false;
   bool _videoHasError = false;
 
-  final CarouselSliderController _middleCarouselController =
-      CarouselSliderController();
-  int _middleBannerIndex = 0;
-
-  final List<String> _middleBanners = [
-    'assets/images/1.png',
-    'assets/images/2.png',
-    'assets/images/3.png',
-  ];
 
   @override
   void initState() {
@@ -361,6 +352,8 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                                             ? Image.network(
                                                 cat['image'] ?? '',
                                                 fit: BoxFit.contain,
+                                                cacheWidth: 160,
+                                                gaplessPlayback: true,
                                                 errorBuilder: (context, error,
                                                     stackTrace) {
                                                   return const Icon(
@@ -375,6 +368,8 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                                                 fit: cat['id'] == 'cat_all'
                                                     ? BoxFit.cover
                                                     : BoxFit.contain,
+                                                cacheWidth: 160,
+                                                gaplessPlayback: true,
                                                 errorBuilder: (context, error,
                                                     stackTrace) {
                                                   return const Icon(
@@ -508,33 +503,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
               const SizedBox(height: 24),
 
               // ── Middle Promotional Banners ──
-              _buildMiddlePromoBanner(),
-              const SizedBox(height: 8),
-
-              // Middle Banner Indicator Dots
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_middleBanners.length, (index) {
-                  final isActive = index == _middleBannerIndex;
-                  return GestureDetector(
-                    onTap: () {
-                      _middleCarouselController.animateToPage(index);
-                      setState(() => _middleBannerIndex = index);
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 2.5),
-                      width: isActive ? 12 : 5,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? const Color(0xFF005F38)
-                            : const Color(0xFFCBD5E1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  );
-                }),
-              ),
+              const _ShopMiddlePromoBanner(),
               const SizedBox(height: 24),
 
               // ── Bottom Benefits Strip ──
@@ -590,55 +559,6 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     );
   }
 
-  Widget _buildMiddlePromoBanner() {
-    final isTest =
-        WidgetsBinding.instance.runtimeType.toString().contains('Test');
-
-    return CarouselSlider(
-      carouselController: _middleCarouselController,
-      options: CarouselOptions(
-        aspectRatio: 1764 / 608,
-        viewportFraction: 1.0,
-        autoPlay: !isTest,
-        autoPlayInterval: const Duration(seconds: 4),
-        enlargeCenterPage: false,
-        onPageChanged: (index, reason) {
-          setState(() {
-            _middleBannerIndex = index;
-          });
-        },
-      ),
-      items: _middleBanners.map((imagePath) {
-        return Container(
-          width: double.infinity,
-          margin: const EdgeInsets.symmetric(horizontal: 2.0),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Image.asset(
-              imagePath,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: const Color(0xFF005F38),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'Sawariya Dairy Special',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold),
-                  ),
-                );
-              },
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
 
   Widget _buildBenefitsRow() {
     return Container(
@@ -846,6 +766,119 @@ class _BenefitItem extends StatelessWidget {
             fontSize: 7.5,
             color: Color(0xFF667085),
           ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Middle Promotional Banner Carousel (Isolated Rebuild Widget)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ShopMiddlePromoBanner extends StatefulWidget {
+  const _ShopMiddlePromoBanner();
+
+  @override
+  State<_ShopMiddlePromoBanner> createState() => _ShopMiddlePromoBannerState();
+}
+
+class _ShopMiddlePromoBannerState extends State<_ShopMiddlePromoBanner> {
+  final CarouselSliderController _carouselController =
+      CarouselSliderController();
+  int _currentIndex = 0;
+
+  static const List<String> _bannerImages = [
+    'assets/images/1.png',
+    'assets/images/2.png',
+    'assets/images/3.png',
+  ];
+
+  late final List<Widget> _bannerItems;
+
+  @override
+  void initState() {
+    super.initState();
+    _bannerItems = _bannerImages.map((imagePath) {
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.symmetric(horizontal: 2.0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Image.asset(
+            imagePath,
+            fit: BoxFit.contain,
+            gaplessPlayback: true,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                color: const Color(0xFF005F38),
+                alignment: Alignment.center,
+                child: const Text(
+                  'Sawariya Dairy Special',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }).toList(growable: false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isTest =
+        WidgetsBinding.instance.runtimeType.toString().contains('Test');
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CarouselSlider(
+          carouselController: _carouselController,
+          options: CarouselOptions(
+            aspectRatio: 1764 / 608,
+            viewportFraction: 1.0,
+            autoPlay: !isTest,
+            autoPlayInterval: const Duration(seconds: 4),
+            enlargeCenterPage: false,
+            onPageChanged: (index, reason) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+          ),
+          items: _bannerItems,
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(_bannerImages.length, (index) {
+            final isActive = index == _currentIndex;
+            return GestureDetector(
+              onTap: () {
+                _carouselController.animateToPage(index);
+                setState(() => _currentIndex = index);
+              },
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                width: isActive ? 12 : 5,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? const Color(0xFF005F38)
+                      : const Color(0xFFCBD5E1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            );
+          }),
         ),
       ],
     );
