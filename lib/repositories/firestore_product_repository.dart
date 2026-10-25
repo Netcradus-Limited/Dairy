@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/product.dart';
 import '../models/category.dart';
@@ -211,14 +212,32 @@ class FirestoreProductRepository {
 
   // ─── Default seeding ─────────────────────────────────────────────────────
 
+  static Future<void>? _activeSeedFuture;
+
   /// Safely seeds missing default categories and products (including Uple & Water)
   /// to Firestore.  Uses `SetOptions(merge: true)` with deterministic IDs so it
   /// never overwrites existing modified data or duplicates records.
   ///
   /// Existence checks are issued concurrently (single round trip) rather than
   /// sequentially, so seeding never holds up other Firestore traffic.
-  Future<void> seedDefaultsIfNeeded() async {
+  Future<void> seedDefaultsIfNeeded() {
+    if (_activeSeedFuture != null) {
+      return _activeSeedFuture!;
+    }
+    final future = _performSeedDefaultsIfNeeded().whenComplete(() {
+      _activeSeedFuture = null;
+    });
+    _activeSeedFuture = future;
+    return future;
+  }
+
+  Future<void> _performSeedDefaultsIfNeeded() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool('firestore_defaults_seeded_v1') == true) {
+        return;
+      }
+
       final batch = _db.batch();
       bool hasWrites = false;
 
@@ -264,7 +283,9 @@ class FirestoreProductRepository {
           name: 'FirestoreProductRepository',
         );
       }
+      await prefs.setBool('firestore_defaults_seeded_v1', true);
     } catch (e) {
+      _activeSeedFuture = null;
       developer.log(
         'seedDefaultsIfNeeded failed (non-fatal): $e',
         name: 'FirestoreProductRepository',

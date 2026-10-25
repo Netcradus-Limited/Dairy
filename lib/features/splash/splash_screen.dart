@@ -10,6 +10,7 @@ import '../../providers/notification_provider.dart';
 import '../../providers/onboarding_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/notification_service.dart';
+import '../auth/services/auth_video_service.dart';
 
 /// Premium Minimal Animated Splash Screen for Sawariya Dairy
 class SplashScreen extends ConsumerStatefulWidget {
@@ -90,6 +91,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     // If a session already exists, go straight to the relevant home screen or pending notification
     final user = ref.read(userProvider);
     if (user.id.isNotEmpty) {
+      AuthVideoService.instance.disposeAll();
       final pendingDest = ref.read(pendingNotificationDestinationProvider);
       if (pendingDest != null) {
         ref.read(pendingNotificationDestinationProvider.notifier).state = null;

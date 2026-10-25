@@ -44,6 +44,13 @@ class AuthVideoService {
   Future<void> _initializeController(VideoPlayerController controller) async {
     try {
       await controller.initialize();
+      // Guard against race condition if disposeAll() was called while awaiting initialize()
+      if (!_controllers.containsValue(controller)) {
+        try {
+          await controller.dispose();
+        } catch (_) {}
+        return;
+      }
       await controller.setVolume(0.0);
       await controller.setLooping(true);
 

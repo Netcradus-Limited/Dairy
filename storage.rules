@@ -15,8 +15,10 @@ service firebase.storage {
     }
 
     function isValidImage() {
-      return request.resource.size < 5 * 1024 * 1024
-          && request.resource.contentType.matches('image/.*');
+      return request.resource == null || (
+        request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*')
+      );
     }
 
     function canManageCatalog() {
@@ -26,6 +28,13 @@ service firebase.storage {
           firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
           && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superadmin', 'owner', 'manager']
         )
+      );
+    }
+
+    function isValidMedia() {
+      return request.resource == null || (
+        request.resource.size < 50 * 1024 * 1024
+        && (request.resource.contentType.matches('image/.*') || request.resource.contentType.matches('video/.*'))
       );
     }
 
@@ -57,7 +66,12 @@ service firebase.storage {
 
     match /banners/{allPaths=**} {
       allow read: if true;
-      allow write: if canManageCatalog() && isValidImage();
+      allow write: if canManageCatalog() && isValidMedia();
+    }
+
+    match /videos/{allPaths=**} {
+      allow read: if true;
+      allow write: if canManageCatalog() && isValidMedia();
     }
   }
 }

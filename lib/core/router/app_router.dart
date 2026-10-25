@@ -35,11 +35,16 @@ import '../../features/subscription/edit_subscription_screen.dart';
 import '../../providers/notification_provider.dart';
 import '../../services/notification_service.dart';
 import '../../services/fcm_service.dart';
+import '../../features/auth/services/auth_video_service.dart';
 import 'auth_refresh.dart';
 
 /// Global root navigator key for deep-link / push notification navigation.
 final GlobalKey<NavigatorState> rootNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'rootNavigator');
+
+/// Global RouteObserver for observing modal route push/pop (e.g. pausing background videos).
+final RouteObserver<ModalRoute<void>> appRouteObserver =
+    RouteObserver<ModalRoute<void>>();
 
 /// Central GoRouter configuration provider for Sawariya Dairy.
 ///
@@ -50,6 +55,7 @@ final GlobalKey<NavigatorState> rootNavigatorKey =
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: rootNavigatorKey,
+    observers: [appRouteObserver],
     initialLocation: '/splash',
     refreshListenable: authRefreshNotifier,
     redirect: (context, state) {
@@ -85,6 +91,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // 3. Authenticated users on auth screens:
       // If currently on an auth/onboarding screen, redirect to pending notification or their role's home panel
       else if (isAuthPath) {
+        AuthVideoService.instance.disposeAll();
         final pendingDest = ref.read(pendingNotificationDestinationProvider);
         if (pendingDest != null && path != '/splash') {
           WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:video_player/video_player.dart';
 import 'dart:ui';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/responsive/responsive.dart';
+import '../../core/widgets/app_video_player.dart';
+import '../../core/widgets/app_network_image.dart';
 import '../../core/widgets/product_card.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../providers/navigation_provider.dart';
@@ -22,50 +23,6 @@ class ShopScreen extends ConsumerStatefulWidget {
 }
 
 class _ShopScreenState extends ConsumerState<ShopScreen> {
-  late VideoPlayerController _videoController;
-  bool _isVideoInitialized = false;
-  bool _videoHasError = false;
-
-
-  @override
-  void initState() {
-    super.initState();
-    _videoController = VideoPlayerController.asset(
-      'assets/images/orderv.mp4',
-      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-    );
-    _videoController.initialize().then((_) async {
-      if (!mounted) return;
-      await _videoController.setVolume(0.0);
-      await _videoController.setLooping(true);
-      if (ref.read(navigationProvider) == 1) {
-        try {
-          await _videoController.play();
-        } catch (e) {
-          debugPrint('Shop video autoplay prevented: $e');
-        }
-      }
-      if (mounted) {
-        setState(() {
-          _isVideoInitialized = true;
-        });
-      }
-    }).catchError((e) {
-      debugPrint('Error initializing shop video: $e');
-      if (mounted) {
-        setState(() {
-          _videoHasError = true;
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _videoController.dispose();
-    super.dispose();
-  }
-
   void _resetFilters() {
     ref.read(productSearchQueryProvider.notifier).state = '';
     ref.read(selectedCategoryProvider.notifier).state = 'cat_all';
@@ -73,14 +30,8 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<int>(navigationProvider, (previous, next) {
-      if (!_isVideoInitialized) return;
-      if (next == 1) {
-        _videoController.play().catchError((_) {});
-      } else {
-        _videoController.pause().catchError((_) {});
-      }
-    });
+    final currentNav = ref.watch(navigationProvider);
+    final isShopActive = currentNav == 1;
 
     final allProducts = ref.watch(allProductsProvider);
     final cartQuantities = ref.watch(cartQuantitiesProvider);
@@ -243,7 +194,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
               ),
               const SizedBox(height: 16),
               // ── Promotional Banner ──
-              _buildPromoBanner(),
+              _buildPromoBanner(isShopActive),
               const SizedBox(height: 16),
               // ── Horizontal Categories Row ──
               SizedBox(
@@ -330,13 +281,13 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                                       if (isSelected)
                                         BoxShadow(
                                           color: getBorderColor(cat['id'])
-                                              .withOpacity(0.25),
+                                              .withValues(alpha: 0.25),
                                           blurRadius: 8,
                                           offset: const Offset(0, 3),
                                         )
                                       else
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.03),
+                                          color: Colors.black.withValues(alpha: 0.03),
                                           blurRadius: 4,
                                           offset: const Offset(0, 1.5),
                                         ),
@@ -445,21 +396,8 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
               const SizedBox(height: 12),
 
               // ── Products Grid ──
-              filteredProducts.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 40),
-                        child: EmptyStateWidget(
-                          icon: Icons.search_off_rounded,
-                          title: 'No products found',
-                          message:
-                              'No products match your filter. Try adjusting or reset.',
-                          buttonText: 'Reset Filters',
-                          onButtonPressed: _resetFilters,
-                        ),
-                      ),
-                    )
-                  : GridView.builder(
+              ref.watch(allProductsStreamProvider).isLoading && allProducts.isEmpty
+                  ? GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -472,7 +410,45 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                                 : 0.72)
                             : 0.79,
                       ),
-                      itemCount: filteredProducts.length,
+                      itemCount: 4,
+                      itemBuilder: (context, index) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF3F4F6),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        );
+                      },
+                    )
+                  : filteredProducts.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 40),
+                            child: EmptyStateWidget(
+                              icon: Icons.search_off_rounded,
+                              title: 'No products found',
+                              message:
+                                  'No products match your filter. Try adjusting or reset.',
+                              buttonText: 'Reset Filters',
+                              onButtonPressed: _resetFilters,
+                            ),
+                          ),
+                        )
+                      : GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: isMobile ? 2 : 3,
+                            crossAxisSpacing: 14,
+                            mainAxisSpacing: 14,
+                            childAspectRatio: isMobile
+                                ? (MediaQuery.sizeOf(context).width < 380
+                                    ? 0.68
+                                    : 0.72)
+                                : 0.79,
+                          ),
+                          itemCount: filteredProducts.length,
                       itemBuilder: (context, index) {
                         final product = filteredProducts[index];
                         final qty = cartQuantities[product.id] ?? 0;
@@ -516,7 +492,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     );
   }
 
-  Widget _buildPromoBanner() {
+  Widget _buildPromoBanner(bool isShopActive) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -524,36 +500,16 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: AspectRatio(
+        child: AppVideoPlayer(
+          videoPath: 'assets/images/orderv.mp4',
+          fallbackAssetImage: 'assets/images/1.png',
           aspectRatio: 2.0,
-          child: (_videoController.value.hasError || _videoHasError)
-              ? Container(
-                  color: const Color(0xFF005F38),
-                  child: Image.asset(
-                    'assets/images/1.png',
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Center(
-                      child: Icon(Icons.play_circle_outline,
-                          size: 48, color: Colors.white),
-                    ),
-                  ),
-                )
-              : (!_isVideoInitialized
-                  ? Container(
-                      color: const Color(0xFF005F38),
-                      alignment: Alignment.center,
-                      child: const CircularProgressIndicator(
-                        color: Colors.white,
-                      ),
-                    )
-                  : FittedBox(
-                      fit: BoxFit.cover,
-                      child: SizedBox(
-                        width: _videoController.value.size.width,
-                        height: _videoController.value.size.height,
-                        child: VideoPlayer(_videoController),
-                      ),
-                    )),
+          fit: BoxFit.cover,
+          autoPlay: true,
+          looping: true,
+          muted: true,
+          isActiveTab: isShopActive,
+          borderRadius: BorderRadius.circular(16),
         ),
       ),
     );
@@ -634,15 +590,15 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withOpacity(0.08),
+                          color: AppColors.primary.withValues(alpha: 0.08),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
                       ],
                     ),
                     child: (cat['image'] ?? '').startsWith('http')
-                        ? Image.network(
-                            cat['image'] ?? '',
+                        ? AppNetworkImage(
+                            imageUrl: cat['image'] ?? '',
                             fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) => const Icon(
                               Icons.grid_view_rounded,

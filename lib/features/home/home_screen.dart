@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:video_player/video_player.dart';
 import 'dart:ui' show PointerDeviceKind;
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/localization/app_language.dart';
 import '../../core/responsive/responsive.dart';
+import '../../core/widgets/app_video_player.dart';
 import '../../core/widgets/category_card.dart';
 import '../../core/widgets/section_header.dart';
 import '../../providers/product_provider.dart';
@@ -53,9 +53,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
             // ─── 3. Categories Section ──────────────────────────────────────────
             categoriesAsync.when(
-              loading: () => const SizedBox(
-                height: 205,
-                child: Center(child: CircularProgressIndicator()),
+              loading: () => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SectionHeader(
+                    title: tr('Categories'),
+                    subtitle: tr('Farm fresh dairy essentials delivered daily'),
+                  ),
+                  const SizedBox(height: AppSizes.p14),
+                  SizedBox(
+                    height: 205,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: EdgeInsets.zero,
+                      itemCount: 4,
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(width: AppSizes.p14),
+                      itemBuilder: (_, __) => Container(
+                        width: isDesktop ? 195 : 170,
+                        height: 205,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               error: (_, __) => const SizedBox.shrink(),
               data: (categories) => Column(
@@ -177,7 +201,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 // 2. Hero Promotional Banner ("Pure Goodness, Delivered to Your Doorstep")
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _HeroPromotionalBanner extends ConsumerStatefulWidget {
+class _HeroPromotionalBanner extends ConsumerWidget {
   final VoidCallback onTap;
 
   const _HeroPromotionalBanner({
@@ -185,69 +209,10 @@ class _HeroPromotionalBanner extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<_HeroPromotionalBanner> createState() =>
-      _HeroPromotionalBannerState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentNav = ref.watch(navigationProvider);
+    final isHomeActive = currentNav == 0;
 
-class _HeroPromotionalBannerState
-    extends ConsumerState<_HeroPromotionalBanner> {
-  VideoPlayerController? _controller;
-  bool _isInitialized = false;
-  bool _hasError = false;
-
-  @override
-  void initState() {
-    super.initState();
-    final controller = VideoPlayerController.asset(
-      'assets/images/homenew2v.mp4',
-      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-    );
-    _controller = controller;
-    controller.initialize().then((_) async {
-      if (!mounted) return;
-      await controller.setVolume(0.0);
-      await controller.setLooping(true);
-      if (ref.read(navigationProvider) == 0) {
-        try {
-          await controller.play();
-        } catch (e) {
-          debugPrint('Banner video autoplay prevented: $e');
-        }
-      }
-      if (mounted) {
-        setState(() {
-          _isInitialized = true;
-        });
-      }
-    }).catchError((e) {
-      debugPrint('Error initializing banner video: $e');
-      if (mounted) {
-        setState(() {
-          _hasError = true;
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    ref.listen<int>(navigationProvider, (previous, next) {
-      final controller = _controller;
-      if (!_isInitialized || controller == null) return;
-      if (next == 0) {
-        controller.play().catchError((_) {});
-      } else {
-        controller.pause().catchError((_) {});
-      }
-    });
-
-    final controller = _controller;
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -262,44 +227,18 @@ class _HeroPromotionalBannerState
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(18),
-        child: AspectRatio(
-          aspectRatio: 2.0,
-          child: GestureDetector(
-            onTap: widget.onTap,
-            child: (controller == null || controller.value.hasError || _hasError)
-                ? Container(
-                    color: Colors.grey[200],
-                    padding: const EdgeInsets.all(8),
-                    child: Image.asset(
-                      'assets/images/banner1.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Center(
-                        child: Icon(Icons.play_circle_outline,
-                            size: 48, color: Color(0xFF005F38)),
-                      ),
-                    ),
-                  )
-                : (!_isInitialized
-                    ? Container(
-                        color: Colors.grey[200],
-                        child: const Center(
-                          child: CircularProgressIndicator(
-                            color: Color(0xFF005F38),
-                          ),
-                        ),
-                      )
-                    : FittedBox(
-                        fit: BoxFit.cover,
-                        child: SizedBox(
-                          width: controller.value.size.width > 0
-                              ? controller.value.size.width
-                              : 16,
-                          height: controller.value.size.height > 0
-                              ? controller.value.size.height
-                              : 9,
-                          child: VideoPlayer(controller),
-                        ),
-                      )),
+        child: GestureDetector(
+          onTap: onTap,
+          child: AppVideoPlayer(
+            videoPath: 'assets/images/homenew2v.mp4',
+            fallbackAssetImage: 'assets/images/banner1.png',
+            aspectRatio: 2.0,
+            fit: BoxFit.cover,
+            autoPlay: true,
+            looping: true,
+            muted: true,
+            isActiveTab: isHomeActive,
+            borderRadius: BorderRadius.circular(18),
           ),
         ),
       ),
@@ -580,108 +519,26 @@ class _BannerSlideItem extends StatelessWidget {
 // Why Choose Us Video Player Widget
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _WhyChooseUsVideo extends ConsumerStatefulWidget {
+class _WhyChooseUsVideo extends ConsumerWidget {
   const _WhyChooseUsVideo();
 
   @override
-  ConsumerState<_WhyChooseUsVideo> createState() => _WhyChooseUsVideoState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentNav = ref.watch(navigationProvider);
+    final isHomeActive = currentNav == 0;
 
-class _WhyChooseUsVideoState extends ConsumerState<_WhyChooseUsVideo> {
-  VideoPlayerController? _controller;
-  bool _isInitialized = false;
-  bool _hasError = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Defer initialization to after initial frame so hero banner and top content paint immediately
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _initVideo();
-    });
-  }
-
-  void _initVideo() {
-    final controller = VideoPlayerController.asset(
-      'assets/images/newhome2.mp4',
-      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-    );
-    _controller = controller;
-    controller.initialize().then((_) async {
-      if (!mounted) return;
-      await controller.setVolume(0.0);
-      await controller.setLooping(true);
-      if (ref.read(navigationProvider) == 0) {
-        try {
-          await controller.play();
-        } catch (e) {
-          debugPrint('Why choose us video autoplay prevented: $e');
-        }
-      }
-      if (mounted) {
-        setState(() {
-          _isInitialized = true;
-        });
-      }
-    }).catchError((e) {
-      debugPrint('Error initializing why video: $e');
-      if (mounted) {
-        setState(() {
-          _hasError = true;
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    ref.listen<int>(navigationProvider, (previous, next) {
-      final controller = _controller;
-      if (!_isInitialized || controller == null) return;
-      if (next == 0) {
-        controller.play().catchError((_) {});
-      } else {
-        controller.pause().catchError((_) {});
-      }
-    });
-
-    final controller = _controller;
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
-      child: AspectRatio(
-        aspectRatio: (_isInitialized && controller != null)
-            ? controller.value.aspectRatio
-            : 16 / 9,
-        child: (controller == null || controller.value.hasError || _hasError)
-            ? Container(
-                color: Colors.grey[200],
-                padding: const EdgeInsets.all(8),
-                child: Image.asset(
-                  'assets/images/banner2.png',
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Center(
-                    child: Icon(Icons.play_circle_outline,
-                        size: 48, color: Color(0xFF005F38)),
-                  ),
-                ),
-              )
-            : (!_isInitialized
-                ? Container(
-                    color: Colors.grey[200],
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF005F38),
-                      ),
-                    ),
-                  )
-                : VideoPlayer(controller)),
+      child: AppVideoPlayer(
+        videoPath: 'assets/images/newhome2.mp4',
+        fallbackAssetImage: 'assets/images/banner2.png',
+        aspectRatio: 16 / 9,
+        fit: BoxFit.cover,
+        autoPlay: true,
+        looping: true,
+        muted: true,
+        isActiveTab: isHomeActive,
+        borderRadius: BorderRadius.circular(16),
       ),
     );
   }

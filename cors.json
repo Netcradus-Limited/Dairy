@@ -1,12 +1,22 @@
 [
   {
     "origin": ["*"],
-    "method": ["GET", "HEAD", "PUT", "POST", "DELETE"],
+    "method": ["GET", "HEAD", "PUT", "POST", "DELETE", "OPTIONS"],
+    "requestHeader": [
+      "Content-Type",
+      "Range",
+      "Authorization",
+      "x-goog-resumable"
+    ],
     "responseHeader": [
       "Content-Type",
       "Access-Control-Allow-Origin",
       "x-goog-meta-uploadedat",
-      "x-goog-meta-firebasestoragedownloadtokens"
+      "x-goog-meta-firebasestoragedownloadtokens",
+      "Accept-Ranges",
+      "Content-Range",
+      "Content-Length",
+      "ETag"
     ],
     "maxAgeSeconds": 3600
   }
