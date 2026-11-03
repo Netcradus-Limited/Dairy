@@ -160,11 +160,15 @@ class ProfileScreen extends ConsumerWidget {
                                   'Legal & Policies',
                                   'Terms, privacy, refunds, delivery & deletion',
                                   () {
-                                    Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) =>
-                                                const LegalPoliciesScreen()));
+                                    if (GoRouter.maybeOf(context) != null) {
+                                      context.push('/privacy-policy');
+                                    } else {
+                                      Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const LegalPoliciesScreen()));
+                                    }
                                   },
                                 ),
                                 const Divider(
@@ -175,11 +179,15 @@ class ProfileScreen extends ConsumerWidget {
                                   'Delete Account',
                                   'Permanently remove account and personal data',
                                   () {
-                                    Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) =>
-                                                const AccountDeletionScreen()));
+                                    if (GoRouter.maybeOf(context) != null) {
+                                      context.push('/delete-account');
+                                    } else {
+                                      Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const AccountDeletionScreen()));
+                                    }
                                   },
                                   isDestructive: true,
                                 ),
@@ -436,16 +444,14 @@ class ProfileScreen extends ConsumerWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: isDestructive
-              ? const Color(0xFFFEE2E2)
-              : const Color(0xFFEAF5EF),
+          color:
+              isDestructive ? const Color(0xFFFEE2E2) : const Color(0xFFEAF5EF),
           shape: BoxShape.circle,
         ),
         child: Icon(
           icon,
-          color: isDestructive
-              ? const Color(0xFFDC2626)
-              : const Color(0xFF005F38),
+          color:
+              isDestructive ? const Color(0xFFDC2626) : const Color(0xFF005F38),
           size: 18,
         ),
       ),
@@ -454,9 +460,8 @@ class ProfileScreen extends ConsumerWidget {
         style: TextStyle(
           fontSize: 13.5,
           fontWeight: FontWeight.w700,
-          color: isDestructive
-              ? const Color(0xFFDC2626)
-              : const Color(0xFF172033),
+          color:
+              isDestructive ? const Color(0xFFDC2626) : const Color(0xFF172033),
         ),
       ),
       subtitle: Text(
@@ -464,9 +469,8 @@ class ProfileScreen extends ConsumerWidget {
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w500,
-          color: isDestructive
-              ? const Color(0xFFEF4444)
-              : const Color(0xFF98A2B3),
+          color:
+              isDestructive ? const Color(0xFFEF4444) : const Color(0xFF98A2B3),
         ),
       ),
       trailing: const Icon(

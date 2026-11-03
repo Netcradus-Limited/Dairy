@@ -25,6 +25,7 @@ class LegalPoliciesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
+      key: ValueKey(initialTabIndex),
       length: 6,
       initialIndex: initialTabIndex.clamp(0, 5),
       child: Title(
@@ -154,7 +155,8 @@ class LegalPoliciesScreen extends StatelessWidget {
             runSpacing: 8,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
@@ -169,7 +171,8 @@ class LegalPoliciesScreen extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFEF3C7),
                   borderRadius: BorderRadius.circular(20),
@@ -259,6 +262,8 @@ class LegalPoliciesScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSizes.p16),
               _buildContentCard(content),
+              const SizedBox(height: AppSizes.p20),
+              _buildWebFooter(context),
               const SizedBox(height: AppSizes.p32),
             ],
           ),
@@ -340,6 +345,8 @@ class LegalPoliciesScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: AppSizes.p20),
+              _buildWebFooter(context),
               const SizedBox(height: AppSizes.p32),
             ],
           ),
@@ -367,6 +374,8 @@ class LegalPoliciesScreen extends StatelessWidget {
               buildDpdpContentCard(dpdpDataProtectionContent),
               const SizedBox(height: AppSizes.p16),
               buildDpdpContactCard(),
+              const SizedBox(height: AppSizes.p20),
+              _buildWebFooter(context),
               const SizedBox(height: AppSizes.p32),
             ],
           ),
@@ -375,43 +384,181 @@ class LegalPoliciesScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildWebFooter(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 16,
+        runSpacing: 8,
+        children: [
+          Text(
+            '© 2026 SAWARIYA SARKAR DAIRY LLP',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const Text('•', style: TextStyle(color: AppColors.textSecondary)),
+          InkWell(
+            onTap: () {
+              if (GoRouter.maybeOf(context) != null) {
+                context.go('/privacy-policy');
+              }
+            },
+            child: Text(
+              'Privacy Policy',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          const Text('•', style: TextStyle(color: AppColors.textSecondary)),
+          InkWell(
+            onTap: () {
+              if (GoRouter.maybeOf(context) != null) {
+                context.go('/terms-and-conditions');
+              }
+            },
+            child: Text(
+              'Terms & Conditions',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          const Text('•', style: TextStyle(color: AppColors.textSecondary)),
+          InkWell(
+            onTap: () {
+              if (GoRouter.maybeOf(context) != null) {
+                context.go('/refund-policy');
+              }
+            },
+            child: Text(
+              'Refund Policy',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          const Text('•', style: TextStyle(color: AppColors.textSecondary)),
+          InkWell(
+            onTap: () {
+              if (GoRouter.maybeOf(context) != null) {
+                context.go('/delivery-policy');
+              }
+            },
+            child: Text(
+              'Delivery Policy',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          const Text('•', style: TextStyle(color: AppColors.textSecondary)),
+          InkWell(
+            onTap: () {
+              if (GoRouter.maybeOf(context) != null) {
+                context.go('/home');
+              }
+            },
+            child: Text(
+              'Home',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   static const String _privacyPolicyContent = '''
 1. DATA CONTROLLER & APP OVERVIEW
-SAWARIYA SARKAR DAIRY LLP ("Sawariya Dairy") operates this mobile application to deliver fresh milk, curd, paneer, and dairy products to consumers. This policy explains what information is collected, how it is used, and your rights under applicable Indian data protection laws.
-• Business Entity: SAWARIYA SARKAR DAIRY LLP [BUSINESS DECISION REQUIRED: Specify Registration / LLPIN / GSTIN]
+SAWARIYA SARKAR DAIRY LLP ("Sawariya Dairy", "we", "us", or "our") operates this mobile application and web platform to provide fresh milk, curd, paneer, and daily dairy delivery services. This Privacy Policy informs customers and delivery personnel about the categories of personal data we collect, how it is processed and shared, and the rights available under applicable Indian legal frameworks, including the Information Technology Act, 2000, the Information Technology (Reasonable Security Practices and Procedures and Sensitive Personal Data or Information) Rules, 2011, and the Digital Personal Data Protection Act, 2023 (DPDP Act).
 
-2. INFORMATION WE COLLECT
-• Authentication & Identity: Mobile phone number for SMS OTP login via Google Firebase Authentication. Customer name and optional email are collected to personalize your account.
-• Delivery Addresses: House number, street/area, landmark, city, state, postal PIN code, and contact phone number.
-• Location Data:
-   - Customers: Device location is requested on-demand only when you tap "Use Current Location" to assist with delivery address entry.
-   - Delivery Staff: Real-time GPS location is collected while on duty and online to provide active order tracking to customers.
-• Orders & Subscriptions: Products ordered, quantities, delivery time slots, recurring subscription frequency (Daily, Alternate Day, Weekly), and order timestamps.
-• Payments: The application supports CASH ON DELIVERY ONLY. We record order totals and collection status. We do NOT collect credit/debit card numbers, UPI PINs, or net banking credentials.
-• Customer Support: Ticket subject, category, description, and order reference submitted through the in-app support module.
-• Photos: Accessed via Camera or Photo Library solely when you upload a profile avatar or submit photographic evidence for missing, damaged, leaking, spoiled, or incorrect dairy items. Stored in Google Firebase Storage.
-• Push Notifications: Firebase Cloud Messaging (FCM) tokens to deliver order status and delivery alerts.
+• Data Fiduciary / Operating Entity: SAWARIYA SARKAR DAIRY LLP
+• Registered Business Address: Ground Floor, Khewat No. 253/260, Farukh Nagar Road, Tajnagar, Gurugram, Haryana
+• Official Website: https://sawariyasdairy.com
+• Contact Email: support@sawariyasdairy.com
+• Contact Telephone / WhatsApp: 9896703884
 
-3. HOW WE USE INFORMATION
-Your data is used strictly to fulfill orders, schedule dairy subscriptions, deliver goods to active service zones [BUSINESS DECISION REQUIRED: Specify Active Service Areas], provide customer grievance redressal, and maintain statutory financial records.
+Regulatory Staging Notice: The DPDP Act, 2023 and its statutory rules follow a phased implementation schedule established by the Central Government. We have structured this policy to align in good faith with core data protection principles while accurately reflecting the application's actual operational capabilities.
 
-4. THIRD-PARTY DATA PROCESSORS
-We do not sell personal data. Technical service providers include:
-• Google Cloud / Firebase (Authentication, Cloud Firestore database in India, Cloud Storage, Push Notifications)
-• India Post API & Photon (postal PIN code lookup)
-• OpenStreetMap (map tile rendering)
+2. CATEGORIES OF PERSONAL DATA COLLECTED & SOURCES
+We collect personal data directly from you and your device when you interact with the Sawariya Dairy platform:
 
-5. YOUR RIGHTS & ACCOUNT DELETION
-You may review, update, or permanently delete your account and personal data at any time via Profile → Delete Account in the app or via our web deletion resource:
-${AppStrings.accountDeletionUrl}
-Data retention follows statutory compliance requirements [BUSINESS DECISION REQUIRED: Specify Retention Period, e.g., 7–8 years under statutory commercial law].
+• Authentication & Account Profile: Mobile telephone number used for One-Time Password (OTP) verification through Google Firebase Authentication. Upon profile creation, your name and optional email address are collected to manage your account and deliver service notices.
+• Delivery Addresses: House/flat number, apartment or building name, street, locality, landmark, city, state, postal PIN code, and contact phone number, submitted by you to facilitate accurate physical deliveries.
+• Device Location Data:
+   - Customers: Precise device GPS coordinates are requested strictly on-demand only when you tap "Use Current Location" to assist in auto-populating delivery address details. Customer location is never tracked continuously or in the background. You can decline or revoke location permissions via your device settings at any time and enter address details manually.
+   - Delivery Staff: Real-time background and foreground GPS location is collected from delivery personnel exclusively while logged into a delivery staff account, having acknowledged the prominent in-app disclosure, and having toggled their shift status to "On Duty / Online". This tracking coordinates delivery routing, enables dispatch verification, and displays live order progress to customers awaiting their assigned delivery. Location tracking ceases immediately when the delivery partner marks their status as "Offline" or ends their shift.
+• Orders & Subscriptions: Ordered items, quantities, delivery slot preferences (morning and evening windows), subscription frequency (Daily, Alternate Day, Weekly, or custom schedules), delivery status history, and timestamps.
+• Payments (Cash on Delivery Only): The application operates exclusively on a CASH ON DELIVERY (COD) basis. We record order pricing totals, applicable discounts, and cash collection confirmation upon handover. We do NOT collect, process, or store credit/debit card numbers, CVVs, net banking credentials, or UPI payment PINs, and we do not integrate an online payment gateway.
+• Customer Support & Grievances: In-app support tickets collect ticket subject, category (such as late delivery, packaging, or quality concerns), description, and associated order references.
+• Profile Photos & Storage: Camera or photo library access is requested through system pickers solely when you choose to upload or update a profile avatar (or delivery staff profile picture). Uploaded photos are stored in Google Firebase Storage. In-app complaint tickets collect text descriptions; photographic documentation requested for product quality verification may be sent directly to customer support via email or WhatsApp.
+• Push Notifications: Firebase Cloud Messaging (FCM) device registration tokens are collected to deliver transactional order updates, delivery status alerts, and subscription notices to your device.
 
-6. GRIEVANCE DESK & CONTACT DETAILS
+3. PURPOSES OF PROCESSING & LEGAL GROUNDS
+Your personal data is processed for lawful, specified operational purposes:
+• Fulfilling and delivering dairy orders and recurring subscriptions within our active service areas.
+• Verifying user identity through SMS OTP for secure account access.
+• Communicating order status updates, delivery partner arrival notices, and service alerts.
+• Resolving customer inquiries, quality complaints, and grievances.
+• Maintaining commercial invoices, billing records, and tax documentation required under applicable Indian statutory laws.
+• Detecting, preventing, and addressing fraudulent orders or security incidents.
+Processing is based on your consent provided upon account creation or order placement, and legitimate operational use necessary to perform requested delivery services and comply with statutory obligations.
+
+4. THIRD-PARTY DATA PROCESSORS & INFRASTRUCTURE
+We do not sell, rent, or trade your personal data to advertisers or third-party data brokers. We engage technical service providers to support specific platform functions:
+• Google Cloud & Firebase: Core infrastructure services including Firebase Authentication, Cloud Firestore database, Firebase Cloud Storage, Cloud Functions, and Firebase Cloud Messaging (FCM). Where regional settings are configured, Indian regional data centers (such as Google Cloud's India regions) are utilized. Data processing by Google Cloud is subject to Google's applicable platform terms and security standards.
+• India Post API: Public postal directory service (api.postalpincode.in) queried to validate PIN codes and retrieve corresponding post office districts.
+• Photon Geocoder (Komoot): Geocoding service utilizing OpenStreetMap data (photon.komoot.io) to resolve GPS coordinates into approximate street and locality names.
+• OpenStreetMap: Map tile services (tile.openstreetmap.org) utilized to render interactive delivery tracking maps.
+Third-party providers process data solely as necessary to perform their respective technical functions.
+
+5. DATA RETENTION & ACCOUNT DELETION
+• Personal Data Erasure: When you initiate account deletion, your Firebase Authentication account is permanently deleted, your profile details (name, email, avatar reference) are de-identified, your saved addresses, shopping cart items, notification records, and FCM tokens are erased, and active subscriptions are cancelled immediately.
+• Statutory Retention: In accordance with Indian commercial, tax, and accounting regulations, historical tax invoices, order line items, and Cash on Delivery payment totals are retained in a de-identified format strictly for statutory accounting and legal compliance, after which they are permanently purged.
+• Backup Lifecycles: Routine system logs and database backup snapshots expire in accordance with standard cloud infrastructure lifecycle schedules.
+
+6. YOUR PRIVACY RIGHTS & HOW TO EXERCISE THEM
+Subject to applicable Indian legal requirements and phased statutory rollout schedules, you have the following rights regarding your personal data:
+• Access & Correction: You may view and edit your profile details and saved delivery addresses directly within the application's Profile settings.
+• Consent Withdrawal: You may withdraw consent for location access or push notifications at any time through your device operating system permissions.
+• Account Deletion: You may request complete erasure of your account and eligible personal data through any of the following channels:
+   - In-App: Go to Profile → Delete Account, review the disclosure, and tap "Permanently Delete Account".
+   - Web Deletion Page: Visit ${AppStrings.accountDeletionUrl} to review deletion policies and submit a deletion request.
+   - Email / Helpline Request: If you cannot log in or have uninstalled the app, email support@sawariyasdairy.com or call 9896703884 with your registered mobile phone number. After ownership verification, your account will be processed for deletion.
+
+7. GRIEVANCE REDRESSAL & CONTACT INFORMATION
+For privacy questions, data requests, or grievances concerning personal data processing, you may contact our Grievance Desk:
+
 SAWARIYA SARKAR DAIRY LLP
 • Support Email: support@sawariyasdairy.com
-• Support Phone: 9896703884
-• Business Address: Ground Floor, Khewat No. 253/260, Farukh Nagar Road, Tajnagar, Gurugram, Haryana
+• Helpline / WhatsApp: 9896703884
+• Registered Business Address: Ground Floor, Khewat No. 253/260, Farukh Nagar Road, Tajnagar, Gurugram, Haryana
 • Official Website: https://sawariyasdairy.com
+
+We review and address data privacy inquiries in accordance with applicable grievance response timelines under Indian law.
 ''';
 
   static String get _termsContent => TermsAndConditionsScreen.termsText;
@@ -425,7 +572,7 @@ SAWARIYA SARKAR DAIRY LLP
 • Customers may cancel an order before it enters preparation/delivery, subject to its current order status.
 • Once a fresh/perishable order enters preparation or dispatch, cancellation may not be available.
 • Subscription cancellation affects future eligible deliveries and does not automatically cancel already prepared or dispatched orders.
-• Subscription deliveries may be paused, skipped, or modified only when the applicable cutoff allows it [BUSINESS DECISION REQUIRED: Specify Cancellation Cutoff Time, e.g., 8:00 PM previous day].
+• Subscription deliveries may be paused, skipped, or modified prior to the applicable operational cutoff window.
 
 3. QUALITY CONCERNS & DEFECTIVE / MISSING GOODS
 • Fresh/perishable dairy products generally cannot be returned after successful delivery.
@@ -436,7 +583,7 @@ SAWARIYA SARKAR DAIRY LLP
 4. RESOLUTION METHODS
 • Approved complaints may be resolved through replacement, order adjustment, or another appropriate resolution agreed with Support.
 • No refund is provided solely because a customer changes their mind after successful delivery of a perishable product.
-• Approved adjustments or replacements are processed according to operational schedules [BUSINESS DECISION REQUIRED: Specify Resolution / Adjustment Timeline, e.g., 2–3 business days].
+• Approved adjustments or replacements are processed according to operational schedules in coordination with customer support.
 
 5. CONTACT & GRIEVANCE REDRESSAL
 • Company: SAWARIYA SARKAR DAIRY LLP
@@ -448,15 +595,15 @@ SAWARIYA SARKAR DAIRY LLP
 
   static const String _deliveryContent = '''
 1. SERVICE AREAS & OPERATIONAL AVAILABILITY
-• Delivery is available only in active Sawariya Dairy service areas [BUSINESS DECISION REQUIRED: Specify Active Service Zones / Cities].
-• Available delivery slots are shown according to operational availability [BUSINESS DECISION REQUIRED: Specify Delivery Operating Hours].
+• Delivery is available only in active Sawariya Dairy service areas and delivery corridors.
+• Available delivery slots are shown during checkout according to operational availability (typically morning and evening delivery windows).
 
 2. ACCURATE ADDRESS & PHONE NUMBER
 • Customers must provide an accurate delivery address and reachable phone number.
 • Customers must ensure reasonable physical access for the delivery agent (e.g., gate clearance, security access, designated drop area).
 
 3. SUBSCRIPTIONS & CUTOFF TIMES
-• Subscription deliveries may be paused or skipped only when the applicable cutoff allows it [BUSINESS DECISION REQUIRED: Specify Daily Cutoff Time, e.g., 8:00 PM previous day].
+• Subscription deliveries may be paused or skipped prior to the applicable operational cutoff window.
 
 4. CUSTOMER UNAVAILABILITY & ATTEMPTED DELIVERY
 • If the customer is unavailable, delivery may be retried or marked unsuccessful according to operational availability.
@@ -478,29 +625,31 @@ SAWARIYA SARKAR DAIRY LLP
 ''';
 
   static const String _accountDeletionContent = '''
-1. RIGHT TO ERASURE
-You have the right to permanently delete your Sawariya Dairy account and erase your personal data.
+1. RIGHT TO REQUEST DELETION
+You have the right to request permanent deletion of your Sawariya Dairy account and erasure of your personal data.
 
-2. WHAT IS DELETED IMMEDIATELY
-• Firebase Authentication credentials and active login sessions.
-• Personal profile information (name, avatar, email).
-• Saved delivery addresses and GPS coordinates.
-• Shopping cart items and device push notification registration tokens.
-• Active recurring subscriptions are immediately cancelled.
+2. WHAT IS ERASED UPON DELETION
+• Firebase Authentication credentials and active session tokens.
+• Profile personal details (customer name, email address, profile avatar reference).
+• Saved delivery addresses and associated location coordinates.
+• Active shopping cart items and saved delivery preferences.
+• Push notification registration tokens (FCM tokens).
+• Active recurring subscriptions are immediately cancelled so no future deliveries are scheduled.
 
-3. WHAT IS RETAINED & STATUTORY JUSTIFICATION
-In accordance with Indian tax, GST, and commercial accounting regulations, historical invoices, order line items, and Cash on Delivery payment records are retained in a de-identified format strictly for statutory accounting compliance [BUSINESS DECISION REQUIRED: Specify Retention Period, e.g., 7–8 years under statutory commercial law].
+3. WHAT IS RETAINED & STATUTORY LIMITATIONS
+• Historical tax invoices, completed order line items, and Cash on Delivery payment totals are retained in a de-identified format to comply with statutory commercial accounting, taxation, and legal audit requirements under Indian law.
+• Standard system infrastructure logs and database backup snapshots cycle out automatically in accordance with cloud service lifecycle schedules.
 
 4. HOW TO INITIATE DELETION
-• In-App: Tap the "Proceed to Account Deletion" button below.
-• Web Request: Visit our public deletion page:
-  ${AppStrings.accountDeletionUrl}
+• In-App (Recommended): Log in, navigate to Profile → Delete Account, review the confirmation details, and tap "Permanently Delete Account".
+• Public Web Page: Visit our deletion page at ${AppStrings.accountDeletionUrl} to review deletion procedures and initiate your request.
+• Email or Telephone Request: If you cannot access the application or have uninstalled it, you may submit a deletion request by emailing support@sawariyasdairy.com or calling 9896703884 with your registered mobile number. Following verification of account ownership, your deletion request will be processed.
 
-5. GRIEVANCE & PRIVACY DESK
+5. GRIEVANCE & PRIVACY CONTACT
 SAWARIYA SARKAR DAIRY LLP
 • Support Email: support@sawariyasdairy.com
-• Support Phone: 9896703884
-• Business Address: Ground Floor, Khewat No. 253/260, Farukh Nagar Road, Tajnagar, Gurugram, Haryana
+• Support Phone / WhatsApp: 9896703884
+• Registered Business Address: Ground Floor, Khewat No. 253/260, Farukh Nagar Road, Tajnagar, Gurugram, Haryana
 • Official Website: https://sawariyasdairy.com
 ''';
 }

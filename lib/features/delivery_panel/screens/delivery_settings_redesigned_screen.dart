@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/constants/app_colors.dart';
@@ -149,7 +150,7 @@ class _DeliverySettingsRedesignedScreenState
     );
   }
 
-  void _showInfoDialog(String title, String message) {
+  void _showInfoDialog(String title, String message, {String? route}) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -162,6 +163,22 @@ class _DeliverySettingsRedesignedScreenState
           style: GoogleFonts.plusJakartaSans(fontSize: 13),
         ),
         actions: [
+          if (route != null)
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                if (GoRouter.maybeOf(context) != null) {
+                  context.push(route);
+                }
+              },
+              child: Text(
+                'View Full Policy',
+                style: GoogleFonts.plusJakartaSans(
+                  color: DeliveryTheme.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(
@@ -209,103 +226,105 @@ class _DeliverySettingsRedesignedScreenState
                         BorderRadius.circular(DeliveryTheme.cardRadius),
                     clipBehavior: Clip.antiAlias,
                     child: Column(
-                    children: [
-                      // 1. Notifications toggle (Persisted via SettingsProvider)
-                      _buildSwitchTile(
-                        icon: Icons.notifications_none_rounded,
-                        title: 'Notifications',
-                        value: notificationsEnabled,
-                        onChanged: (val) {
-                          ref
-                              .read(settingsProvider.notifier)
-                              .updateNotifications(val);
-                        },
-                      ),
-                      const Divider(
-                          height: 1, indent: 54, color: Color(0xFFECEFF1)),
-
-                      // 2. Location Services
-                      _buildSwitchTile(
-                        icon: Icons.location_on_outlined,
-                        title: 'Location Services',
-                        value: _locationServicesEnabled,
-                        onChanged: (val) {
-                          setState(() => _locationServicesEnabled = val);
-                          if (val) {
+                      children: [
+                        // 1. Notifications toggle (Persisted via SettingsProvider)
+                        _buildSwitchTile(
+                          icon: Icons.notifications_none_rounded,
+                          title: 'Notifications',
+                          value: notificationsEnabled,
+                          onChanged: (val) {
                             ref
-                                .read(agentLiveLocationProvider.notifier)
-                                .startTracking();
-                          } else {
-                            ref
-                                .read(agentLiveLocationProvider.notifier)
-                                .stopTracking();
-                          }
-                        },
-                      ),
-                      const Divider(
-                          height: 1, indent: 54, color: Color(0xFFECEFF1)),
-
-                      // 3. Battery Optimization
-                      _buildNavigationTile(
-                        icon: Icons.battery_charging_full_rounded,
-                        title: 'Battery Optimization',
-                        trailingText: 'Configured',
-                        onTap: _showBatteryOptimizationDialog,
-                      ),
-                      const Divider(
-                          height: 1, indent: 54, color: Color(0xFFECEFF1)),
-
-                      // 4. Privacy Policy
-                      _buildNavigationTile(
-                        icon: Icons.privacy_tip_outlined,
-                        title: 'Privacy Policy',
-                        onTap: () => _showInfoDialog(
-                          'Privacy Policy',
-                          'Sawariya Dairy values your privacy. We collect location data during active delivery hours only to optimize deliveries and customer tracking.',
+                                .read(settingsProvider.notifier)
+                                .updateNotifications(val);
+                          },
                         ),
-                      ),
-                      const Divider(
-                          height: 1, indent: 54, color: Color(0xFFECEFF1)),
+                        const Divider(
+                            height: 1, indent: 54, color: Color(0xFFECEFF1)),
 
-                      // 7. Terms & Conditions
-                      _buildNavigationTile(
-                        icon: Icons.article_outlined,
-                        title: 'Terms & Conditions',
-                        onTap: () => _showInfoDialog(
-                          'Terms & Conditions',
-                          'Delivery partners must adhere to dairy safety, hygiene, and scheduled delivery window standards at all times.',
+                        // 2. Location Services
+                        _buildSwitchTile(
+                          icon: Icons.location_on_outlined,
+                          title: 'Location Services',
+                          value: _locationServicesEnabled,
+                          onChanged: (val) {
+                            setState(() => _locationServicesEnabled = val);
+                            if (val) {
+                              ref
+                                  .read(agentLiveLocationProvider.notifier)
+                                  .startTracking();
+                            } else {
+                              ref
+                                  .read(agentLiveLocationProvider.notifier)
+                                  .stopTracking();
+                            }
+                          },
                         ),
-                      ),
-                      const Divider(
-                          height: 1, indent: 54, color: Color(0xFFECEFF1)),
-                      // 8. Logout
-                      ListTile(
-                        onTap: _showLogoutDialog,
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFEBEE),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.logout_rounded,
-                            color: DeliveryTheme.statusCancelledText,
-                            size: 20,
+                        const Divider(
+                            height: 1, indent: 54, color: Color(0xFFECEFF1)),
+
+                        // 3. Battery Optimization
+                        _buildNavigationTile(
+                          icon: Icons.battery_charging_full_rounded,
+                          title: 'Battery Optimization',
+                          trailingText: 'Configured',
+                          onTap: _showBatteryOptimizationDialog,
+                        ),
+                        const Divider(
+                            height: 1, indent: 54, color: Color(0xFFECEFF1)),
+
+                        // 4. Privacy Policy
+                        _buildNavigationTile(
+                          icon: Icons.privacy_tip_outlined,
+                          title: 'Privacy Policy',
+                          onTap: () => _showInfoDialog(
+                            'Privacy Policy',
+                            'Sawariya Dairy values your privacy. We collect location data during active delivery hours only to optimize deliveries and customer tracking.',
+                            route: '/privacy-policy',
                           ),
                         ),
-                        title: Text(
-                          'Logout',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: DeliveryTheme.statusCancelledText,
+                        const Divider(
+                            height: 1, indent: 54, color: Color(0xFFECEFF1)),
+
+                        // 7. Terms & Conditions
+                        _buildNavigationTile(
+                          icon: Icons.article_outlined,
+                          title: 'Terms & Conditions',
+                          onTap: () => _showInfoDialog(
+                            'Terms & Conditions',
+                            'Delivery partners must adhere to dairy safety, hygiene, and scheduled delivery window standards at all times.',
+                            route: '/terms-and-conditions',
                           ),
                         ),
-                      ),
-                    ],
+                        const Divider(
+                            height: 1, indent: 54, color: Color(0xFFECEFF1)),
+                        // 8. Logout
+                        ListTile(
+                          onTap: _showLogoutDialog,
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFEBEE),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.logout_rounded,
+                              color: DeliveryTheme.statusCancelledText,
+                              size: 20,
+                            ),
+                          ),
+                          title: Text(
+                            'Logout',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: DeliveryTheme.statusCancelledText,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
                 const SizedBox(height: 36),
 
                 // Bottom Branding matching Screen 8: "Delivering Freshness Always ♡"

@@ -173,7 +173,8 @@ class TermsAndConditionsScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
@@ -189,7 +190,8 @@ class TermsAndConditionsScreen extends StatelessWidget {
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFEF3C7),
                   borderRadius: BorderRadius.circular(20),
@@ -497,12 +499,33 @@ class TermsAndConditionsScreen extends StatelessWidget {
               ),
               const Text('•', style: TextStyle(color: AppColors.textSecondary)),
               InkWell(
-                onTap: () => _launchExternalUrl(
-                  context,
-                  AppStrings.privacyPolicyUrl,
-                ),
+                onTap: () => context.go('/privacy-policy'),
                 child: Text(
                   'Privacy Policy',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+              const Text('•', style: TextStyle(color: AppColors.textSecondary)),
+              InkWell(
+                onTap: () => context.go('/refund-policy'),
+                child: Text(
+                  'Refund Policy',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+              const Text('•', style: TextStyle(color: AppColors.textSecondary)),
+              InkWell(
+                onTap: () => context.go('/delivery-policy'),
+                child: Text(
+                  'Delivery Policy',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,

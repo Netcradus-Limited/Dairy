@@ -19,7 +19,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Terms & Conditions Screen UI Tests', () {
-    testWidgets('Renders all 23 canonical sections, company header, and COD details',
+    testWidgets(
+        'Renders all 23 canonical sections, company header, and COD details',
         (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -35,26 +36,31 @@ void main() {
       expect(find.text('SAWARIYA SARKAR DAIRY LLP'), findsOneWidget);
       expect(find.text('COD ONLY'), findsOneWidget);
       expect(find.text('Cash on Delivery Only'), findsOneWidget);
-      expect(find.textContaining('Ground Floor, Khewat No. 253/260'), findsWidgets);
+      expect(find.textContaining('Ground Floor, Khewat No. 253/260'),
+          findsWidgets);
       expect(find.text('support@sawariyasdairy.com'), findsWidgets);
       expect(find.text('9896703884'), findsWidgets);
 
       // Verify sections are present
       for (final sec in TermsAndConditionsScreen.termsSections) {
         expect(find.text(sec.title), findsOneWidget,
-            reason: 'Section ${sec.number} title "${sec.title}" should be present');
+            reason:
+                'Section ${sec.number} title "${sec.title}" should be present');
       }
 
       // Verify exactly 23 sections
       expect(TermsAndConditionsScreen.termsSections.length, equals(23));
 
       // Check first and last section
-      expect(TermsAndConditionsScreen.termsSections.first.title, equals('Introduction'));
-      expect(TermsAndConditionsScreen.termsSections.last.title, equals('Contact Information'));
+      expect(TermsAndConditionsScreen.termsSections.first.title,
+          equals('Introduction'));
+      expect(TermsAndConditionsScreen.termsSections.last.title,
+          equals('Contact Information'));
 
       // Check specific operational rules
       expect(find.textContaining('CASH ON DELIVERY (COD) ONLY'), findsWidgets);
-      expect(find.textContaining('within 24 hours of the scheduled delivery'), findsWidgets);
+      expect(find.textContaining('within 24 hours of the scheduled delivery'),
+          findsWidgets);
     });
   });
 
@@ -72,10 +78,12 @@ void main() {
       });
 
       expect(hasTermsRoute, isTrue,
-          reason: 'Expected /terms-and-conditions route to be defined in appRouterProvider');
+          reason:
+              'Expected /terms-and-conditions route to be defined in appRouterProvider');
     });
 
-    testWidgets('Unauthenticated visitor can access /terms-and-conditions without /login redirect',
+    testWidgets(
+        'Unauthenticated visitor can access /terms-and-conditions without /login redirect',
         (tester) async {
       // Unauthenticated state: guestUser (id == '')
       final container = ProviderContainer(
@@ -105,7 +113,8 @@ void main() {
       expect(find.text('SAWARIYA SARKAR DAIRY LLP'), findsOneWidget);
     });
 
-    testWidgets('Authenticated user can navigate to /terms-and-conditions directly',
+    testWidgets(
+        'Authenticated user can navigate to /terms-and-conditions directly',
         (tester) async {
       const authUser = User(
         id: 'cust_test_1',
@@ -141,7 +150,9 @@ void main() {
   });
 
   group('GoRouter Public Legal Policy Routes Tests', () {
-    test('Routes /privacy-policy, /refund-policy, /delivery-policy, /delete-account are registered in GoRouter', () {
+    test(
+        'Routes /privacy-policy, /refund-policy, /delivery-policy, /delete-account are registered in GoRouter',
+        () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -152,7 +163,10 @@ void main() {
           .toSet();
 
       expect(registeredPaths.contains('/terms-and-conditions'), isTrue);
+      expect(registeredPaths.contains('/terms'), isTrue);
       expect(registeredPaths.contains('/privacy-policy'), isTrue);
+      expect(registeredPaths.contains('/privacy-polic'), isTrue);
+      expect(registeredPaths.contains('/privacy'), isTrue);
       expect(registeredPaths.contains('/refund-policy'), isTrue);
       expect(registeredPaths.contains('/delivery-policy'), isTrue);
       expect(registeredPaths.contains('/delete-account'), isTrue);
@@ -160,7 +174,77 @@ void main() {
       expect(registeredPaths.contains('/data-protection'), isTrue);
     });
 
-    testWidgets('Unauthenticated visitor can access /privacy-policy and see LegalPoliciesScreen at Tab 0',
+    testWidgets(
+        'Unauthenticated visitor can access /privacy-polic typo route and be redirected to /privacy-policy without GoException',
+        (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          userProvider.overrideWith((ref) => _TestUserNotifier(guestUser)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final router = container.read(appRouterProvider);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: router,
+          ),
+        ),
+      );
+
+      router.go('/privacy-polic');
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(LegalPoliciesScreen), findsOneWidget);
+      expect(find.text('Privacy Policy'), findsWidgets);
+      expect(find.textContaining('DATA CONTROLLER & APP OVERVIEW'),
+          findsOneWidget);
+    });
+
+    testWidgets(
+        'Clicking Privacy Policy in TermsAndConditionsScreen footer navigates to /privacy-policy',
+        (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          userProvider.overrideWith((ref) => _TestUserNotifier(guestUser)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final router = container.read(appRouterProvider);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: router,
+          ),
+        ),
+      );
+
+      router.go('/terms-and-conditions');
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TermsAndConditionsScreen), findsOneWidget);
+
+      final privacyLinkFinder = find.widgetWithText(InkWell, 'Privacy Policy');
+      expect(privacyLinkFinder, findsOneWidget);
+
+      await tester.ensureVisible(privacyLinkFinder);
+      await tester.tap(privacyLinkFinder);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(LegalPoliciesScreen), findsOneWidget);
+      expect(find.text('Privacy Policy'), findsWidgets);
+    });
+
+    testWidgets(
+        'Unauthenticated visitor can access /privacy-policy and see LegalPoliciesScreen at Tab 0',
         (tester) async {
       final container = ProviderContainer(
         overrides: [
@@ -185,10 +269,12 @@ void main() {
 
       expect(find.byType(LegalPoliciesScreen), findsOneWidget);
       expect(find.text('Privacy Policy'), findsWidgets);
-      expect(find.textContaining('DATA CONTROLLER & APP OVERVIEW'), findsOneWidget);
+      expect(find.textContaining('DATA CONTROLLER & APP OVERVIEW'),
+          findsOneWidget);
     });
 
-    testWidgets('Unauthenticated visitor can access /refund-policy and see Tab 2',
+    testWidgets(
+        'Unauthenticated visitor can access /refund-policy and see Tab 2',
         (tester) async {
       final container = ProviderContainer(
         overrides: [
@@ -215,7 +301,8 @@ void main() {
       expect(find.text('Refund & Cancellation Policy'), findsOneWidget);
     });
 
-    testWidgets('Unauthenticated visitor can access /delivery-policy and see Tab 3',
+    testWidgets(
+        'Unauthenticated visitor can access /delivery-policy and see Tab 3',
         (tester) async {
       final container = ProviderContainer(
         overrides: [
@@ -242,7 +329,8 @@ void main() {
       expect(find.text('Delivery Policy'), findsWidgets);
     });
 
-    testWidgets('Unauthenticated visitor can access /delete-account and see Tab 4',
+    testWidgets(
+        'Unauthenticated visitor can access /delete-account and see Tab 4',
         (tester) async {
       final container = ProviderContainer(
         overrides: [
@@ -269,7 +357,8 @@ void main() {
       expect(find.text('Account Deletion & Data Retention'), findsOneWidget);
     });
 
-    testWidgets('Authenticated user can navigate to /privacy-policy directly without being redirected to /home or /admin',
+    testWidgets(
+        'Authenticated user can navigate to /privacy-policy directly without being redirected to /home or /admin',
         (tester) async {
       const authUser = User(
         id: 'cust_test_2',
@@ -304,7 +393,8 @@ void main() {
   });
 
   group('LegalPoliciesScreen Tab Integration Tests', () {
-    testWidgets('LegalPoliciesScreen Tab 1 loads the full 23-section terms text',
+    testWidgets(
+        'LegalPoliciesScreen Tab 1 loads the full 23-section terms text',
         (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -320,7 +410,8 @@ void main() {
       expect(find.textContaining('CASH ON DELIVERY (COD) ONLY'), findsWidgets);
     });
 
-    testWidgets('LegalPoliciesScreen is responsive on desktop viewport (1200x800) without character stacking',
+    testWidgets(
+        'LegalPoliciesScreen is responsive on desktop viewport (1200x800) without character stacking',
         (tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
@@ -342,17 +433,23 @@ void main() {
 
       // Verify title is rendered with appropriate horizontal width
       final titleFinder = find.byWidgetPredicate(
-        (w) => w is Text && w.data == 'Privacy Policy' && w.style?.fontSize == 22.0,
+        (w) =>
+            w is Text &&
+            w.data == 'Privacy Policy' &&
+            w.style?.fontSize == 22.0,
       );
       expect(titleFinder, findsOneWidget);
       final titleBox = tester.renderObject<RenderBox>(titleFinder);
       expect(titleBox.size.width, greaterThan(100.0),
-          reason: 'Title should have full horizontal width, not single-character width');
+          reason:
+              'Title should have full horizontal width, not single-character width');
       expect(titleBox.size.height, lessThan(40.0),
-          reason: 'Single-line or wrapped title should not be stacked character by character');
+          reason:
+              'Single-line or wrapped title should not be stacked character by character');
     });
 
-    testWidgets('LegalPoliciesScreen is responsive on mobile viewport (360x800) without RenderFlex overflow',
+    testWidgets(
+        'LegalPoliciesScreen is responsive on mobile viewport (360x800) without RenderFlex overflow',
         (tester) async {
       tester.view.physicalSize = const Size(360, 800);
       tester.view.devicePixelRatio = 1.0;
@@ -369,7 +466,8 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull,
-            reason: 'Tab $i should render without overflow on 360x800 viewport');
+            reason:
+                'Tab $i should render without overflow on 360x800 viewport');
       }
     });
   });

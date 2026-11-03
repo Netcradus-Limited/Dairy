@@ -70,13 +70,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           path == '/otp' ||
           path == '/splash' ||
           path == '/onboarding';
-      final isPublicWebPath = path == '/terms-and-conditions' ||
-          path == '/privacy-policy' ||
-          path == '/refund-policy' ||
-          path == '/delivery-policy' ||
-          path == '/delete-account' ||
-          path == '/dpdp' ||
-          path == '/data-protection';
+      final publicLegalPaths = {
+        '/terms-and-conditions',
+        '/terms-and-condition',
+        '/terms-conditions',
+        '/terms',
+        '/privacy-policy',
+        '/privacy-polic',
+        '/privacy-policies',
+        '/privacypolicy',
+        '/privacy',
+        '/refund-policy',
+        '/refund-policies',
+        '/refund',
+        '/refunds',
+        '/cancellation-policy',
+        '/delivery-policy',
+        '/delivery-policies',
+        '/delete-account',
+        '/account-deletion',
+        '/dpdp',
+        '/data-protection',
+      };
+      final isPublicWebPath = publicLegalPaths.contains(path);
 
       String? targetRoute;
 
@@ -250,8 +266,36 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const EditSubscriptionScreen(),
       ),
       GoRoute(
+        path: '/terms',
+        redirect: (context, state) => '/terms-and-conditions',
+      ),
+      GoRoute(
+        path: '/terms-and-condition',
+        redirect: (context, state) => '/terms-and-conditions',
+      ),
+      GoRoute(
+        path: '/terms-conditions',
+        redirect: (context, state) => '/terms-and-conditions',
+      ),
+      GoRoute(
         path: '/terms-and-conditions',
         builder: (context, state) => const TermsAndConditionsScreen(),
+      ),
+      GoRoute(
+        path: '/privacy',
+        redirect: (context, state) => '/privacy-policy',
+      ),
+      GoRoute(
+        path: '/privacy-polic',
+        redirect: (context, state) => '/privacy-policy',
+      ),
+      GoRoute(
+        path: '/privacy-policies',
+        redirect: (context, state) => '/privacy-policy',
+      ),
+      GoRoute(
+        path: '/privacypolicy',
+        redirect: (context, state) => '/privacy-policy',
       ),
       GoRoute(
         path: '/privacy-policy',
@@ -259,14 +303,38 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             const LegalPoliciesScreen(initialTabIndex: 0),
       ),
       GoRoute(
+        path: '/refund',
+        redirect: (context, state) => '/refund-policy',
+      ),
+      GoRoute(
+        path: '/refunds',
+        redirect: (context, state) => '/refund-policy',
+      ),
+      GoRoute(
+        path: '/refund-policies',
+        redirect: (context, state) => '/refund-policy',
+      ),
+      GoRoute(
+        path: '/cancellation-policy',
+        redirect: (context, state) => '/refund-policy',
+      ),
+      GoRoute(
         path: '/refund-policy',
         builder: (context, state) =>
             const LegalPoliciesScreen(initialTabIndex: 2),
       ),
       GoRoute(
+        path: '/delivery-policies',
+        redirect: (context, state) => '/delivery-policy',
+      ),
+      GoRoute(
         path: '/delivery-policy',
         builder: (context, state) =>
             const LegalPoliciesScreen(initialTabIndex: 3),
+      ),
+      GoRoute(
+        path: '/account-deletion',
+        redirect: (context, state) => '/delete-account',
       ),
       GoRoute(
         path: '/delete-account',
@@ -345,7 +413,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   provider.ChangeNotifierProvider(create: (_) {
                     final p = AdminProvider();
                     p.setNavIndex(5);
-                    if (effectiveOrderId != null && effectiveOrderId.isNotEmpty) {
+                    if (effectiveOrderId != null &&
+                        effectiveOrderId.isNotEmpty) {
                       p.setSearchQuery(effectiveOrderId);
                     }
                     return p;

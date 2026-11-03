@@ -8,13 +8,13 @@ plugins {
 }
 
 import java.util.Properties
-import java.io.FileInputStream
 
-
-val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+val keystoreProperties = Properties().apply {
+    val propFile = if (keystorePropertiesFile.exists()) keystorePropertiesFile else project.file("key.properties")
+    if (propFile.exists()) {
+        propFile.inputStream().use { load(it) }
+    }
 }
 
 android {
@@ -58,16 +58,10 @@ android {
 
     buildTypes {
         release {
-            val storeFilePath = keystoreProperties.getProperty("storeFile")
-            val isReleaseKeystoreAvailable = keystorePropertiesFile.exists() &&
-                storeFilePath != null &&
-                (file(storeFilePath).exists() || rootProject.file(storeFilePath).exists())
-
-            signingConfig = if (isReleaseKeystoreAvailable) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            signingConfig = signingConfigs.getByName("release")
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 

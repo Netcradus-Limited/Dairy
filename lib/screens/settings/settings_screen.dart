@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
@@ -123,12 +124,16 @@ class SettingsScreen extends ConsumerWidget {
                     trailing: const Icon(Icons.chevron_right_rounded,
                         color: AppColors.textMuted),
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const LegalPoliciesScreen(),
-                        ),
-                      );
+                      if (GoRouter.maybeOf(context) != null) {
+                        context.push('/privacy-policy');
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const LegalPoliciesScreen(),
+                          ),
+                        );
+                      }
                     },
                   ),
                 ]),

@@ -117,6 +117,11 @@ class _AccountDeletionScreenState extends ConsumerState<AccountDeletionScreen> {
       setState(() {
         _errorMessage = result.errorMessage;
       });
+    } else if (result.status == AccountDeletionResultStatus.unauthenticated) {
+      setState(() {
+        _errorMessage =
+            'You are not currently signed in. Please log in with your registered mobile phone number to delete your account, or email support@sawariyasdairy.com with your registered mobile number.';
+      });
     } else {
       setState(() {
         _errorMessage =
@@ -206,8 +211,10 @@ class _AccountDeletionScreenState extends ConsumerState<AccountDeletionScreen> {
                     children: [
                       CircleAvatar(
                         radius: 24,
-                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                        child: const Icon(Icons.person, color: AppColors.primary),
+                        backgroundColor:
+                            AppColors.primary.withValues(alpha: 0.1),
+                        child:
+                            const Icon(Icons.person, color: AppColors.primary),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -215,7 +222,11 @@ class _AccountDeletionScreenState extends ConsumerState<AccountDeletionScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              user.name.isEmpty ? 'Customer' : user.name,
+                              user.name.isEmpty
+                                  ? (user.id.isEmpty
+                                      ? 'Not Signed In'
+                                      : 'Customer')
+                                  : user.name,
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
@@ -224,7 +235,9 @@ class _AccountDeletionScreenState extends ConsumerState<AccountDeletionScreen> {
                             ),
                             Text(
                               user.phone.isEmpty
-                                  ? 'Active Session'
+                                  ? (user.id.isEmpty
+                                      ? 'Sign in required for self-service deletion'
+                                      : 'Active Session')
                                   : user.phone,
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 13,
@@ -237,6 +250,70 @@ class _AccountDeletionScreenState extends ConsumerState<AccountDeletionScreen> {
                     ],
                   ),
                 ),
+                if (user.id.isEmpty) ...[
+                  const SizedBox(height: AppSizes.p12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(AppSizes.p14),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.info_outline_rounded,
+                              size: 18,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Sign In Required for In-App Deletion',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'To delete your account immediately via self-service, please sign in with your registered phone number so your identity can be verified via SMS OTP. Alternatively, if you cannot log in or have uninstalled the app, you may email support@sawariyasdairy.com or call 9896703884 with your registered mobile number.',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            height: 1.45,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        OutlinedButton.icon(
+                          onPressed: () => context.go('/login'),
+                          icon: const Icon(Icons.login, size: 16),
+                          label: const Text('Log In to Verify Account'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: AppColors.primary),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            textStyle: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: AppSizes.p24),
 
                 Text(

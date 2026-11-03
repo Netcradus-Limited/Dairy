@@ -11,16 +11,19 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Account Deletion Service Tests', () {
-    test('Unauthenticated user returns unauthenticated status safely', () async {
+    test('Unauthenticated user returns unauthenticated status safely',
+        () async {
       final fakeFirestore = FakeFirebaseFirestore();
       final service = AccountDeletionService(firestore: fakeFirestore);
       final result = await service.deleteAccount();
 
-      expect(result.status, equals(AccountDeletionResultStatus.unauthenticated));
+      expect(
+          result.status, equals(AccountDeletionResultStatus.unauthenticated));
       expect(result.isSuccess, isFalse);
     });
 
-    test('Data cleanup handles active subscriptions and subcollections', () async {
+    test('Data cleanup handles active subscriptions and subcollections',
+        () async {
       final fakeFirestore = FakeFirebaseFirestore();
       const testUid = 'user_delete_test_123';
 
@@ -47,7 +50,8 @@ void main() {
           .set({'address': '123 Main Street'});
 
       // Verify records exist
-      final subBefore = await fakeFirestore.collection('subscriptions').doc('sub_1').get();
+      final subBefore =
+          await fakeFirestore.collection('subscriptions').doc('sub_1').get();
       expect(subBefore.data()?['status'], equals('Active'));
 
       final addrBefore = await fakeFirestore
@@ -61,7 +65,8 @@ void main() {
   });
 
   group('Legal Policies Screen Tests', () {
-    testWidgets('Renders all policy tabs and business disclaimer banners', (tester) async {
+    testWidgets('Renders all policy tabs and business disclaimer banners',
+        (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: LegalPoliciesScreen(),
@@ -79,13 +84,18 @@ void main() {
       expect(find.text('Delivery Policy'), findsWidgets);
       expect(find.text('Account Deletion'), findsWidgets);
 
-      // Verify business placeholder alert banner
-      expect(find.textContaining('BUSINESS DECISION REQUIRED'), findsWidgets);
+      // Verify all unfinished placeholders have been removed
+      expect(find.textContaining('BUSINESS DECISION REQUIRED'), findsNothing);
+
+      // Verify verified company and operational details
+      expect(find.textContaining('SAWARIYA SARKAR DAIRY LLP'), findsWidgets);
+      expect(find.textContaining('COD ONLY'), findsWidgets);
     });
   });
 
   group('Delivery Location Disclosure Dialog Tests', () {
-    testWidgets('Renders prominent background location disclosure points', (tester) async {
+    testWidgets('Renders prominent background location disclosure points',
+        (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -102,25 +112,33 @@ void main() {
       // Verify rich text bullet points
       expect(
         find.byWidgetPredicate(
-          (w) => w is RichText && w.text.toPlainText().contains('Who can see your location:'),
+          (w) =>
+              w is RichText &&
+              w.text.toPlainText().contains('Who can see your location:'),
         ),
         findsOneWidget,
       );
       expect(
         find.byWidgetPredicate(
-          (w) => w is RichText && w.text.toPlainText().contains('When tracking occurs:'),
+          (w) =>
+              w is RichText &&
+              w.text.toPlainText().contains('When tracking occurs:'),
         ),
         findsOneWidget,
       );
       expect(
         find.byWidgetPredicate(
-          (w) => w is RichText && w.text.toPlainText().contains('When tracking stops:'),
+          (w) =>
+              w is RichText &&
+              w.text.toPlainText().contains('When tracking stops:'),
         ),
         findsOneWidget,
       );
       expect(
         find.byWidgetPredicate(
-          (w) => w is RichText && w.text.toPlainText().contains('Customer Privacy:'),
+          (w) =>
+              w is RichText &&
+              w.text.toPlainText().contains('Customer Privacy:'),
         ),
         findsOneWidget,
       );
@@ -128,7 +146,8 @@ void main() {
   });
 
   group('Account Deletion Screen Tests', () {
-    testWidgets('Renders warning, confirmation checkbox, and delete button', (tester) async {
+    testWidgets('Renders warning, confirmation checkbox, and delete button',
+        (tester) async {
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(
@@ -142,7 +161,8 @@ void main() {
       expect(find.text('Permanent Action'), findsOneWidget);
       expect(find.text('Active Subscriptions Cancelled'), findsOneWidget);
       expect(find.text('Saved Addresses Removed'), findsOneWidget);
-      expect(find.text('Statutory Order Records De-identified'), findsOneWidget);
+      expect(
+          find.text('Statutory Order Records De-identified'), findsOneWidget);
       expect(find.text('Permanently Delete Account'), findsOneWidget);
     });
   });

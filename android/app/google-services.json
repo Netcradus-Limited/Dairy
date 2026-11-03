@@ -9,6 +9,25 @@
       "client_info": {
         "mobilesdk_app_id": "1:325042169664:android:a5ba7cdfecb84c161d7ca5",
         "android_client_info": {
+          "package_name": "com.example.dairy_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCz0VKzg-CmNoFZz0j73dsyb_VHfwwcboo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:325042169664:android:56d2e62240c424841d7ca5",
+        "android_client_info": {
           "package_name": "com.sawariyassarkar.app"
         }
       },
