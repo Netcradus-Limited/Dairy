@@ -11,6 +11,7 @@ import '../../../providers/delivery_provider.dart';
 import '../../../services/order_service.dart';
 import '../../../services/subscription_service.dart';
 import '../../../services/delivery_tracking_service.dart';
+import '../services/delivery_location_coordinator.dart';
 
 /// Active Delivery Tab - Pickup -> Out for Delivery -> Delivered flow
 class ActiveDeliveryTab extends ConsumerStatefulWidget {
@@ -117,8 +118,10 @@ class _ActiveDeliveryTabState extends ConsumerState<ActiveDeliveryTab> {
             ),
             const SizedBox(height: 32),
             ElevatedButton.icon(
-              onPressed: () =>
-                  ref.read(deliveryAgentProvider.notifier).toggleDuty(),
+              onPressed: () async {
+                await DeliveryLocationCoordinator.toggleDutyWithConsent(
+                    context, ref);
+              },
               icon: const Icon(Icons.power_settings_new_rounded),
               label: const Text('Go Online'),
               style: ElevatedButton.styleFrom(

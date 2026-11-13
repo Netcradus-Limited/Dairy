@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geocoding/geocoding.dart' as geo;
 import 'package:geolocator/geolocator.dart';
@@ -75,7 +76,63 @@ class GeocodedAddress {
 /// Wraps device GPS, Photon OSM, BigDataCloud, and native platform geocoding
 /// to provide high-accuracy cross-platform (Web, Android, iOS, Desktop)
 /// location & address resolution without requiring paid API keys.
+/// Snapshot of Android/platform location & notification permissions.
+class AndroidLocationPermissionState {
+  final int sdkInt;
+  final bool fineGranted;
+  final bool coarseGranted;
+  final bool foregroundGranted;
+  final bool backgroundGranted;
+  final bool notificationGranted;
+  final bool shouldShowForegroundRationale;
+  final bool shouldShowBackgroundRationale;
+
+  const AndroidLocationPermissionState({
+    required this.sdkInt,
+    required this.fineGranted,
+    required this.coarseGranted,
+    required this.foregroundGranted,
+    required this.backgroundGranted,
+    required this.notificationGranted,
+    this.shouldShowForegroundRationale = false,
+    this.shouldShowBackgroundRationale = false,
+  });
+
+  factory AndroidLocationPermissionState.fromMap(Map<dynamic, dynamic> map) {
+    final fine = map['fineGranted'] == true;
+    final coarse = map['coarseGranted'] == true;
+    return AndroidLocationPermissionState(
+      sdkInt: (map['sdkInt'] as num?)?.toInt() ?? 0,
+      fineGranted: fine,
+      coarseGranted: coarse,
+      foregroundGranted: map['foregroundGranted'] == true || fine || coarse,
+      backgroundGranted: map['backgroundGranted'] == true,
+      notificationGranted: map['notificationGranted'] != false,
+      shouldShowForegroundRationale:
+          map['shouldShowForegroundRationale'] == true,
+      shouldShowBackgroundRationale:
+          map['shouldShowBackgroundRationale'] == true,
+    );
+  }
+}
+
 class LocationService {
+  static const MethodChannel _defaultPermissionChannel =
+      MethodChannel('com.sawariyassarkar.app/location_permissions');
+
+  final MethodChannel _permissionChannel;
+  final TargetPlatform? _platformOverride;
+
+  LocationService({
+    MethodChannel? permissionChannel,
+    TargetPlatform? platformOverride,
+  })  : _permissionChannel = permissionChannel ?? _defaultPermissionChannel,
+        _platformOverride = platformOverride;
+
+  TargetPlatform get _platform => _platformOverride ?? defaultTargetPlatform;
+
+  bool get _isNativeAndroid => !kIsWeb && _platform == TargetPlatform.android;
+
   /// Whether location services are enabled on the device.
   Future<bool> isLocationServiceEnabled() async {
     try {
@@ -90,40 +147,120 @@ class LocationService {
     try {
       return await Geolocator.checkPermission();
     } catch (_) {
-      return LocationPermission.always;
+      return LocationPermission.whileInUse;
     }
   }
 
-  /// Checks whether location services and permissions are granted, requesting
-  /// permissions if needed and returning a granular [LocationResultStatus].
-  Future<LocationResultStatus> checkAndRequestPermissions() async {
+  /// Pure read-only snapshot of platform permissions. Never triggers any OS prompt.
+  Future<AndroidLocationPermissionState> getPermissionSnapshot() async {
+    if (_isNativeAndroid) {
+      try {
+        final result = await _permissionChannel
+            .invokeMapMethod<dynamic, dynamic>('getLocationPermissionState');
+        if (result != null) {
+          return AndroidLocationPermissionState.fromMap(result);
+        }
+      } on MissingPluginException {
+        // Fallback in unit tests without native channel registration
+      } catch (e) {
+        debugPrint('LocationService: getPermissionSnapshot error: $e');
+      }
+    }
+
+    final perm = await checkPermission();
+    final fgGranted = perm == LocationPermission.whileInUse ||
+        perm == LocationPermission.always;
+    final bgGranted = !_isNativeAndroid
+        ? perm == LocationPermission.always
+        : perm == LocationPermission.always;
+    return AndroidLocationPermissionState(
+      sdkInt: 0,
+      fineGranted: fgGranted,
+      coarseGranted: fgGranted,
+      foregroundGranted: fgGranted,
+      backgroundGranted: bgGranted,
+      notificationGranted: true,
+    );
+  }
+
+  /// Requests ONLY foreground location permission (ACCESS_FINE_LOCATION /
+  /// ACCESS_COARSE_LOCATION). Never bundles ACCESS_BACKGROUND_LOCATION.
+  Future<LocationResultStatus> requestForegroundLocationOnly() async {
     try {
       final isServiceEnabled = await isLocationServiceEnabled();
       if (!isServiceEnabled) {
         return LocationResultStatus.servicesDisabled;
       }
 
+      if (_isNativeAndroid) {
+        try {
+          final before = await getPermissionSnapshot();
+          if (before.foregroundGranted) {
+            return LocationResultStatus.success;
+          }
+          final res =
+              await _permissionChannel.invokeMapMethod<dynamic, dynamic>(
+                  'requestForegroundLocationOnly');
+          if (res != null) {
+            final after = AndroidLocationPermissionState.fromMap(res);
+            if (after.foregroundGranted) {
+              return LocationResultStatus.success;
+            }
+            if (!after.shouldShowForegroundRationale) {
+              return LocationResultStatus.permissionDeniedForever;
+            }
+            return LocationResultStatus.permissionDenied;
+          }
+        } on MissingPluginException {
+          // Fall through to Geolocator foreground-only path in tests/non-plugin env
+        }
+      }
+
       LocationPermission permission = await checkPermission();
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        return LocationResultStatus.success;
+      }
       if (permission == LocationPermission.deniedForever) {
         return LocationResultStatus.permissionDeniedForever;
       }
 
-      final granted = await requestLocationPermission();
-      if (!granted) {
-        permission = await checkPermission();
-        if (permission == LocationPermission.deniedForever) {
-          return LocationResultStatus.permissionDeniedForever;
-        }
-        return LocationResultStatus.permissionDenied;
+      // Only request when status is denied so Geolocator does NOT escalate to background.
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        return LocationResultStatus.success;
       }
-
-      // Attempt background location permission upgrade on Android 10+
-      await requestBackgroundLocationPermission();
-      return LocationResultStatus.success;
+      if (permission == LocationPermission.deniedForever) {
+        return LocationResultStatus.permissionDeniedForever;
+      }
+      return LocationResultStatus.permissionDenied;
     } catch (e) {
-      debugPrint('LocationService: checkAndRequestPermissions error: $e');
+      debugPrint('LocationService: requestForegroundLocationOnly error: $e');
       return LocationResultStatus.timeoutOrError;
     }
+  }
+
+  /// Requests POST_NOTIFICATIONS on Android 13+ so the foreground service
+  /// notification is visible to the delivery partner.
+  Future<bool> requestNotificationPermission() async {
+    if (!_isNativeAndroid) return true;
+    try {
+      final granted = await _permissionChannel
+          .invokeMethod<bool>('requestNotificationPermission');
+      return granted ?? true;
+    } on MissingPluginException {
+      return true;
+    } catch (e) {
+      debugPrint('LocationService: requestNotificationPermission error: $e');
+      return false;
+    }
+  }
+
+  /// Requests ONLY foreground permissions (safe for all callers; never triggers
+  /// unconsented background location prompts).
+  Future<LocationResultStatus> checkAndRequestPermissions() async {
+    return requestForegroundLocationOnly();
   }
 
   /// Opens the device system location settings page (e.g. GPS toggle).
@@ -135,8 +272,18 @@ class LocationService {
     }
   }
 
-  /// Opens the app settings page (e.g. to grant permanently denied permissions).
+  /// Opens the app settings page (e.g. to grant permanently denied permissions
+  /// or select "Allow all the time" on Android 11+).
   Future<bool> openAppSettings() async {
+    if (_isNativeAndroid) {
+      try {
+        final opened = await _permissionChannel
+            .invokeMethod<bool>('openAppLocationSettings');
+        if (opened == true) return true;
+      } on MissingPluginException {
+        // Fallback to Geolocator.openAppSettings
+      } catch (_) {}
+    }
     try {
       return await Geolocator.openAppSettings();
     } catch (_) {
@@ -144,17 +291,26 @@ class LocationService {
     }
   }
 
-  /// Requests location permission (if not already granted).
-  Future<bool> requestLocationPermission() async {
-    if (!await Geolocator.isLocationServiceEnabled()) return false;
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
+  /// Opens notification settings for this app (Android 8+ Notification Settings,
+  /// falling back to App Details Settings) so the user can enable
+  /// POST_NOTIFICATIONS when notification-drawer visibility is restricted.
+  Future<bool> openNotificationSettings() async {
+    if (_isNativeAndroid) {
+      try {
+        final opened = await _permissionChannel
+            .invokeMethod<bool>('openAppNotificationSettings');
+        if (opened == true) return true;
+      } on MissingPluginException {
+        // Fallback to openAppSettings()
+      } catch (_) {}
     }
+    return openAppSettings();
+  }
 
-    return permission == LocationPermission.whileInUse ||
-        permission == LocationPermission.always;
+  /// Requests ONLY foreground location permission (if not already granted).
+  Future<bool> requestLocationPermission() async {
+    final status = await requestForegroundLocationOnly();
+    return status == LocationResultStatus.success;
   }
 
   /// High-accuracy stream of device positions.
@@ -177,35 +333,69 @@ class LocationService {
     return result.position;
   }
 
-  /// Obtains the real device GPS position with detailed status and user-friendly error messages.
+  /// Obtains a single GPS position ONLY if foreground permission is already granted.
+  /// Never requests permissions or triggers system dialogs.
+  Future<Position?> getCurrentPositionAlreadyPermitted() async {
+    Timer? timeoutTimer;
+    try {
+      final snap = await getPermissionSnapshot();
+      if (!snap.foregroundGranted) return null;
+      final completer = Completer<Position?>();
+      timeoutTimer = Timer(const Duration(seconds: 10), () {
+        if (!completer.isCompleted) completer.complete(null);
+      });
+      unawaited(
+        Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        ).then((pos) {
+          timeoutTimer?.cancel();
+          if (!completer.isCompleted) {
+            completer.complete(
+              (pos.latitude != 0.0 || pos.longitude != 0.0) ? pos : null,
+            );
+          }
+        }).catchError((_) {
+          timeoutTimer?.cancel();
+          if (!completer.isCompleted) completer.complete(null);
+        }),
+      );
+      return await completer.future;
+    } catch (_) {
+      timeoutTimer?.cancel();
+      return null;
+    }
+  }
+
+  /// Obtains a single foreground device GPS position (used by Customer Address entry).
+  /// Strictly uses foreground-only permission checks and NEVER requests background location.
   Future<LocationResult> getCurrentPositionDetailed() async {
     try {
-      final isServiceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!isServiceEnabled) {
+      final fgStatus = await requestForegroundLocationOnly();
+      if (fgStatus == LocationResultStatus.servicesDisabled) {
         return const LocationResult(
           status: LocationResultStatus.servicesDisabled,
           errorMessage:
               'Device location services are disabled. Please turn on GPS / Location in your device settings.',
         );
       }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          return const LocationResult(
-            status: LocationResultStatus.permissionDenied,
-            errorMessage:
-                'Location permission was denied. Please allow location access to use your current location.',
-          );
-        }
+      if (fgStatus == LocationResultStatus.permissionDenied) {
+        return const LocationResult(
+          status: LocationResultStatus.permissionDenied,
+          errorMessage:
+              'Location permission was denied. Please allow location access to use your current location.',
+        );
       }
-
-      if (permission == LocationPermission.deniedForever) {
+      if (fgStatus == LocationResultStatus.permissionDeniedForever) {
         return const LocationResult(
           status: LocationResultStatus.permissionDeniedForever,
           errorMessage:
               'Location permission is permanently denied in device settings. Please enable location permissions in App Settings.',
+        );
+      }
+      if (fgStatus != LocationResultStatus.success) {
+        return const LocationResult(
+          status: LocationResultStatus.timeoutOrError,
+          errorMessage: 'Unable to verify foreground location permission.',
         );
       }
 
@@ -798,23 +988,34 @@ class LocationService {
   /// granted "While in use" — presents the system’s "Allow all the time"
   /// dialog. This is handled natively by [geolocator_android] without any
   /// custom Kotlin code.
+  /// Requests standalone ACCESS_BACKGROUND_LOCATION on Android 10+.
+  /// Must ONLY be called AFTER foreground location is granted AND the delivery
+  /// partner has explicitly consented to the Prominent Disclosure dialog.
+  /// Never bundles foreground and background permissions together.
   Future<bool> requestBackgroundLocationPermission() async {
-    if (defaultTargetPlatform != TargetPlatform.android) return true;
+    if (!_isNativeAndroid) return true;
     try {
-      final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.always) return true;
-      if (permission == LocationPermission.whileInUse) {
-        // Second requestPermission call on Android 10+ shows the
-        // "Allow all the time" system dialog.
-        final upgraded = await Geolocator.requestPermission();
-        return upgraded == LocationPermission.always;
+      final before = await getPermissionSnapshot();
+      if (!before.foregroundGranted) return false;
+      if (before.backgroundGranted) return true;
+
+      try {
+        final res = await _permissionChannel
+            .invokeMapMethod<dynamic, dynamic>('requestBackgroundLocationOnly');
+        if (res != null) {
+          final after = AndroidLocationPermissionState.fromMap(res);
+          return after.backgroundGranted;
+        }
+      } on MissingPluginException {
+        // On non-plugin test environments without native handler, fallback cleanly:
+        final permission = await Geolocator.checkPermission();
+        return permission == LocationPermission.always;
       }
-      // Denied / deniedForever: cannot request background
       return false;
-    } catch (_) {
-      // In emulator / test environments, Geolocator calls may throw
-      // (no real Location stack). Treat as not required so tests pass cleanly.
-      return true;
+    } catch (e) {
+      debugPrint(
+          'LocationService: requestBackgroundLocationPermission error: $e');
+      return false;
     }
   }
 }

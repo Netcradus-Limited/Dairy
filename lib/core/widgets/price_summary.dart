@@ -132,12 +132,17 @@ class PriceSummaryCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                '₹${grandTotal.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryBlue,
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '₹${grandTotal.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryBlue,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -145,24 +150,31 @@ class PriceSummaryCard extends StatelessWidget {
 
           if (showActionButton) ...[
             const SizedBox(height: AppSizes.p16),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: onActionButtonPressed,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryBlue,
-                  foregroundColor: AppColors.textOnPrimary,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: AppSizes.borderMedium,
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: onActionButtonPressed,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    backgroundColor: AppColors.primaryBlue,
+                    foregroundColor: AppColors.textOnPrimary,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: AppSizes.borderMedium,
+                    ),
+                    elevation: 2,
                   ),
-                  elevation: 2,
-                ),
-                child: Text(
-                  tr(actionButtonText),
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
+                  child: Text(
+                    tr(actionButtonText),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -201,12 +213,15 @@ class _SummaryRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: valueColor,
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: valueColor,
+            ),
           ),
         ),
       ],

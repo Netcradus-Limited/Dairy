@@ -7,7 +7,9 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+import java.util.Base64
 import java.util.Properties
+import com.flutter.gradle.tasks.FlutterTask
 
 val keystorePropertiesFile = rootProject.file("key.properties")
 val keystoreProperties = Properties().apply {
@@ -63,12 +65,32 @@ android {
         debug {
             signingConfig = signingConfigs.getByName("debug")
         }
+        create("qa") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".qa"
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("debug", "release")
+            isDebuggable = true
+            isMinifyEnabled = false
+            isShrinkResources = false
+        }
     }
 
     lint {
         abortOnError = false
         checkReleaseBuilds = false
         disable += listOf("DuplicateDefinition", "StaticFieldLeak", "IgnoredSharedPrefs")
+    }
+}
+
+tasks.withType(FlutterTask::class.java).configureEach {
+    if (name == "compileFlutterBuildQa") {
+        val qaDefine = Base64.getEncoder()
+            .encodeToString("QA_FIREBASE=true".toByteArray(Charsets.UTF_8))
+        val existing = dartDefines?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
+        if (!existing.contains(qaDefine)) {
+            dartDefines = (existing + qaDefine).joinToString(",")
+        }
     }
 }
 

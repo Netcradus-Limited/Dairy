@@ -36,50 +36,110 @@ service cloud.firestore {
     }
 
     function currentRole() {
-      let data = getUserData();
-      let adminData = (isSignedIn()
-          && exists(/databases/$(database)/documents/admins/$(request.auth.uid)))
-          ? get(/databases/$(database)/documents/admins/$(request.auth.uid)).data
-          : null;
+      let adminPath = /databases/$(database)/documents/admins/$(request.auth.uid);
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
 
-      return data != null
-          && ('role' in data)
-          && data.role != null
-          ? data.role
-          : adminData != null
-              && ('role' in adminData)
-              ? adminData.role
+      return (isSignedIn() && exists(adminPath) && ('role' in get(adminPath).data))
+          ? get(adminPath).data.role
+          : (isSignedIn() && exists(userPath) && ('role' in get(userPath).data))
+              ? get(userPath).data.role
               : null;
     }
 
+    // Only genuine, server-controlled administrative records in /admins/{request.auth.uid}
+    // can grant Super Admin standing. Document existence alone NEVER grants Super Admin standing.
     function isSuperAdmin() {
-      return isSignedIn() && (
-        currentRole() in ['admin', 'superadmin', 'owner']
-        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-      );
+      let path = /databases/$(database)/documents/admins/$(request.auth.uid);
+      return isSignedIn()
+          && exists(path)
+          && get(path).data.get('role', '') in ['admin', 'superadmin', 'owner']
+          && get(path).data.get('status', 'Active') in ['Active', 'active', 'ACTIVE'];
     }
 
     function isStaffMember() {
-      return isSignedIn() && (
-        currentRole() in ['admin', 'superadmin', 'owner', 'manager', 'dispatcher', 'staff']
-        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-      );
+      let path = /databases/$(database)/documents/admins/$(request.auth.uid);
+      let staffRoles = ['admin', 'superadmin', 'owner', 'manager', 'dispatcher', 'route_dispatcher', 'staff'];
+      return isSignedIn()
+          && exists(path)
+          && get(path).data.get('role', '') in staffRoles
+          && get(path).data.get('status', 'Active') in ['Active', 'active', 'ACTIVE'];
     }
 
     function isAdmin() {
       return isStaffMember();
     }
 
-    // Checks granular staff permission in users/{uid}.permissions or admins/{uid}.permissions
+    // Checks granular staff permission in authoritative /admins/{uid}.permissions
     function hasPermission(permKey) {
-      let data = getUserData();
-      let hasUserPerm = data != null && ('permissions' in data) && data.permissions is list && permKey in data.permissions;
-      let hasAdminPerm = isSignedIn()
-          && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-          && ('permissions' in get(/databases/$(database)/documents/admins/$(request.auth.uid)).data)
-          && permKey in get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.permissions;
+      let path = /databases/$(database)/documents/admins/$(request.auth.uid);
+      return isSuperAdmin()
+          || (isSignedIn()
+              && exists(path)
+              && get(path).data.get('status', 'Active') in ['Active', 'active', 'ACTIVE']
+              && ('permissions' in get(path).data)
+              && get(path).data.permissions is list
+              && permKey in get(path).data.permissions);
+    }
 
-      return isSuperAdmin() || hasUserPerm || hasAdminPerm;
+    function isOrdinaryStaffRole(role) {
+      return role in ['staff', 'manager', 'dispatcher', 'route_dispatcher'];
+    }
+
+    function getCallerPermissions() {
+      let path = /databases/$(database)/documents/admins/$(request.auth.uid);
+      return (isSignedIn() && exists(path) && ('permissions' in get(path).data) && get(path).data.permissions is list)
+          ? get(path).data.permissions
+          : [];
+    }
+
+    function isAllowedStaffManagerCreate(adminId) {
+      let data = request.resource.data;
+      let allowedFields = [
+        'uid', 'id', 'name', 'phone', 'email', 'role', 'roleTitle',
+        'permissions', 'status', 'isLinked', 'createdAt', 'updatedAt'
+      ];
+      let validRole = ('role' in data) && isOrdinaryStaffRole(data.role);
+      let notSelf = request.auth.uid != adminId && data.get('uid', '') != request.auth.uid;
+      let validStatus = !('status' in data) || data.status in ['Active', 'active', 'Pending', 'pending', 'Inactive', 'inactive'];
+      let noSuperAdmin = data.get('isSuperAdmin', false) == false;
+      let permsValid = !('permissions' in data)
+          || !(data.permissions is list)
+          || getCallerPermissions().hasAll(data.permissions);
+
+      return validRole && notSelf && validStatus && noSuperAdmin && permsValid && data.keys().hasOnly(allowedFields);
+    }
+
+    function isAllowedSuperAdminUpdate(adminId) {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let keepsUid = !('uid' in changed) || request.resource.data.uid == resource.data.uid;
+      let keepsAdminRole = !('role' in changed) || request.resource.data.role in ['admin', 'superadmin', 'owner'];
+      let notDemotingSelf = request.auth.uid != adminId || keepsAdminRole;
+      return notDemotingSelf && keepsUid;
+    }
+
+    function isAllowedStaffManagerUpdate(adminId) {
+      let targetRole = resource.data.get('role', 'staff');
+      let notSelf = request.auth.uid != adminId && resource.data.get('uid', '') != request.auth.uid;
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let allowedFields = [
+        'name', 'email', 'role', 'roleTitle', 'permissions', 'status',
+        'isLinked', 'linkedUid', 'linkedAt', 'updatedAt'
+      ];
+      let preservesIdentity = (!('uid' in changed) || request.resource.data.uid == resource.data.uid)
+          && (!('phone' in changed) || request.resource.data.phone == resource.data.phone);
+      let validRoleChange = !('role' in changed) || isOrdinaryStaffRole(request.resource.data.role);
+      let noSuperAdmin = request.resource.data.get('isSuperAdmin', false) == false;
+      let permsValid = !('permissions' in changed)
+          || !(request.resource.data.permissions is list)
+          || getCallerPermissions().hasAll(request.resource.data.permissions);
+
+      return isOrdinaryStaffRole(targetRole)
+          && notSelf
+          && changed.hasOnly(allowedFields)
+          && preservesIdentity
+          && validRoleChange
+          && noSuperAdmin
+          && permsValid;
     }
 
     function canManageCatalog() {
@@ -121,8 +181,12 @@ service cloud.firestore {
       // Owners can update own profile, but MUST NEVER mutate 'role', 'uid', 'isAdmin', 'permissions', or 'walletBalance'.
       // They are explicitly allowed to update their name, email, phone, profileImageUrl, fcmToken, fcmTokens, etc.
       allow update: if isSuperAdmin()
-          || hasPermission('manageStaff')
-          || hasPermission('editCustomer')
+          || (hasPermission('manageStaff')
+              && request.auth.uid != userId
+              && (!('role' in request.resource.data) || isOrdinaryStaffRole(request.resource.data.role) || request.resource.data.role == 'customer')
+              && (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin == false)
+              && (!('isSuperAdmin' in request.resource.data) || request.resource.data.isSuperAdmin == false))
+          || (hasPermission('editCustomer') && !('role' in request.resource.data) && !('isAdmin' in request.resource.data))
           || (isOwnDoc(userId)
               && (!('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid)
               && (!('role' in request.resource.data) || (('role' in resource.data) && request.resource.data.role == resource.data.role))
@@ -278,22 +342,12 @@ service cloud.firestore {
     // Business rule: Delivery agent MUST currently have isOnline == true.
     // Notice: isOnDuty is NOT treated as a substitute for isOnline.
     function isAgentOnline(agentId) {
-      let hasAgentDoc = exists(/databases/$(database)/documents/delivery_agents/$(agentId));
-      let agentDoc = hasAgentDoc ? get(/databases/$(database)/documents/delivery_agents/$(agentId)).data : null;
-      let hasUserDoc = exists(/databases/$(database)/documents/users/$(agentId));
-      let userDoc = hasUserDoc ? get(/databases/$(database)/documents/users/$(agentId)).data : null;
-
-      return hasAgentDoc
-          ? (agentDoc != null && ('isOnline' in agentDoc) && agentDoc.isOnline == true)
-          : (hasUserDoc && userDoc != null && ('isOnline' in userDoc) && userDoc.isOnline == true);
+      let agentPath = /databases/$(database)/documents/delivery_agents/$(agentId);
+      let userPath = /databases/$(database)/documents/users/$(agentId);
+      return (exists(agentPath) && get(agentPath).data.get('isOnline', false) == true)
+          || (exists(userPath) && get(userPath).data.get('isOnline', false) == true);
     }
 
-    // Admin order update validation:
-    // 1. Permanent terminal lock: DELIVERED and CANCELLED orders can never be modified or reassigned.
-    // 2. Admin cannot force OUT_FOR_DELIVERY or DELIVERED (delivery-agent only actions).
-    // 3. Admin cannot set PREPARING before delivery agent acceptance.
-    // 4. Ensures admin cannot assign an agent while order is in Pending state (must be Confirmed first).
-    // 5. Enforces that an order's assigned agent can only be updated if the targeted agent has isOnline == true.
     function canAdminUpdateOrder() {
       let currentStatus = ('status' in resource.data) ? resource.data.status.lower() : '';
       let targetStatus = ('status' in request.resource.data) ? request.resource.data.status.lower() : currentStatus;
@@ -413,9 +467,13 @@ service cloud.firestore {
       // Delivery agent reads own profile; Customers track assigned driver for active order; Admins read all.
       // Delivery agents CANNOT read another agent's private profile.
       // Unrelated customers CANNOT read delivery agent profiles.
-      allow read: if isAdmin()
+      allow get: if isAdmin()
           || (isDelivery() && isOwnDoc(agentId))
           || isCustomerOfActiveAgent();
+
+      // Collection enumeration: Strictly restricted to Admins.
+      // Delivery agents and customers CANNOT enumerate all agents.
+      allow list: if isAdmin();
 
       // Create own profile doc (Delivery agents or Admins)
       allow create: if isAdmin()
@@ -437,14 +495,19 @@ service cloud.firestore {
     }
 
     function isCustomerOfActiveAgent() {
+      let orderPath = /databases/$(database)/documents/orders/$(resource.data.orderId);
       return isCustomer()
           && ('orderId' in resource.data)
           && resource.data.orderId != null
-          && exists(/databases/$(database)/documents/orders/$(resource.data.orderId))
-          && get(/databases/$(database)/documents/orders/$(resource.data.orderId)).data.userId == request.auth.uid;
+          && resource.data.orderId != ''
+          && exists(orderPath)
+          && get(orderPath).data.userId == request.auth.uid
+          && !(get(orderPath).data.get('status', '').lower() in ['delivered', 'cancelled', '']);
     }
 
     function isAllowedAgentUpdate() {
+      // NOTE: 'assignedZone' removed to prevent delivery-agent self-reassignment (Finding 2)
+      // Only Administrators and Route Dispatchers may modify assignedZone.
       let allowed = [
         'name',
         'phone',
@@ -453,7 +516,6 @@ service cloud.firestore {
         'vehicle',
         'vehicleType',
         'vehicleNumber',
-        'assignedZone',
         'isOnline',
         'isOnDuty',
         'location',
@@ -567,10 +629,57 @@ service cloud.firestore {
 
     // â”€â”€ 13. admins Collection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     match /admins/{adminId} {
-      // Signed-in users can read admins collection for role verification / discovery
-      allow read: if isSignedIn();
-      // Super Admins or Staff Managers may create, update, or delete admin records
-      allow write: if isSuperAdmin() || hasPermission('manageStaff');
+      // Individual document get:
+      // An authenticated user can only read their OWN admin document,
+      // or Super Admins / Staff Managers can read any staff document.
+      // Unprivileged customers CANNOT read arbitrary admin records.
+      allow get: if isSignedIn() && (
+        isSuperAdmin()
+        || hasPermission('manageStaff')
+        || request.auth.uid == adminId
+        || (resource != null && resource.data.uid == request.auth.uid)
+      );
+
+      // Collection listing / enumeration:
+      // Strictly restricted to Super Admins and Staff Managers.
+      // Ordinary customers or unverified users CANNOT list or enumerate admin records.
+      allow list: if isSuperAdmin() || hasPermission('manageStaff');
+
+      // ── CREATE ─────────────────────────────────────────────────────────────
+      // Super Admins can create any staff or admin record.
+      // Staff Managers with 'manageStaff' may ONLY create ordinary staff roles
+      // ('staff', 'dispatcher', 'manager') within their permission ceiling,
+      // and cannot create records for themselves or grant Super Admin status.
+      allow create: if isSuperAdmin()
+          || (hasPermission('manageStaff')
+              && isAllowedStaffManagerCreate(adminId));
+
+      // ── UPDATE ─────────────────────────────────────────────────────────────
+      // Super Admins can update staff records, but cannot demote themselves via client.
+      // Staff Managers with 'manageStaff' may ONLY update ordinary staff records:
+      // - Cannot update Super Admin or owner records
+      // - Cannot promote anyone to Super Admin or owner
+      // - Cannot update their OWN admin document (prevents self-promotion / self-granting)
+      // - Cannot modify immutable identity fields (uid, phone)
+      // - Cannot assign permissions above their own permission ceiling
+      // - Updates restricted strictly to allowed fields
+      allow update: if (isSuperAdmin() && isAllowedSuperAdminUpdate(adminId))
+          || (hasPermission('manageStaff') && isAllowedStaffManagerUpdate(adminId));
+
+      // ── DELETE ─────────────────────────────────────────────────────────────
+      // Only Super Admins can delete administrator/staff records.
+      // Staff Managers CANNOT delete any administrator records.
+      // A Super Admin CANNOT delete their OWN record (prevents accidental or rogue deletion of active Super Admin).
+      allow delete: if isSuperAdmin() && request.auth.uid != adminId;
+    }
+
+    // ── Internal Claim Reservations (Backend Cloud Functions Only) ────────
+    match /_staff_phone_claims/{phone} {
+      allow read, write: if false;
+    }
+
+    match /_delivery_phone_claims/{phone} {
+      allow read, write: if false;
     }
 
     // â”€â”€ 14. delivery_batches Collection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

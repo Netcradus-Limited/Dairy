@@ -12,6 +12,7 @@ class User {
   final String? roleTitle; // 'Super Admin', 'Route Dispatcher', etc.
   final List<String> permissions;
   final String status; // 'Active', 'Inactive'
+  final bool isRoleServerVerified;
 
   const User({
     required this.id,
@@ -23,14 +24,16 @@ class User {
     this.roleTitle,
     this.permissions = const [],
     this.status = 'Active',
+    this.isRoleServerVerified = false,
   });
 
   UserRole get userRole => UserRole.fromString(role);
-  bool get isDelivery => userRole.isDelivery;
-  bool get isAdmin => userRole.isAdmin;
-  bool get isStaff => userRole.isStaff;
-  bool get canAccessAdminPortal => userRole.canAccessAdminPortal;
-  bool get isCustomer => userRole.isCustomer;
+  bool get isDelivery => isRoleServerVerified && userRole.isDelivery;
+  bool get isAdmin => isRoleServerVerified && userRole.isAdmin;
+  bool get isStaff => isRoleServerVerified && userRole.isStaff;
+  bool get canAccessAdminPortal =>
+      isRoleServerVerified && userRole.canAccessAdminPortal;
+  bool get isCustomer => !isRoleServerVerified || userRole.isCustomer;
   bool get isActive => status.toLowerCase() == 'active';
 
   /// Permission checker for RBAC enforcement
@@ -50,6 +53,7 @@ class User {
     String? roleTitle,
     List<String>? permissions,
     String? status,
+    bool? isRoleServerVerified,
   }) {
     return User(
       id: id ?? this.id,
@@ -61,6 +65,7 @@ class User {
       roleTitle: roleTitle ?? this.roleTitle,
       permissions: permissions ?? this.permissions,
       status: status ?? this.status,
+      isRoleServerVerified: isRoleServerVerified ?? this.isRoleServerVerified,
     );
   }
 

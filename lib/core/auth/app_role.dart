@@ -42,35 +42,16 @@ enum UserRole {
     }
   }
 
-  /// Resolves role from phone number with E.164 / prefix normalization.
-  /// 9999999999 / 8888888888 -> [UserRole.admin]
-  /// 7777777777 -> [UserRole.delivery]
-  /// All other numbers -> [UserRole.customer]
+  /// Resolves role from phone number.
+  /// Privileged roles (admin, staff, delivery) are strictly managed via authoritative
+  /// backend Firestore collections (`/admins` and `/delivery_agents`).
+  /// All unauthenticated or unverified phone lookups fail securely to [UserRole.customer].
   static UserRole fromPhone(String? phone) {
-    if (phone == null || phone.trim().isEmpty) return UserRole.customer;
-    final digits = phone.replaceAll(RegExp(r'\D'), '');
-    final normalized = (digits.length == 10)
-        ? digits
-        : (digits.length == 11 && digits.startsWith('0'))
-            ? digits.substring(1)
-            : (digits.length == 12 && digits.startsWith('91'))
-                ? digits.substring(2)
-                : (digits.length > 10)
-                    ? digits.substring(digits.length - 10)
-                    : digits;
-
-    if (normalized == '9999999999' || normalized == '8888888888') {
-      return UserRole.admin;
-    }
-    if (normalized == '7777777777') {
-      return UserRole.delivery;
-    }
     return UserRole.customer;
   }
 
   /// Resolves role by prioritizing explicit privileged role strings
-  /// ('admin', 'owner', 'superadmin', 'manager', 'dispatcher', 'staff', 'delivery')
-  /// and falling back to phone number.
+  /// verified from authoritative backend collections, failing securely to [UserRole.customer].
   static UserRole fromPhoneAndRole({String? phone, String? role}) {
     if (role != null && role.trim().isNotEmpty) {
       final parsed = fromString(role);
@@ -78,7 +59,7 @@ enum UserRole {
         return parsed;
       }
     }
-    return fromPhone(phone);
+    return UserRole.customer;
   }
 
   /// Returns the canonical sanitized role string for storage or state.

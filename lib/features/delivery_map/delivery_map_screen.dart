@@ -8,6 +8,7 @@ import '../../models/delivery_boy_model.dart';
 import '../../providers/delivery_live_location_provider.dart';
 import '../../providers/delivery_provider.dart';
 import '../../services/route_service.dart';
+import '../delivery_panel/services/delivery_location_coordinator.dart';
 
 /// Physical hub constants and default initial map view.
 class _MapConstants {
@@ -132,8 +133,8 @@ class _DeliveryMapScreenState extends ConsumerState<DeliveryMapScreen> {
   }
   // -------------------------------------------------------------------------
 
-  void _toggleLiveLocation() {
-    ref.read(agentLiveLocationProvider.notifier).toggle();
+  Future<void> _toggleLiveLocation() async {
+    await DeliveryLocationCoordinator.toggleTrackingWithConsent(context, ref);
   }
 
   List<Marker> _buildMarkers(List<DeliveryOrder> orders, LatLng? agentPos) {

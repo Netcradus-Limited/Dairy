@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/responsive/responsive_layout.dart';
 import '../../../models/delivery_boy_model.dart';
+import '../services/delivery_location_coordinator.dart';
 import '../../../providers/delivery_provider.dart';
 import '../../../services/order_service.dart';
 
@@ -144,8 +145,10 @@ class _RequestsTabState extends ConsumerState<RequestsTab> {
             ),
             const SizedBox(height: 32),
             ElevatedButton.icon(
-              onPressed: () =>
-                  ref.read(deliveryAgentProvider.notifier).toggleDuty(),
+              onPressed: () async {
+                await DeliveryLocationCoordinator.toggleDutyWithConsent(
+                    context, ref);
+              },
               icon: const Icon(Icons.power_settings_new_rounded),
               label: const Text('Go Online'),
               style: ElevatedButton.styleFrom(

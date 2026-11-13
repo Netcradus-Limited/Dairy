@@ -55,3 +55,5 @@ node_modules/
 **/*.keystore
 **/private_key.pe*
 **/serviceAccountKey*.json
+
+build_artifacts_preserved/*.aab

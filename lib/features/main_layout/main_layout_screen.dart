@@ -7,6 +7,7 @@ import '../../core/widgets/app_bottom_navigation.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/navigation_provider.dart';
+import '../../services/network_connectivity_service.dart';
 import '../address/address_screen.dart';
 import '../cart/cart_screen.dart';
 import '../home/home_screen.dart';
@@ -26,6 +27,32 @@ class MainLayoutScreen extends ConsumerStatefulWidget {
 class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
   final Set<int> _loadedTabs = {0};
 
+  Widget _buildOfflineBanner(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+      color: const Color(0xFFD97706),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.wifi_off_rounded, size: 15, color: Colors.white),
+          SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              'You are offline. Showing cached catalog and saved orders.',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentIndex = ref.watch(navigationProvider);
@@ -33,6 +60,7 @@ class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
 
     final cartCount = ref.watch(cartItemCountProvider);
     final deliveryLocation = ref.watch(deliveryLocationDisplayProvider);
+    final isNetworkOnline = ref.watch(networkConnectivityProvider);
     final isDesktop = context.isDesktop;
 
     final List<Widget> pages = [
@@ -48,6 +76,18 @@ class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
         MaterialPageRoute(builder: (_) => const AddressScreen()),
       );
     }
+
+    final bodyContent = Column(
+      children: [
+        if (!isNetworkOnline) _buildOfflineBanner(context),
+        Expanded(
+          child: IndexedStack(
+            index: currentIndex,
+            children: pages,
+          ),
+        ),
+      ],
+    );
 
     if (isDesktop) {
       return Scaffold(
@@ -71,10 +111,7 @@ class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
             );
           },
         ),
-        body: IndexedStack(
-          index: currentIndex,
-          children: pages,
-        ),
+        body: bodyContent,
       );
     }
 
@@ -105,10 +142,7 @@ class _MainLayoutScreenState extends ConsumerState<MainLayoutScreen> {
           },
         ),
       ),
-      body: IndexedStack(
-        index: currentIndex,
-        children: pages,
-      ),
+      body: bodyContent,
       bottomNavigationBar: AppBottomNavigation(
         currentIndex: currentIndex,
         onTap: (index) {

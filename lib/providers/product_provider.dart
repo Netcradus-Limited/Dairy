@@ -19,23 +19,17 @@ final firestoreProductRepoProvider =
 // ─── Category stream from Firestore ─────────────────────────────────────────
 
 /// Real-time stream of categories from the Firestore `categories` collection.
-/// Emits an empty list on error so the UI can render gracefully.
+/// Backed by the resilient repository stream which preserves cached data across drops.
 final categoriesProvider = StreamProvider<List<Category>>((ref) {
-  return ref
-      .watch(firestoreProductRepoProvider)
-      .streamCategories()
-      .handleError((_) => <Category>[]);
+  return ref.watch(firestoreProductRepoProvider).streamCategories();
 });
 
 // ─── Product streams from Firestore ─────────────────────────────────────────
 
 /// Real-time stream of all products from the Firestore `products` collection.
-/// Emits an empty list on error so the UI can render gracefully.
+/// Backed by the resilient repository stream which preserves cached data across drops.
 final allProductsStreamProvider = StreamProvider<List<Product>>((ref) {
-  return ref
-      .watch(firestoreProductRepoProvider)
-      .streamProducts()
-      .handleError((_) => <Product>[]);
+  return ref.watch(firestoreProductRepoProvider).streamProducts();
 });
 
 /// Convenience provider that exposes the current product list as a plain

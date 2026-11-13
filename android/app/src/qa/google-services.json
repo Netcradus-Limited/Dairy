@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1044268289363",
+    "project_id": "sawariya-dairy-qa",
+    "storage_bucket": "sawariya-dairy-qa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1044268289363:android:36510653ba9d5e4f2665a6",
+        "android_client_info": {
+          "package_name": "com.sawariyassarkar.app.qa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2W5-KJS5ht8uovmbI8Ui7ZzJ0k7GGTog"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

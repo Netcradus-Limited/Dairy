@@ -62,12 +62,12 @@ void main() {
       final normalized = PhoneAuthUtils.normalize('+91 98765 43210');
       expect(normalized, equals('9876543210'));
 
-      // Check role mapping
+      // BUG-004 fix: Zero-trust role security. Phone numbers alone do not grant admin or delivery roles without Firestore backend verification
       final adminRole = UserRole.fromPhone('+919999999999');
-      expect(adminRole, equals(UserRole.admin));
+      expect(adminRole, equals(UserRole.customer));
 
       final deliveryRole = UserRole.fromPhone('+917777777777');
-      expect(deliveryRole, equals(UserRole.delivery));
+      expect(deliveryRole, equals(UserRole.customer));
     });
 
     // 3. Existing user does not create duplicate user document
@@ -265,6 +265,7 @@ void main() {
         name: 'Karl',
         phone: '+919876543210',
         role: UserRole.deliveryValue,
+        isRoleServerVerified: true,
       );
 
       expect(deliveryUser.isDelivery, isTrue);

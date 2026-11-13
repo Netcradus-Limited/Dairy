@@ -172,7 +172,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       debugPrint(
-          '[AUTH ROLE DEBUG] Final route: ${targetRoute ?? path} (currentLocation=$path, userId=${user.id}, role=${user.role}, canAccessAdmin=$canAccessAdmin, isDelivery=$isDelivery)');
+          '[AUTH ROLE DEBUG] Final route: ${targetRoute ?? path} (currentLocation=$path, userId=${user.id}, role=${user.role}, isRoleServerVerified=${user.isRoleServerVerified}, canAccessAdmin=$canAccessAdmin, isDelivery=$isDelivery)');
 
       return targetRoute;
     },

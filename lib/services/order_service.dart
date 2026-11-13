@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 import 'package:firebase_auth/firebase_auth.dart' hide User;
@@ -235,10 +236,10 @@ class OrderService {
       final formattedAmount = totals.total.toStringAsFixed(
           totals.total.truncateToDouble() == totals.total ? 0 : 2);
       final notifBody =
-          'New Order #$orderCode from $resolvedCustomerName - ₹$formattedAmount ($paymentMode)';
+          'New Order #$orderCode from $resolvedCustomerName - â‚¹$formattedAmount ($paymentMode)';
 
       await notifRepo.sendNotificationToAdmins(
-        title: 'New Order Received 🛒',
+        title: 'New Order Received ðŸ›’',
         body: notifBody,
         type: NotificationType.order,
         orderId: docRef.id,
@@ -299,19 +300,91 @@ class OrderService {
     }
   }
 
+  /// In-memory cache for user orders keyed by clean user ID, supporting
+  /// stream resilience and zero-flicker reloads across connection drops.
+  final Map<String, List<Order>> _cachedUserOrders = {};
+
   /// Live stream of a user's orders, newest first.
+  /// Validates userId to prevent empty ID queries (which cause Firestore HTTP 400),
+  /// preserves previously loaded in-memory orders across network drops, and captures
+  /// stream transport errors gracefully with exponential backoff reconnects without hanging callers.
   Stream<List<Order>> streamOrdersForUser(String userId) {
-    try {
-      return _firestore
-          .collection('orders')
-          .where('userId', isEqualTo: userId)
-          .snapshots()
-          .map((snap) =>
-              snap.docs.map((d) => Order.fromFirestore(d.data(), d.id)).toList()
-                ..sort((a, b) => b.orderDate.compareTo(a.orderDate)));
-    } catch (_) {
-      return const Stream.empty();
+    final cleanId = userId.trim();
+    if (cleanId.isEmpty) {
+      return Stream.value(<Order>[]);
     }
+
+    late StreamController<List<Order>> controller;
+    StreamSubscription? subscription;
+    Timer? retryTimer;
+    int retryAttempt = 0;
+    bool isCancelled = false;
+
+    void connect() {
+      if (isCancelled || controller.isClosed) return;
+      subscription?.cancel();
+
+      try {
+        subscription = _firestore
+            .collection('orders')
+            .where('userId', isEqualTo: cleanId)
+            .snapshots()
+            .listen(
+          (snap) {
+            retryAttempt = 0;
+            final orders = snap.docs
+                .map((d) => Order.fromFirestore(d.data(), d.id))
+                .toList()
+              ..sort((a, b) => b.orderDate.compareTo(a.orderDate));
+            _cachedUserOrders[cleanId] = orders;
+            if (!controller.isClosed) {
+              controller.add(orders);
+            }
+          },
+          onError: (err, st) {
+            debugPrint('[ORDER STREAM] Error streaming orders for $cleanId: $err');
+            // Retain previously cached data so the UI does not clear or freeze
+            if (_cachedUserOrders.containsKey(cleanId) && !controller.isClosed) {
+              controller.add(_cachedUserOrders[cleanId]!);
+            }
+            // Exponential backoff reconnection for transient stream drops
+            if (!isCancelled && !controller.isClosed) {
+              retryAttempt++;
+              final delaySeconds = (1 << (retryAttempt.clamp(1, 4)));
+              debugPrint('[ORDER STREAM] Reconnecting orders stream for $cleanId in ${delaySeconds}s (attempt $retryAttempt)...');
+              retryTimer?.cancel();
+              retryTimer = Timer(Duration(seconds: delaySeconds), () {
+                if (!isCancelled && !controller.isClosed) {
+                  connect();
+                }
+              });
+            }
+          },
+        );
+      } catch (e) {
+        debugPrint('[ORDER STREAM] Initialization error for $cleanId: $e');
+        if (_cachedUserOrders.containsKey(cleanId) && !controller.isClosed) {
+          controller.add(_cachedUserOrders[cleanId]!);
+        }
+      }
+    }
+
+    controller = StreamController<List<Order>>.broadcast(
+      onListen: () {
+        isCancelled = false;
+        if (_cachedUserOrders.containsKey(cleanId)) {
+          controller.add(_cachedUserOrders[cleanId]!);
+        }
+        connect();
+      },
+      onCancel: () {
+        isCancelled = true;
+        retryTimer?.cancel();
+        subscription?.cancel();
+      },
+    );
+
+    return controller.stream;
   }
 
   /// Updates an order's status in Firestore.
@@ -447,7 +520,7 @@ class OrderService {
 
             // 1. Notify Admin: "Order #XXXX is now out for delivery."
             await notifRepo.sendNotificationToAdmins(
-              title: 'Out for Delivery 🚚',
+              title: 'Out for Delivery ðŸšš',
               body:
                   'Order #$displayCode is now out for delivery by $effectiveAgentName.',
               type: NotificationType.delivery,
@@ -473,7 +546,7 @@ class OrderService {
             if (customerId != null && customerId.isNotEmpty) {
               await notifRepo.sendNotificationToUser(
                 targetUserId: customerId,
-                title: 'Order Out for Delivery 🚚',
+                title: 'Order Out for Delivery ðŸšš',
                 body: 'Your order #$displayCode is now out for delivery!',
                 type: NotificationType.order,
                 createdBy: agentId.isNotEmpty ? agentId : 'system',
@@ -824,7 +897,7 @@ class OrderService {
 
       final notifRepo = NotificationRepository(firestore: _firestore);
       await notifRepo.sendNotificationToAdmins(
-        title: 'Order Accepted 📦',
+        title: 'Order Accepted ðŸ“¦',
         body: 'Delivery agent $effectiveName accepted Order #$displayCode.',
         type: NotificationType.delivery,
         orderId: cleanOrderId,
@@ -970,7 +1043,7 @@ class OrderService {
     try {
       final notifRepo = NotificationRepository(firestore: _firestore);
       await notifRepo.sendNotificationToAdmins(
-        title: 'Delivery Completed — Confirmation Required 📋',
+        title: 'Delivery Completed â€” Confirmation Required ðŸ“‹',
         body:
             'Agent reported delivery completed for order #$cleanOrderId. Confirmation required.',
         type: NotificationType.delivery,
@@ -998,7 +1071,7 @@ class OrderService {
         final notifRepo = NotificationRepository(firestore: _firestore);
         await notifRepo.sendNotificationToUser(
           targetUserId: customerUid,
-          title: 'Delivery Completed 📦',
+          title: 'Delivery Completed ðŸ“¦',
           body:
               'Your delivery has been reported as completed and is awaiting confirmation.',
           type: NotificationType.delivery,

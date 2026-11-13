@@ -41,6 +41,7 @@ void main() {
           name: 'Delivery Agent',
           phone: '9876543210',
           role: 'delivery',
+          isRoleServerVerified: true,
         );
         expect(deliveryUser.isDelivery, isTrue);
         expect(deliveryUser.isAdmin, isFalse);
@@ -577,6 +578,7 @@ void main() {
           name: 'Delivery Agent',
           phone: '9876543210',
           role: 'delivery',
+          isRoleServerVerified: true,
         );
 
         final route1 = NotificationService.resolveNotificationRoute(

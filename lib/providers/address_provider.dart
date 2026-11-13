@@ -82,7 +82,10 @@ class AddressNotifier extends StateNotifier<List<Address>> {
 
       state = list;
     } catch (e) {
-      state = [];
+      // Preserve existing in-memory addresses across transient network drops
+      if (state.isEmpty) {
+        state = [];
+      }
       Future.microtask(() {
         _ref.read(addressErrorProvider.notifier).state = e.toString();
       });

@@ -1,5 +1,6 @@
 const { onDocumentUpdated, onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
@@ -1517,3 +1518,511 @@ exports.onAdminBroadcastCreated = onDocumentCreated(
 exports.processDailySubscriptionOrders = processDailySubscriptionOrders;
 exports.processAdminBroadcast = processAdminBroadcast;
 exports.calculateNextDeliveryDate = calculateNextDeliveryDate;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BUG-004: ZERO-TRUST FIRST-TIME ACCOUNT LINKING (CALLABLE FUNCTIONS)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const ALLOWED_STAFF_ROLES = Object.freeze([
+  "admin",
+  "superadmin",
+  "owner",
+  "manager",
+  "dispatcher",
+  "route_dispatcher",
+  "staff",
+]);
+
+const ALLOWED_DELIVERY_ROLES = Object.freeze([
+  "delivery",
+  "delivery_agent",
+  "driver",
+]);
+
+const ALLOWED_STATUSES = Object.freeze(["Active", "active"]);
+
+/**
+ * Normalizes Indian phone numbers to canonical 10-digit format without country code.
+ */
+function normalizeIndianPhone(rawPhone) {
+  if (!rawPhone || typeof rawPhone !== "string") return "";
+  const digits = rawPhone.replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("0")) {
+    return digits.substring(1);
+  }
+  if (digits.length === 12 && digits.startsWith("91")) {
+    return digits.substring(2);
+  }
+  if (digits.length > 10) {
+    return digits.substring(digits.length - 10);
+  }
+  if (digits.length === 10) {
+    return digits;
+  }
+  return digits;
+}
+
+/**
+ * Generates standard queryable phone representation variants.
+ */
+function generatePhoneVariants(rawPhone) {
+  const norm = normalizeIndianPhone(rawPhone);
+  if (!norm || norm.length !== 10) return rawPhone ? [rawPhone.trim()] : [];
+  return [
+    `+91${norm}`,
+    norm,
+    `+91 ${norm}`,
+    `91${norm}`,
+    `0${norm}`,
+    `${norm.substring(0, 5)} ${norm.substring(5)}`,
+  ];
+}
+
+/**
+ * Transaction-bound core logic for linking pre-provisioned staff records to a verified Auth UID.
+ * All reads occur before all writes within an atomic Firestore transaction.
+ */
+async function processLinkStaffAccount(db, authContext) {
+  if (!authContext || !authContext.uid) {
+    throw new HttpsError("unauthenticated", "Authentication required to link staff account.");
+  }
+
+  const verifiedPhone = (authContext.phoneNumber || "").trim();
+  if (!verifiedPhone) {
+    throw new HttpsError("failed-precondition", "A verified phone number claim from Firebase Auth is required.");
+  }
+
+  const uid = authContext.uid;
+  const normalizedPhone = normalizeIndianPhone(verifiedPhone);
+  if (!normalizedPhone || normalizedPhone.length !== 10) {
+    throw new HttpsError("invalid-argument", "Invalid phone number format for staff verification.");
+  }
+
+  const phoneVariants = generatePhoneVariants(verifiedPhone);
+  const claimRef = db.collection("_staff_phone_claims").doc(normalizedPhone);
+  const adminUidRef = db.collection("admins").doc(uid);
+  const userRef = db.collection("users").doc(uid);
+
+  return await db.runTransaction(async (transaction) => {
+    // ── READ 1: Check phone reservation claim ──────────────────────────────
+    const claimSnap = await transaction.get(claimRef);
+    if (claimSnap.exists) {
+      const claimData = claimSnap.data() || {};
+      if (claimData.uid && claimData.uid !== uid) {
+        throw new HttpsError(
+          "already-exists",
+          `This staff phone number is already linked to another account (${claimData.uid}). UID takeover rejected.`
+        );
+      }
+      if (claimData.uid === uid) {
+        // Idempotent retry: verify admin document
+        const adminSnap = await transaction.get(adminUidRef);
+        if (adminSnap.exists) {
+          const aData = adminSnap.data() || {};
+          const status = (aData.status || "Active").trim();
+          if (!ALLOWED_STATUSES.includes(status)) {
+            throw new HttpsError("permission-denied", "Staff account has been deactivated or suspended.");
+          }
+          return {
+            status: "already_linked",
+            role: aData.role || "staff",
+            roleTitle: aData.roleTitle || aData.role || "staff",
+            permissions: Array.isArray(aData.permissions) ? aData.permissions : [],
+          };
+        }
+      }
+    }
+
+    // Check cross-claim in _delivery_phone_claims
+    const crossDeliveryClaimRef = db.collection("_delivery_phone_claims").doc(normalizedPhone);
+    const crossDeliverySnap = await transaction.get(crossDeliveryClaimRef);
+    if (crossDeliverySnap.exists) {
+      const crossData = crossDeliverySnap.data() || {};
+      if (crossData.uid && crossData.uid !== uid) {
+        throw new HttpsError(
+          "already-exists",
+          `This phone number is already claimed by a delivery partner (${crossData.uid}). Cross-role takeover rejected.`
+        );
+      }
+    }
+
+    // ── READ 2: Query pre-provisioned staff documents ──────────────────────
+    let matchedDoc = null;
+    let matchingDocs = [];
+
+    // Check direct doc by normalized phone
+    const normPhoneDocRef = db.collection("admins").doc(normalizedPhone);
+    const normPhoneSnap = await transaction.get(normPhoneDocRef);
+    if (normPhoneSnap.exists) {
+      matchingDocs.push(normPhoneSnap);
+    }
+
+    // Also query by phone variants within transaction
+    try {
+      const staffQuery = db.collection("admins").where("phone", "in", phoneVariants).limit(5);
+      const querySnap = await transaction.get(staffQuery);
+      for (const d of querySnap.docs) {
+        if (!matchingDocs.some((m) => m.id === d.id)) {
+          matchingDocs.push(d);
+        }
+      }
+    } catch (qErr) {
+      console.warn(`[Staff Linking] Query error inside transaction: ${qErr.message}`);
+    }
+
+    if (matchingDocs.length === 0) {
+      return {
+        status: "not_staff",
+        role: "customer",
+        permissions: [],
+      };
+    }
+
+    // Check for conflicting or ambiguous unlinked documents
+    const candidateDocs = matchingDocs.filter((d) => d.id !== uid);
+    if (candidateDocs.length > 1) {
+      const distinctRoles = new Set(candidateDocs.map((d) => d.data()?.role));
+      if (distinctRoles.size > 1) {
+        throw new HttpsError(
+          "failed-precondition",
+          "Ambiguous staff provisioning records found for this phone number. Contact administrator."
+        );
+      }
+    }
+
+    matchedDoc = candidateDocs[0] || matchingDocs[0];
+    const staffData = matchedDoc.data() || {};
+
+    // Validate active status
+    const status = (staffData.status || "Active").trim();
+    if (!ALLOWED_STATUSES.includes(status)) {
+      throw new HttpsError("permission-denied", "This staff provisioning record is not active.");
+    }
+
+    // Validate role against allowlist
+    const rawRole = (staffData.role || "").trim().toLowerCase();
+    if (!ALLOWED_STAFF_ROLES.includes(rawRole)) {
+      throw new HttpsError("invalid-argument", `Unauthorized role "${rawRole}" in provisioning record.`);
+    }
+
+    const cleanRole = rawRole;
+    const roleTitle = staffData.roleTitle || cleanRole;
+    const permissions = Array.isArray(staffData.permissions)
+      ? staffData.permissions.map((p) => String(p).trim()).filter(Boolean)
+      : [];
+
+    // Verify record hasn't already been claimed by a different user
+    if (staffData.isLinked === true && staffData.linkedUid && staffData.linkedUid !== uid) {
+      throw new HttpsError("already-exists", "This staff record has already been claimed by another user.");
+    }
+
+    // ── READ 3: Read user doc ──────────────────────────────────────────────
+    const userSnap = await transaction.get(userRef);
+    const existingUserData = userSnap.exists ? userSnap.data() || {} : {};
+
+    // ── ATOMIC WRITES (All reads strictly completed above) ──────────────────
+    // 1. Phone reservation claim
+    transaction.set(
+      claimRef,
+      {
+        uid: uid,
+        phone: normalizedPhone,
+        linkedAt: FieldValue.serverTimestamp(),
+        sourceDocId: matchedDoc.id,
+      },
+      { merge: true }
+    );
+
+    // 2. Mark source pre-provisioned doc as linked
+    if (matchedDoc.id !== uid) {
+      transaction.update(matchedDoc.ref, {
+        isLinked: true,
+        linkedUid: uid,
+        linkedAt: FieldValue.serverTimestamp(),
+      });
+    }
+
+    // 3. Write UID-keyed admin record with explicit allowlist fields
+    const adminPayload = {
+      uid: uid,
+      role: cleanRole,
+      roleTitle: roleTitle,
+      permissions: permissions,
+      status: status,
+      phone: verifiedPhone,
+      isLinked: true,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    if (staffData.name) adminPayload.name = String(staffData.name).trim();
+    if (staffData.email) adminPayload.email = String(staffData.email).trim();
+
+    transaction.set(adminUidRef, adminPayload, { merge: true });
+
+    // 4. Update user document
+    const userPayload = {
+      uid: uid,
+      role: cleanRole,
+      roleTitle: roleTitle,
+      permissions: permissions,
+      status: status,
+      phone: verifiedPhone,
+      isAdmin: ["admin", "superadmin", "owner"].includes(cleanRole),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    if (staffData.name && (!existingUserData.name || existingUserData.name === "Sawariya Customer")) {
+      userPayload.name = String(staffData.name).trim();
+    }
+    if (staffData.email && !existingUserData.email) {
+      userPayload.email = String(staffData.email).trim();
+    }
+
+    transaction.set(userRef, userPayload, { merge: true });
+
+    return {
+      status: "linked",
+      role: cleanRole,
+      roleTitle: roleTitle,
+      permissions: permissions,
+    };
+  });
+}
+
+/**
+ * Transaction-bound core logic for linking pre-provisioned delivery agent records to a verified Auth UID.
+ * All reads occur before all writes within an atomic Firestore transaction.
+ */
+async function processLinkDeliveryAgentAccount(db, authContext) {
+  if (!authContext || !authContext.uid) {
+    throw new HttpsError("unauthenticated", "Authentication required to link delivery agent account.");
+  }
+
+  const verifiedPhone = (authContext.phoneNumber || "").trim();
+  if (!verifiedPhone) {
+    throw new HttpsError("failed-precondition", "A verified phone number claim from Firebase Auth is required.");
+  }
+
+  const uid = authContext.uid;
+  const normalizedPhone = normalizeIndianPhone(verifiedPhone);
+  if (!normalizedPhone || normalizedPhone.length !== 10) {
+    throw new HttpsError("invalid-argument", "Invalid phone number format for delivery agent verification.");
+  }
+
+  const phoneVariants = generatePhoneVariants(verifiedPhone);
+  const claimRef = db.collection("_delivery_phone_claims").doc(normalizedPhone);
+  const agentUidRef = db.collection("delivery_agents").doc(uid);
+  const userRef = db.collection("users").doc(uid);
+
+  return await db.runTransaction(async (transaction) => {
+    // ── READ 1: Check phone reservation claim ──────────────────────────────
+    const claimSnap = await transaction.get(claimRef);
+    if (claimSnap.exists) {
+      const claimData = claimSnap.data() || {};
+      if (claimData.uid && claimData.uid !== uid) {
+        throw new HttpsError(
+          "already-exists",
+          `This delivery agent phone number is already linked to another account (${claimData.uid}). UID takeover rejected.`
+        );
+      }
+      if (claimData.uid === uid) {
+        // Idempotent retry: verify delivery agent document
+        const agentSnap = await transaction.get(agentUidRef);
+        if (agentSnap.exists) {
+          const aData = agentSnap.data() || {};
+          const status = (aData.status || "Active").trim();
+          if (!ALLOWED_STATUSES.includes(status)) {
+            throw new HttpsError("permission-denied", "Delivery agent account has been deactivated or suspended.");
+          }
+          return {
+            status: "already_linked",
+            role: "delivery",
+            roleTitle: "Delivery Partner",
+            permissions: [],
+          };
+        }
+      }
+    }
+
+    // Check cross-claim in _staff_phone_claims
+    const crossStaffClaimRef = db.collection("_staff_phone_claims").doc(normalizedPhone);
+    const crossStaffSnap = await transaction.get(crossStaffClaimRef);
+    if (crossStaffSnap.exists) {
+      const crossData = crossStaffSnap.data() || {};
+      if (crossData.uid && crossData.uid !== uid) {
+        throw new HttpsError(
+          "already-exists",
+          `This phone number is already claimed by a staff account (${crossData.uid}). Cross-role takeover rejected.`
+        );
+      }
+    }
+
+    // ── READ 2: Query pre-provisioned delivery agent documents ─────────────
+    let matchingDocs = [];
+
+    // Query delivery_agents collection by phone variants
+    try {
+      const agentQuery = db.collection("delivery_agents").where("phone", "in", phoneVariants).limit(5);
+      const querySnap = await transaction.get(agentQuery);
+      matchingDocs.push(...querySnap.docs);
+    } catch (qErr) {
+      console.warn(`[Delivery Linking] Query error inside transaction: ${qErr.message}`);
+    }
+
+    if (matchingDocs.length === 0) {
+      return {
+        status: "not_delivery",
+        role: "customer",
+        permissions: [],
+      };
+    }
+
+    const candidateDocs = matchingDocs.filter((d) => d.id !== uid);
+    if (candidateDocs.length > 1) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Ambiguous delivery agent provisioning records found for this phone number. Contact administrator."
+      );
+    }
+    const matchedDoc = candidateDocs[0] || matchingDocs[0];
+    const agentData = matchedDoc.data() || {};
+
+    // Validate active status
+    const status = (agentData.status || "Active").trim();
+    if (!ALLOWED_STATUSES.includes(status)) {
+      throw new HttpsError("permission-denied", "This delivery agent record is not active.");
+    }
+
+    // Verify record hasn't already been claimed by a different user
+    if (agentData.isLinked === true && agentData.linkedUid && agentData.linkedUid !== uid) {
+      throw new HttpsError("already-exists", "This delivery record has already been claimed by another user.");
+    }
+
+    // ── READ 3: Read user doc ──────────────────────────────────────────────
+    const userSnap = await transaction.get(userRef);
+    const existingUserData = userSnap.exists ? userSnap.data() || {} : {};
+
+    // ── ATOMIC WRITES (All reads strictly completed above) ──────────────────
+    // 1. Phone reservation claim
+    transaction.set(
+      claimRef,
+      {
+        uid: uid,
+        phone: normalizedPhone,
+        linkedAt: FieldValue.serverTimestamp(),
+        sourceDocId: matchedDoc.id,
+      },
+      { merge: true }
+    );
+
+    // 2. Mark source pre-provisioned doc as linked
+    if (matchedDoc.id !== uid) {
+      transaction.update(matchedDoc.ref, {
+        isLinked: true,
+        linkedUid: uid,
+        linkedAt: FieldValue.serverTimestamp(),
+      });
+    }
+
+    // 3. Write UID-keyed delivery_agent record with explicit allowlist fields
+    const agentPayload = {
+      uid: uid,
+      id: uid,
+      role: "delivery",
+      status: status,
+      phone: verifiedPhone,
+      isOnline: false,
+      isOnDuty: false,
+      isLinked: true,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    if (agentData.name) agentPayload.name = String(agentData.name).trim();
+    if (agentData.email) agentPayload.email = String(agentData.email).trim();
+    if (agentData.vehicle || agentData.vehicleType) {
+      agentPayload.vehicle = String(agentData.vehicle || agentData.vehicleType).trim();
+    }
+    if (agentData.vehicleNumber) agentPayload.vehicleNumber = String(agentData.vehicleNumber).trim();
+    if (agentData.assignedZone || agentData.zone) {
+      agentPayload.assignedZone = String(agentData.assignedZone || agentData.zone).trim();
+    }
+    if (agentData.rating != null && !isNaN(agentData.rating)) {
+      agentPayload.rating = Number(agentData.rating);
+    }
+    if (agentData.profileImageUrl || agentData.photoUrl) {
+      agentPayload.profileImageUrl = String(agentData.profileImageUrl || agentData.photoUrl).trim();
+    }
+
+    transaction.set(agentUidRef, agentPayload, { merge: true });
+
+    // 4. Update user document
+    const userPayload = {
+      uid: uid,
+      role: "delivery",
+      roleTitle: "Delivery Partner",
+      status: status,
+      phone: verifiedPhone,
+      isAdmin: false,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    if (agentData.name && (!existingUserData.name || existingUserData.name === "Sawariya Customer")) {
+      userPayload.name = String(agentData.name).trim();
+    }
+    if (agentData.email && !existingUserData.email) {
+      userPayload.email = String(agentData.email).trim();
+    }
+
+    transaction.set(userRef, userPayload, { merge: true });
+
+    return {
+      status: "linked",
+      role: "delivery",
+      roleTitle: "Delivery Partner",
+      permissions: [],
+    };
+  });
+}
+
+// ── CALLABLE CLOUD FUNCTIONS (PROPOSED FOR FUTURE DEPLOYMENT UPON APPROVAL) ──
+
+exports.linkStaffAccount = onCall(
+  {
+    region: "asia-south2",
+    enforceAppCheck: false,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Authentication required to link staff account.");
+    }
+    const db = getFirestore();
+    const authContext = {
+      uid: request.auth.uid,
+      phoneNumber: request.auth.token.phone_number || "",
+    };
+    return await processLinkStaffAccount(db, authContext);
+  }
+);
+
+exports.linkDeliveryAgentAccount = onCall(
+  {
+    region: "asia-south2",
+    enforceAppCheck: false,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Authentication required to link delivery agent account.");
+    }
+    const db = getFirestore();
+    const authContext = {
+      uid: request.auth.uid,
+      phoneNumber: request.auth.token.phone_number || "",
+    };
+    return await processLinkDeliveryAgentAccount(db, authContext);
+  }
+);
+
+// Exports for unit testing
+exports.normalizeIndianPhone = normalizeIndianPhone;
+exports.generatePhoneVariants = generatePhoneVariants;
+exports.ALLOWED_STAFF_ROLES = ALLOWED_STAFF_ROLES;
+exports.ALLOWED_DELIVERY_ROLES = ALLOWED_DELIVERY_ROLES;
+exports.ALLOWED_STATUSES = ALLOWED_STATUSES;
+exports.processLinkStaffAccount = processLinkStaffAccount;
+exports.processLinkDeliveryAgentAccount = processLinkDeliveryAgentAccount;

@@ -10,6 +10,7 @@ import '../../../providers/delivery_live_location_provider.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../providers/user_provider.dart';
 import '../../../services/battery_optimization_service.dart';
+import '../services/delivery_location_coordinator.dart';
 import '../theme/delivery_theme.dart';
 import '../widgets/delivery_header.dart';
 
@@ -24,8 +25,6 @@ class DeliverySettingsRedesignedScreen extends ConsumerStatefulWidget {
 
 class _DeliverySettingsRedesignedScreenState
     extends ConsumerState<DeliverySettingsRedesignedScreen> {
-  bool _locationServicesEnabled = true;
-
   void _showLogoutDialog() {
     showDialog(
       context: context,
@@ -198,6 +197,7 @@ class _DeliverySettingsRedesignedScreenState
   Widget build(BuildContext context) {
     final notificationsEnabled =
         ref.watch(settingsProvider.select((s) => s.notificationsEnabled));
+    final isTrackingActive = ref.watch(agentLiveLocationProvider);
 
     return Scaffold(
       backgroundColor: DeliveryTheme.background,
@@ -245,13 +245,15 @@ class _DeliverySettingsRedesignedScreenState
                         _buildSwitchTile(
                           icon: Icons.location_on_outlined,
                           title: 'Location Services',
-                          value: _locationServicesEnabled,
-                          onChanged: (val) {
-                            setState(() => _locationServicesEnabled = val);
+                          value: isTrackingActive,
+                          onChanged: (val) async {
                             if (val) {
-                              ref
-                                  .read(agentLiveLocationProvider.notifier)
-                                  .startTracking();
+                              await DeliveryLocationCoordinator
+                                  .enableTrackingWithConsent(
+                                context,
+                                ref,
+                                forceBackgroundPrompt: true,
+                              );
                             } else {
                               ref
                                   .read(agentLiveLocationProvider.notifier)
@@ -278,7 +280,7 @@ class _DeliverySettingsRedesignedScreenState
                           title: 'Privacy Policy',
                           onTap: () => _showInfoDialog(
                             'Privacy Policy',
-                            'Sawariya Dairy values your privacy. We collect location data during active delivery hours only to optimize deliveries and customer tracking.',
+                            'Sawariya Dairy collects foreground and background location from delivery partners only after explicit consent and while toggled On Duty / Online (including between consecutive deliveries), even when minimized or screen-locked, to coordinate dispatch and show live delivery ETAs to assigned customers. Tracking stops when you go Offline, take a break, log out, or close the app/shift.',
                             route: '/privacy-policy',
                           ),
                         ),

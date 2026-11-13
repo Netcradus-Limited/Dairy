@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:dairy_app/features/delivery_panel/widgets/gps_status_warning_banner.dart';
 import 'package:dairy_app/models/delivery_boy_model.dart';
@@ -44,6 +45,21 @@ class _MockLocationService extends LocationService {
   }
 
   @override
+  Future<AndroidLocationPermissionState> getPermissionSnapshot() async {
+    final fg = permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always;
+    final bg = permission == LocationPermission.always && backgroundGranted;
+    return AndroidLocationPermissionState(
+      sdkInt: 34,
+      fineGranted: fg,
+      coarseGranted: fg,
+      foregroundGranted: fg,
+      backgroundGranted: bg,
+      notificationGranted: true,
+    );
+  }
+
+  @override
   Future<bool> requestBackgroundLocationPermission() async => backgroundGranted;
 
   @override
@@ -60,6 +76,9 @@ class _MockLocationService extends LocationService {
 
   @override
   Stream<Position> getPositionStream() => positionController.stream;
+
+  @override
+  Future<Position?> getCurrentPositionAlreadyPermitted() async => null;
 
   @override
   Future<Position?> getCurrentPosition() async => null;
@@ -125,6 +144,9 @@ void main() {
   late ProviderContainer container;
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({
+      'delivery_bg_location_disclosure_agreed_agent_test_4': true,
+    });
     mockLocation = _MockLocationService();
     mockTrackingService = _CapturingTrackingService();
 
@@ -161,7 +183,7 @@ void main() {
 
       final trackingNotifier =
           container.read(agentLiveLocationProvider.notifier);
-      await trackingNotifier.startTracking();
+      await trackingNotifier.startTracking(explicitUserAction: true);
 
       expect(trackingNotifier.state, isFalse);
       expect(
@@ -178,7 +200,7 @@ void main() {
 
       final trackingNotifier =
           container.read(agentLiveLocationProvider.notifier);
-      await trackingNotifier.startTracking();
+      await trackingNotifier.startTracking(explicitUserAction: true);
 
       expect(trackingNotifier.state, isFalse);
       expect(
@@ -195,7 +217,7 @@ void main() {
 
       final trackingNotifier =
           container.read(agentLiveLocationProvider.notifier);
-      await trackingNotifier.startTracking();
+      await trackingNotifier.startTracking(explicitUserAction: true);
 
       expect(trackingNotifier.state, isFalse);
       expect(
@@ -212,7 +234,7 @@ void main() {
 
       final trackingNotifier =
           container.read(agentLiveLocationProvider.notifier);
-      await trackingNotifier.startTracking();
+      await trackingNotifier.startTracking(explicitUserAction: true);
 
       expect(trackingNotifier.state, isTrue);
       expect(
@@ -238,7 +260,7 @@ void main() {
 
       final trackingNotifier =
           container.read(agentLiveLocationProvider.notifier);
-      await trackingNotifier.startTracking();
+      await trackingNotifier.startTracking(explicitUserAction: true);
       expect(trackingNotifier.state, isTrue);
 
       // Simulate GPS turned off while driving
@@ -264,7 +286,7 @@ void main() {
 
       final trackingNotifier =
           container.read(agentLiveLocationProvider.notifier);
-      await trackingNotifier.startTracking();
+      await trackingNotifier.startTracking(explicitUserAction: true);
       expect(trackingNotifier.state, isFalse);
       expect(
         container.read(gpsTrackingStatusProvider),
@@ -293,7 +315,7 @@ void main() {
 
       final trackingNotifier =
           container.read(agentLiveLocationProvider.notifier);
-      await trackingNotifier.startTracking();
+      await trackingNotifier.startTracking(explicitUserAction: true);
       expect(trackingNotifier.state, isTrue);
 
       trackingNotifier.stopTracking();

@@ -7,7 +7,13 @@ import 'package:dairy_app/models/user.dart';
 import 'package:dairy_app/providers/delivery_provider.dart';
 import 'package:dairy_app/providers/user_provider.dart';
 import 'package:dairy_app/features/delivery_panel/delivery_panel_screen.dart';
+import 'dart:async';
+import 'package:dairy_app/services/earnings_service.dart';
+import 'package:dairy_app/services/location_service.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:dairy_app/services/network_connectivity_service.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _TestUserNotifier extends StateNotifier<User> implements UserNotifier {
   _TestUserNotifier(super.state);
@@ -16,9 +22,37 @@ class _TestUserNotifier extends StateNotifier<User> implements UserNotifier {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class _DesktopTestLocationService extends LocationService {
+  final _ctrl = StreamController<Position>.broadcast();
+  @override
+  Future<bool> isLocationServiceEnabled() async => true;
+  @override
+  Future<AndroidLocationPermissionState> getPermissionSnapshot() async =>
+      const AndroidLocationPermissionState(
+        sdkInt: 34,
+        fineGranted: true,
+        coarseGranted: true,
+        foregroundGranted: true,
+        backgroundGranted: true,
+        notificationGranted: true,
+      );
+  @override
+  Future<Position?> getCurrentPositionAlreadyPermitted() async => null;
+  @override
+  Stream<Position> getPositionStream() => _ctrl.stream;
+  void dispose() => _ctrl.close();
+}
+
 class _StaticDeliveryNotifier extends StateNotifier<DeliveryAgent>
     implements DeliveryNotifier {
   _StaticDeliveryNotifier(super.state);
+
+  @override
+  Future<void> setDuty(bool isOnline) async {
+    state = state.copyWith(
+      status: isOnline ? DeliveryStatus.onDuty : DeliveryStatus.offDuty,
+    );
+  }
 
   @override
   Future<void> toggleDuty() async {
@@ -192,11 +226,23 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          userProvider.overrideWith(
+            (ref) => _TestUserNotifier(
+              const User(
+                id: 'agent_desktop_1',
+                name: 'Suresh Kumar',
+                phone: '+91 98260 12345',
+                role: 'delivery',
+                isRoleServerVerified: true,
+              ),
+            ),
+          ),
           deliveryAgentProvider.overrideWith((ref) => _StaticDeliveryNotifier(agent)),
           networkConnectivityProvider.overrideWith((ref) => _MockNetworkNotifier(true)),
           deliveryActiveOrdersStreamProvider.overrideWith((ref) => Stream.value([])),
           deliveryRequestsStreamProvider.overrideWithValue(const <DeliveryOrder>[]),
           deliveryHistoryStreamProvider.overrideWithValue(const AsyncValue.data(<DeliveryOrder>[])),
+          earningsServiceProvider.overrideWithValue(EarningsService(FakeFirebaseFirestore())),
           deliveryAgentLocationStreamProvider.overrideWith((ref) => Stream.value(null)),
         ],
       );
@@ -241,11 +287,23 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          userProvider.overrideWith(
+            (ref) => _TestUserNotifier(
+              const User(
+                id: 'agent_desktop_1',
+                name: 'Suresh Kumar',
+                phone: '+91 98260 12345',
+                role: 'delivery',
+                isRoleServerVerified: true,
+              ),
+            ),
+          ),
           deliveryAgentProvider.overrideWith((ref) => _StaticDeliveryNotifier(agent)),
           networkConnectivityProvider.overrideWith((ref) => _MockNetworkNotifier(true)),
           deliveryActiveOrdersStreamProvider.overrideWith((ref) => Stream.value([])),
           deliveryRequestsStreamProvider.overrideWithValue(const <DeliveryOrder>[]),
           deliveryHistoryStreamProvider.overrideWithValue(const AsyncValue.data(<DeliveryOrder>[])),
+          earningsServiceProvider.overrideWithValue(EarningsService(FakeFirebaseFirestore())),
           deliveryAgentLocationStreamProvider.overrideWith((ref) => Stream.value(null)),
         ],
       );
@@ -289,14 +347,30 @@ void main() {
         earningsToday: 0.0,
       );
 
+      SharedPreferences.setMockInitialValues({});
+      final mockLoc = _DesktopTestLocationService();
+      addTearDown(mockLoc.dispose);
       final staticNotifier = _StaticDeliveryNotifier(agent);
       final container = ProviderContainer(
         overrides: [
+          locationServiceProvider.overrideWithValue(mockLoc),
+          userProvider.overrideWith(
+            (ref) => _TestUserNotifier(
+              const User(
+                id: 'agent_desktop_2',
+                name: 'Suresh Kumar',
+                phone: '+91 98260 12345',
+                role: 'delivery',
+                isRoleServerVerified: true,
+              ),
+            ),
+          ),
           deliveryAgentProvider.overrideWith((ref) => staticNotifier),
           networkConnectivityProvider.overrideWith((ref) => _MockNetworkNotifier(true)),
           deliveryActiveOrdersStreamProvider.overrideWith((ref) => Stream.value([])),
           deliveryRequestsStreamProvider.overrideWithValue(const <DeliveryOrder>[]),
           deliveryHistoryStreamProvider.overrideWithValue(const AsyncValue.data(<DeliveryOrder>[])),
+          earningsServiceProvider.overrideWithValue(EarningsService(FakeFirebaseFirestore())),
           deliveryAgentLocationStreamProvider.overrideWith((ref) => Stream.value(null)),
         ],
       );
@@ -318,6 +392,12 @@ void main() {
       // Tap the desktop top bar badge
       await tester.tap(find.text('Offline').first);
       await tester.pumpAndSettle();
+
+      // Option A disclosure consent must be accepted before going Online
+      if (find.byKey(const Key('disclosure_agree_button')).evaluate().isNotEmpty) {
+        await tester.tap(find.byKey(const Key('disclosure_agree_button')));
+        await tester.pumpAndSettle();
+      }
 
       // Now it's explicitly online
       expect(staticNotifier.state.status, equals(DeliveryStatus.onDuty));

@@ -9,6 +9,7 @@ import '../../../core/responsive/responsive_layout.dart';
 import '../../../models/delivery_boy_model.dart';
 import '../../../providers/delivery_provider.dart';
 import '../../../services/firebase_storage_service.dart';
+import '../services/delivery_location_coordinator.dart';
 import '../theme/delivery_theme.dart';
 import '../widgets/delivery_agent_avatar.dart';
 import 'delivery_history_redesigned_screen.dart';
@@ -220,9 +221,8 @@ class _DeliveryProfileRedesignedTabState
       backgroundColor: DeliveryTheme.background,
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final double maxContentWidth = isDesktop
-              ? 640.0
-              : (isTablet ? 560.0 : double.infinity);
+          final double maxContentWidth =
+              isDesktop ? 640.0 : (isTablet ? 560.0 : double.infinity);
           final double bannerHeight = isDesktop ? 120.0 : 140.0;
           const double avatarRadius = 46.0;
           const double avatarDiameter = avatarRadius * 2; // 92
@@ -282,10 +282,8 @@ class _DeliveryProfileRedesignedTabState
                                               Scaffold.maybeOf(context)
                                                   ?.openDrawer();
                                             },
-                                            icon: const Icon(
-                                                Icons.menu_rounded,
-                                                color: Colors.white,
-                                                size: 26),
+                                            icon: const Icon(Icons.menu_rounded,
+                                                color: Colors.white, size: 26),
                                           )
                                         else
                                           const SizedBox(width: 48),
@@ -351,16 +349,13 @@ class _DeliveryProfileRedesignedTabState
                                           ? const SizedBox(
                                               width: 14,
                                               height: 14,
-                                              child:
-                                                  CircularProgressIndicator(
+                                              child: CircularProgressIndicator(
                                                 strokeWidth: 2,
                                                 color: Colors.white,
                                               ),
                                             )
-                                          : const Icon(
-                                              Icons.camera_alt_rounded,
-                                              color: Colors.white,
-                                              size: 14),
+                                          : const Icon(Icons.camera_alt_rounded,
+                                              color: Colors.white, size: 14),
                                     ),
                                   ),
                                 ),
@@ -374,9 +369,7 @@ class _DeliveryProfileRedesignedTabState
                     // 2. Name + Title + Online/Offline Pill
                     const SizedBox(height: 10),
                     Text(
-                      agent.name.isNotEmpty
-                          ? agent.name
-                          : 'Delivery Partner',
+                      agent.name.isNotEmpty ? agent.name : 'Delivery Partner',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -396,10 +389,10 @@ class _DeliveryProfileRedesignedTabState
 
                     // Online/Offline Pill (interactive)
                     InkWell(
-                      onTap: () {
-                        ref
-                            .read(deliveryAgentProvider.notifier)
-                            .toggleDuty();
+                      key: const Key('delivery_profile_duty_toggle'),
+                      onTap: () async {
+                        await DeliveryLocationCoordinator.toggleDutyWithConsent(
+                            context, ref);
                       },
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
@@ -454,8 +447,8 @@ class _DeliveryProfileRedesignedTabState
                         decoration: DeliveryTheme.cardDecoration(),
                         child: Material(
                           color: DeliveryTheme.cardBg,
-                          borderRadius: BorderRadius.circular(
-                              DeliveryTheme.cardRadius),
+                          borderRadius:
+                              BorderRadius.circular(DeliveryTheme.cardRadius),
                           clipBehavior: Clip.antiAlias,
                           child: Column(
                             children: [
@@ -489,8 +482,7 @@ class _DeliveryProfileRedesignedTabState
                                 title: 'Earnings',
                                 onTap: () {
                                   ref
-                                      .read(
-                                          deliveryPanelTabProvider.notifier)
+                                      .read(deliveryPanelTabProvider.notifier)
                                       .setTab(3);
                                 },
                               ),

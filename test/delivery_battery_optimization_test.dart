@@ -15,6 +15,7 @@ import 'package:dairy_app/services/delivery_tracking_service.dart';
 import 'package:dairy_app/services/location_service.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ─── Test Doubles ─────────────────────────────────────────────────────────────
 
@@ -62,6 +63,20 @@ class _FakeLocationService extends LocationService {
   bool backgroundGranted = true;
 
   @override
+  Future<bool> isLocationServiceEnabled() async => true;
+
+  @override
+  Future<AndroidLocationPermissionState> getPermissionSnapshot() async =>
+      AndroidLocationPermissionState(
+        sdkInt: 34,
+        fineGranted: permissionGranted,
+        coarseGranted: permissionGranted,
+        foregroundGranted: permissionGranted,
+        backgroundGranted: permissionGranted && backgroundGranted,
+        notificationGranted: true,
+      );
+
+  @override
   Future<bool> requestLocationPermission() async => permissionGranted;
 
   @override
@@ -69,6 +84,9 @@ class _FakeLocationService extends LocationService {
 
   @override
   Stream<Position> getPositionStream() => _controller.stream;
+
+  @override
+  Future<Position?> getCurrentPositionAlreadyPermitted() async => null;
 
   @override
   Future<Position?> getCurrentPosition() async => null;
@@ -349,6 +367,9 @@ void main() {
   group('Tracking Session Start Battery Check Integration', () {
     test('startTracking triggers checkStatus on batteryOptimizationProvider',
         () async {
+      SharedPreferences.setMockInitialValues({
+        'delivery_bg_location_disclosure_agreed_agent_123': true,
+      });
       final mockBatteryService = _MockBatteryOptimizationService()
         ..isIgnoring = false;
       final fakeLocationService = _FakeLocationService();
@@ -380,7 +401,7 @@ void main() {
           container.read(agentLiveLocationProvider.notifier);
       expect(mockBatteryService.checkCount, equals(0));
 
-      await trackingNotifier.startTracking();
+      await trackingNotifier.startTracking(explicitUserAction: true);
 
       // Give async microtask a moment to run checkStatus
       await Future<void>.delayed(const Duration(milliseconds: 10));

@@ -6,10 +6,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:dairy_app/core/utils/retry_helper.dart';
 import 'package:dairy_app/features/delivery_panel/delivery_panel_screen.dart';
 import 'package:dairy_app/models/delivery_boy_model.dart';
+import 'package:dairy_app/models/user.dart';
+import 'package:dairy_app/providers/user_provider.dart';
 import 'package:dairy_app/providers/delivery_live_location_provider.dart';
 import 'package:dairy_app/providers/delivery_provider.dart';
 import 'package:dairy_app/services/delivery_tracking_service.dart';
+import 'package:dairy_app/services/earnings_service.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:dairy_app/services/earnings_service.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:dairy_app/services/network_connectivity_service.dart';
+
+class _MockUserNotifier extends StateNotifier<User> implements UserNotifier {
+  _MockUserNotifier(super.state);
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 class MockDeliveryNotifier extends StateNotifier<DeliveryAgent>
     implements DeliveryNotifier {
@@ -181,6 +193,26 @@ void main() {
               .overrideWith((ref) => Stream.value(<DeliveryOrder>[])),
           networkConnectivityProvider
               .overrideWith((ref) => connectivityNotifier),
+          earningsServiceProvider.overrideWithValue(EarningsService(FakeFirebaseFirestore())),
+          deliveryActiveOrdersStreamProvider.overrideWith((ref) => Stream.value([])),
+          deliveryRequestsStreamProvider.overrideWithValue(const <DeliveryOrder>[]),
+          deliveryHistoryStreamProvider.overrideWithValue(const AsyncValue.data(<DeliveryOrder>[])),
+          deliveryAgentLocationStreamProvider.overrideWith((ref) => Stream.value(null)),
+          earningsServiceProvider.overrideWithValue(
+            EarningsService(FakeFirebaseFirestore()),
+          ),
+          deliveryActiveOrdersStreamProvider.overrideWith(
+            (ref) => Stream.value([]),
+          ),
+          deliveryRequestsStreamProvider.overrideWithValue(
+            const <DeliveryOrder>[],
+          ),
+          deliveryHistoryStreamProvider.overrideWithValue(
+            const AsyncValue.data(<DeliveryOrder>[]),
+          ),
+          deliveryAgentLocationStreamProvider.overrideWith(
+            (ref) => Stream.value(null),
+          ),
           deliveryAgentProvider.overrideWith((ref) => MockDeliveryNotifier(
                 const DeliveryAgent(
                   id: 'agent_1',
@@ -236,8 +268,34 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          userProvider.overrideWith(
+            (ref) => _MockUserNotifier(
+              const User(
+                id: 'agent_1',
+                name: 'Ramesh Kumar',
+                phone: '+91 9876543210',
+                role: 'delivery',
+                isRoleServerVerified: true,
+              ),
+            ),
+          ),
           networkConnectivityProvider
               .overrideWith((ref) => connectivityNotifier),
+          earningsServiceProvider.overrideWithValue(
+            EarningsService(FakeFirebaseFirestore()),
+          ),
+          deliveryActiveOrdersStreamProvider.overrideWith(
+            (ref) => Stream.value([]),
+          ),
+          deliveryRequestsStreamProvider.overrideWithValue(
+            const <DeliveryOrder>[],
+          ),
+          deliveryHistoryStreamProvider.overrideWithValue(
+            const AsyncValue.data(<DeliveryOrder>[]),
+          ),
+          deliveryAgentLocationStreamProvider.overrideWith(
+            (ref) => Stream.value(null),
+          ),
           deliveryAgentProvider.overrideWith((ref) => MockDeliveryNotifier(
                 const DeliveryAgent(
                   id: 'agent_1',

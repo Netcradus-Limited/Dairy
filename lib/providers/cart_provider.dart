@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/cart_item.dart';
 import '../models/product.dart';
+import '../services/connectivity/cart_web_sync.dart';
 
 /// Cart State Notifier managing the full CartItems map (productId -> CartItem).
 ///
@@ -52,6 +53,12 @@ class CartNotifier extends StateNotifier<Map<String, CartItem>> {
 
   void _init() {
     unawaited(_restoreLocalCart());
+    initCartWebSync(() {
+      unawaited(_restoreLocalCart());
+      if (_currentUid != null && _currentUid!.isNotEmpty) {
+        _listenToFirestoreCart(_currentUid!);
+      }
+    });
     final auth = _auth;
     if (auth != null) {
       final currentUser = auth.currentUser;
@@ -159,7 +166,7 @@ class CartNotifier extends StateNotifier<Map<String, CartItem>> {
     _saveToPrefs();
 
     if (_currentUid != null && _currentUid!.isNotEmpty) {
-      _syncItemToFirestore(_currentUid!, updatedItem);
+      _debouncedSyncItemToFirestore(_currentUid!, updatedItem);
     }
   }
 
@@ -182,7 +189,7 @@ class CartNotifier extends StateNotifier<Map<String, CartItem>> {
     _saveToPrefs();
 
     if (_currentUid != null && _currentUid!.isNotEmpty) {
-      _syncItemToFirestore(_currentUid!, updatedItem);
+      _debouncedSyncItemToFirestore(_currentUid!, updatedItem);
     }
   }
 
@@ -207,13 +214,16 @@ class CartNotifier extends StateNotifier<Map<String, CartItem>> {
       _saveToPrefs();
 
       if (_currentUid != null && _currentUid!.isNotEmpty) {
-        _syncItemToFirestore(_currentUid!, updatedItem);
+        _debouncedSyncItemToFirestore(_currentUid!, updatedItem);
       }
     }
   }
 
   /// Remove item entirely
   void removeItem(String productId) {
+    _syncDebounceTimers[productId]?.cancel();
+    _syncDebounceTimers.remove(productId);
+
     final newState = Map<String, CartItem>.from(state);
     newState.remove(productId);
     state = newState;
@@ -242,6 +252,38 @@ class CartNotifier extends StateNotifier<Map<String, CartItem>> {
   }
 
   // ─── Firestore Operations ────────────────────────────────────────────────
+
+  final Map<String, Timer> _syncDebounceTimers = {};
+
+  void _debouncedSyncItemToFirestore(String uid, CartItem item) {
+    _syncDebounceTimers[item.product.id]?.cancel();
+    _syncDebounceTimers[item.product.id] =
+        Timer(const Duration(milliseconds: 300), () {
+      _syncItemToFirestore(uid, item);
+      _syncDebounceTimers.remove(item.product.id);
+    });
+  }
+
+  /// Immediately flushes all pending debounced item syncs to Firestore.
+  /// Eliminates write losses when navigating away, checking out, or disposing.
+  void flushPendingSyncs() {
+    final uid = _currentUid;
+    if (uid == null || uid.isEmpty) {
+      for (final timer in _syncDebounceTimers.values) {
+        timer.cancel();
+      }
+      _syncDebounceTimers.clear();
+      return;
+    }
+    for (final entry in _syncDebounceTimers.entries) {
+      entry.value.cancel();
+      final item = state[entry.key];
+      if (item != null) {
+        _syncItemToFirestore(uid, item);
+      }
+    }
+    _syncDebounceTimers.clear();
+  }
 
   Future<void> _syncItemToFirestore(String uid, CartItem item) async {
     final firestore = _firestore;
@@ -313,6 +355,7 @@ class CartNotifier extends StateNotifier<Map<String, CartItem>> {
 
   @override
   void dispose() {
+    flushPendingSyncs();
     _authSubscription?.cancel();
     _cartSubscription?.cancel();
     super.dispose();

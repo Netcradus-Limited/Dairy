@@ -55,7 +55,9 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         final m = payment.method.toLowerCase();
         if (_methodFilter == 'Cash' && !m.contains('cash')) return false;
         if (_methodFilter == 'Online' &&
-            (m.contains('cash') || m.contains('wallet'))) return false;
+            (m.contains('cash') || m.contains('wallet'))) {
+          return false;
+        }
         if (_methodFilter == 'Wallet' && !m.contains('wallet')) return false;
       }
 

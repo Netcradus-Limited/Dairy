@@ -295,7 +295,9 @@ class DeliveryOrder {
     if (latitude!.isNaN ||
         longitude!.isNaN ||
         latitude!.isInfinite ||
-        longitude!.isInfinite) return false;
+        longitude!.isInfinite) {
+      return false;
+    }
     if (latitude! < -90.0 || latitude! > 90.0) return false;
     if (longitude! < -180.0 || longitude! > 180.0) return false;
     if (latitude! == 0.0 && longitude! == 0.0) return false;

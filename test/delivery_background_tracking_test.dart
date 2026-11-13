@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -43,6 +44,24 @@ class _FakeLocationService extends LocationService {
   }
 
   @override
+  Future<bool> isLocationServiceEnabled() async => true;
+
+  @override
+  Future<LocationPermission> checkPermission() async =>
+      _permissionGranted ? LocationPermission.always : LocationPermission.denied;
+
+  @override
+  Future<AndroidLocationPermissionState> getPermissionSnapshot() async =>
+      AndroidLocationPermissionState(
+        sdkInt: 34,
+        fineGranted: _permissionGranted,
+        coarseGranted: _permissionGranted,
+        foregroundGranted: _permissionGranted,
+        backgroundGranted: _permissionGranted && _backgroundGranted,
+        notificationGranted: true,
+      );
+
+  @override
   Future<bool> requestLocationPermission() async => _permissionGranted;
 
   @override
@@ -54,6 +73,9 @@ class _FakeLocationService extends LocationService {
     subscriptionCount++;
     return _controller.stream;
   }
+
+  @override
+  Future<Position?> getCurrentPositionAlreadyPermitted() async => null;
 
   @override
   Future<Position?> getCurrentPosition() async => null;
@@ -143,11 +165,16 @@ ProviderContainer _makeContainer({
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('Task 7 — Android Background Location Tracking', () {
     late _FakeLocationService loc;
     late _CapturingTrackingService tracking;
 
     setUp(() {
+      SharedPreferences.setMockInitialValues({
+        'delivery_bg_location_disclosure_agreed_$_agentId': true,
+      });
       loc = _FakeLocationService();
       tracking = _CapturingTrackingService();
     });
@@ -162,7 +189,7 @@ void main() {
       expect(container.read(agentLiveLocationProvider), isFalse,
           reason: 'Tracking must be off before startTracking()');
 
-      await container.read(agentLiveLocationProvider.notifier).startTracking();
+      await container.read(agentLiveLocationProvider.notifier).startTracking(explicitUserAction: true);
 
       expect(container.read(agentLiveLocationProvider), isTrue,
           reason: 'Tracking must be on after startTracking()');
@@ -174,7 +201,7 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(agentLiveLocationProvider.notifier);
-      await notifier.startTracking();
+      await notifier.startTracking(explicitUserAction: true);
       expect(container.read(agentLiveLocationProvider), isTrue);
 
       notifier.stopTracking();
@@ -190,8 +217,8 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(agentLiveLocationProvider.notifier);
-      await notifier.startTracking();
-      await notifier.startTracking(); // second call — duplicate guard must fire
+      await notifier.startTracking(explicitUserAction: true);
+      await notifier.startTracking(explicitUserAction: true); // second call — duplicate guard must fire
 
       expect(loc.subscriptionCount, 1,
           reason: 'getPositionStream() must be called exactly once; '
@@ -204,7 +231,7 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(agentLiveLocationProvider.notifier);
-      await notifier.startTracking();
+      await notifier.startTracking(explicitUserAction: true);
       notifier.stopTracking();
 
       expect(() => notifier.stopTracking(), returnsNormally,
@@ -218,7 +245,7 @@ void main() {
       final container = _makeContainer(loc: loc, tracking: tracking);
       addTearDown(container.dispose);
 
-      await container.read(agentLiveLocationProvider.notifier).startTracking();
+      await container.read(agentLiveLocationProvider.notifier).startTracking(explicitUserAction: true);
       loc.emit(_lat, _lng);
       await Future<void>.delayed(const Duration(milliseconds: 60));
 
@@ -240,7 +267,7 @@ void main() {
       final container = _makeContainer(loc: loc, tracking: tracking);
 
       final notifier = container.read(agentLiveLocationProvider.notifier);
-      await notifier.startTracking();
+      await notifier.startTracking(explicitUserAction: true);
       expect(container.read(agentLiveLocationProvider), isTrue);
 
       // Simulate logout / app teardown
@@ -259,7 +286,7 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(agentLiveLocationProvider.notifier);
-      await notifier.startTracking();
+      await notifier.startTracking(explicitUserAction: true);
       expect(container.read(agentLiveLocationProvider), isTrue);
 
       // Delivery completed → agent goes offline
@@ -279,7 +306,7 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(agentLiveLocationProvider.notifier);
-      await notifier.startTracking();
+      await notifier.startTracking(explicitUserAction: true);
       expect(container.read(agentLiveLocationProvider), isTrue);
 
       // Cancelled / failed delivery can put the agent on breakTime
@@ -297,7 +324,7 @@ void main() {
       final container = _makeContainer(loc: loc, tracking: tracking);
       addTearDown(container.dispose);
 
-      await container.read(agentLiveLocationProvider.notifier).startTracking();
+      await container.read(agentLiveLocationProvider.notifier).startTracking(explicitUserAction: true);
 
       // Emit zero-placeholder coordinates (invalid sentinel)
       loc.emit(0.0, 0.0);
@@ -320,7 +347,7 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(agentLiveLocationProvider.notifier);
-      await notifier.startTracking();
+      await notifier.startTracking(explicitUserAction: true);
 
       // Emit a valid position — write will throw inside the service.
       // The .catchError in _write() must swallow the failure.
@@ -341,12 +368,12 @@ void main() {
       final notifier = container.read(agentLiveLocationProvider.notifier);
 
       // Cycle: start → stop → start (pattern used by the delivery map screen)
-      await notifier.startTracking();
+      await notifier.startTracking(explicitUserAction: true);
       expect(container.read(agentLiveLocationProvider), isTrue);
       notifier.stopTracking();
       expect(container.read(agentLiveLocationProvider), isFalse);
 
-      await notifier.startTracking();
+      await notifier.startTracking(explicitUserAction: true);
       expect(container.read(agentLiveLocationProvider), isTrue);
 
       // Two startTracking() calls create two subscriptions (one per session)
@@ -366,7 +393,7 @@ void main() {
       final container = _makeContainer(loc: loc, tracking: tracking);
       addTearDown(container.dispose);
 
-      await container.read(agentLiveLocationProvider.notifier).startTracking();
+      await container.read(agentLiveLocationProvider.notifier).startTracking(explicitUserAction: true);
 
       // Emit the same coordinates twice in a row
       loc.emit(_lat, _lng);

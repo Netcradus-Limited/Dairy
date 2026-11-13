@@ -30,17 +30,17 @@ void main() {
     });
 
     test(
-        '3. UserRole.fromPhone detects admin and delivery roles correctly from normalized numbers',
+        '3. UserRole.fromPhone defaults to customer securely without granting unverified privileged roles (BUG-004 fix)',
         () {
-      expect(UserRole.fromPhone('+919999999999'), UserRole.admin);
-      expect(UserRole.fromPhone('9999999999'), UserRole.admin);
-      expect(UserRole.fromPhone('+91 99999 99999'), UserRole.admin);
-      expect(UserRole.fromPhone('09999999999'), UserRole.admin);
-      expect(UserRole.fromPhone('8888888888'), UserRole.admin);
+      expect(UserRole.fromPhone('+919999999999'), UserRole.customer);
+      expect(UserRole.fromPhone('9999999999'), UserRole.customer);
+      expect(UserRole.fromPhone('+91 99999 99999'), UserRole.customer);
+      expect(UserRole.fromPhone('09999999999'), UserRole.customer);
+      expect(UserRole.fromPhone('8888888888'), UserRole.customer);
 
-      expect(UserRole.fromPhone('+917777777777'), UserRole.delivery);
-      expect(UserRole.fromPhone('7777777777'), UserRole.delivery);
-      expect(UserRole.fromPhone('+91 77777 77777'), UserRole.delivery);
+      expect(UserRole.fromPhone('+917777777777'), UserRole.customer);
+      expect(UserRole.fromPhone('7777777777'), UserRole.customer);
+      expect(UserRole.fromPhone('+91 77777 77777'), UserRole.customer);
 
       expect(UserRole.fromPhone('+919876543210'), UserRole.customer);
       expect(UserRole.fromPhone('9876543210'), UserRole.customer);
@@ -48,7 +48,7 @@ void main() {
     });
 
     test(
-        '4. UserRole.fromPhoneAndRole prioritizes explicit role strings and falls back to phone',
+        '4. UserRole.fromPhoneAndRole strictly prioritizes explicit role strings and never elevates privileges from phone alone (BUG-004 fix)',
         () {
       expect(UserRole.fromPhoneAndRole(phone: '+919876543210', role: 'admin'),
           UserRole.admin);
@@ -61,15 +61,15 @@ void main() {
           UserRole.fromPhoneAndRole(phone: '+919876543210', role: 'delivery'),
           UserRole.delivery);
 
-      // Phone takes effect when role is default/customer/null
+      // Phone alone without explicit role defaults securely to customer
       expect(
           UserRole.fromPhoneAndRole(phone: '+919999999999', role: 'customer'),
-          UserRole.admin);
+          UserRole.customer);
       expect(UserRole.fromPhoneAndRole(phone: '9999999999', role: null),
-          UserRole.admin);
+          UserRole.customer);
       expect(
           UserRole.fromPhoneAndRole(phone: '+917777777777', role: 'customer'),
-          UserRole.delivery);
+          UserRole.customer);
       expect(
           UserRole.fromPhoneAndRole(phone: '+919876543210', role: 'customer'),
           UserRole.customer);
@@ -112,7 +112,8 @@ void main() {
         id: 'test_admin_uid',
         name: 'Test Admin',
         phone: '+919999999999',
-        role: UserRole.fromPhoneAndRole(phone: '+919999999999').value,
+        role: UserRole.adminValue,
+        isRoleServerVerified: true,
       );
       expect(adminUser.isAdmin, isTrue);
       expect(adminUser.isDelivery, isFalse);
@@ -124,6 +125,7 @@ void main() {
         name: 'Owner User',
         phone: '+919876543210',
         role: 'owner',
+        isRoleServerVerified: true,
       );
       expect(ownerUser.isAdmin, isTrue);
       expect(ownerUser.isDelivery, isFalse);
@@ -133,7 +135,8 @@ void main() {
         id: 'delivery_uid',
         name: 'Delivery Agent',
         phone: '+917777777777',
-        role: UserRole.fromPhoneAndRole(phone: '+917777777777').value,
+        role: UserRole.deliveryValue,
+        isRoleServerVerified: true,
       );
       expect(deliveryUser.isAdmin, isFalse);
       expect(deliveryUser.isDelivery, isTrue);
@@ -173,7 +176,7 @@ void main() {
     test(
         '9. User model preserves dispatcher roleTitle, permissions and checks access',
         () {
-      final dispatcherUser = User.fromMap({
+      final rawUser = User.fromMap({
         'id': 'sam_auth_uid_123',
         'name': 'sam',
         'phone': '+917817956637',
@@ -182,6 +185,8 @@ void main() {
         'status': 'Active',
         'permissions': ['viewDashboard', 'viewOrders', 'assignDeliveryAgent'],
       });
+      // Deserialized cache starts unverified; verified once confirmed by authoritative server
+      final dispatcherUser = rawUser.copyWith(isRoleServerVerified: true);
 
       expect(dispatcherUser.id, equals('sam_auth_uid_123'));
       expect(dispatcherUser.role, equals('dispatcher'));

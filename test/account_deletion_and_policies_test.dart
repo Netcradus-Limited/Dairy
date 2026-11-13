@@ -105,7 +105,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Location Access'), findsOneWidget);
+      expect(find.textContaining('Background Location'), findsOneWidget);
       expect(find.text('Agree & Continue'), findsOneWidget);
       expect(find.text('Not Now'), findsOneWidget);
 
@@ -122,7 +122,7 @@ void main() {
         find.byWidgetPredicate(
           (w) =>
               w is RichText &&
-              w.text.toPlainText().contains('When tracking occurs:'),
+              w.text.toPlainText().contains('When tracking operates:'),
         ),
         findsOneWidget,
       );
@@ -138,7 +138,7 @@ void main() {
         find.byWidgetPredicate(
           (w) =>
               w is RichText &&
-              w.text.toPlainText().contains('Customer Privacy:'),
+              w.text.toPlainText().contains('Customer privacy:'),
         ),
         findsOneWidget,
       );

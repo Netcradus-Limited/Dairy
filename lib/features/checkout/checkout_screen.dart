@@ -72,6 +72,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       return;
     }
 
+    // Flush any pending debounced quantity updates before placing the order
+    ref.read(cartProvider.notifier).flushPendingSyncs();
+
     setState(() {
       _isPlacingOrder = true;
     });
@@ -94,12 +97,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             paymentMethod: paymentName,
           );
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isPlacingOrder = false;
-        });
-      }
-      if (!context.mounted) return;
+      if (!mounted) return;
+      setState(() {
+        _isPlacingOrder = false;
+      });
       Navigator.pop(context); // close loading dialog
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not place order: $e')),
@@ -107,12 +108,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       return;
     }
 
-    if (mounted) {
-      setState(() {
-        _isPlacingOrder = false;
-      });
-    }
-    if (!context.mounted) return;
+    if (!mounted) return;
+    setState(() {
+      _isPlacingOrder = false;
+    });
     Navigator.pop(context); // close loading dialog
 
     // Firestore stream will automatically reflect the new order.

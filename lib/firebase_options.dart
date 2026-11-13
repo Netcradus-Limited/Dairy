@@ -15,13 +15,25 @@ import 'package:flutter/foundation.dart'
 /// );
 /// ```
 class DefaultFirebaseOptions {
-  static FirebaseOptions get currentPlatform {
-    if (kIsWeb) {
+  static const bool isQaFirebase =
+      bool.fromEnvironment('QA_FIREBASE', defaultValue: false);
+
+  static FirebaseOptions get currentPlatform =>
+      optionsForEnvironment(isQa: isQaFirebase);
+
+  static FirebaseOptions optionsForEnvironment({
+    required bool isQa,
+    bool? isWebOverride,
+    TargetPlatform? platformOverride,
+  }) {
+    final bool useWeb = isWebOverride ?? kIsWeb;
+    if (useWeb) {
       return web;
     }
-    switch (defaultTargetPlatform) {
+    final TargetPlatform platform = platformOverride ?? defaultTargetPlatform;
+    switch (platform) {
       case TargetPlatform.android:
-        return android;
+        return isQa ? androidQa : android;
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
@@ -56,6 +68,14 @@ class DefaultFirebaseOptions {
     messagingSenderId: '325042169664',
     projectId: 'sawariya-7efd4',
     storageBucket: 'sawariya-7efd4.firebasestorage.app',
+  );
+
+  static const FirebaseOptions androidQa = FirebaseOptions(
+    apiKey: 'AIzaSyB2W5-KJS5ht8uovmbI8Ui7ZzJ0k7GGTog',
+    appId: '1:1044268289363:android:36510653ba9d5e4f2665a6',
+    messagingSenderId: '1044268289363',
+    projectId: 'sawariya-dairy-qa',
+    storageBucket: 'sawariya-dairy-qa.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(

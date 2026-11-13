@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/product.dart';
@@ -13,6 +14,11 @@ import '../models/category.dart';
 ///   products/{productId}   -> Product.toFirestore()
 ///   categories/{categoryId} -> Category.toFirestore()
 class FirestoreProductRepository {
+  // In-memory cache for graceful offline degradation and stream resilience
+  List<Product>? _cachedProducts;
+  List<Category>? _cachedCategories;
+  List<Map<String, dynamic>>? _cachedRawProducts;
+  List<Map<String, dynamic>>? _cachedRawCategories;
   final FirebaseFirestore? _firestore;
 
   static bool _hasSeededDefaults = false;
@@ -43,7 +49,7 @@ class FirestoreProductRepository {
   CollectionReference<Map<String, dynamic>> get _categories =>
       _db.collection('categories');
 
-  // ─── Merging Helpers for Missing Defaults ─────────────────────────────────
+  // â”€â”€â”€ Merging Helpers for Missing Defaults â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   static List<Category> _mergeMissingDefaultCategories(List<Category> list) {
     final existingIds = {for (final c in list) c.id};
@@ -91,39 +97,121 @@ class FirestoreProductRepository {
     return merged;
   }
 
-  // ─── Streams ─────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Streams â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /// Real-time stream of all products (with missing default products safely merged).
+  ///
+  /// Resilient implementation:
+  /// - Immediately emits cached products on listen for instantaneous rendering.
+  /// - Catches asynchronous Firestore stream transport errors.
+  /// - Preserves previously loaded products on network drop rather than wiping data.
+  /// - Falls back safely to default products if first load fails while offline.
   Stream<List<Product>> streamProducts() {
-    try {
-      return _products.snapshots().map((snap) => _mergeMissingDefaultProducts(
-          snap.docs
-              .map((d) => Product.fromFirestore(d.data(), d.id))
-              .toList()));
-    } catch (_) {
-      return Stream.value(_mergeMissingDefaultProducts([]));
+    late StreamController<List<Product>> controller;
+    StreamSubscription? sub;
+
+    void listenToSnapshots() {
+      try {
+        sub = _products.snapshots().listen(
+          (snap) {
+            final products = _mergeMissingDefaultProducts(
+                snap.docs
+                    .map((d) => Product.fromFirestore(d.data(), d.id))
+                    .toList());
+            _cachedProducts = products;
+            if (!controller.isClosed) controller.add(products);
+          },
+          onError: (err, stack) {
+            debugPrint('[FIRESTORE STREAM] Products stream error: $err');
+            if (_cachedProducts != null && _cachedProducts!.isNotEmpty) {
+              if (!controller.isClosed) controller.add(_cachedProducts!);
+            } else if (!controller.isClosed) {
+              controller.add(_mergeMissingDefaultProducts([]));
+            }
+          },
+        );
+      } catch (e) {
+        debugPrint(
+            '[FIRESTORE STREAM] Products listener initialization error: $e');
+        if (!controller.isClosed) {
+          controller.add(_cachedProducts ?? _mergeMissingDefaultProducts([]));
+        }
+      }
     }
+
+    controller = StreamController<List<Product>>.broadcast(
+      onListen: () {
+        if (_cachedProducts != null && _cachedProducts!.isNotEmpty) {
+          controller.add(_cachedProducts!);
+        }
+        listenToSnapshots();
+      },
+      onCancel: () {
+        sub?.cancel();
+      },
+    );
+
+    return controller.stream;
   }
 
   /// Real-time stream of active categories for customers, sorted by sortOrder
   /// (with missing default categories safely merged).
+  ///
+  /// Preserves previously loaded categories if network connection drops.
   Stream<List<Category>> streamCategories() {
-    try {
-      return _categories.snapshots().map((snap) {
-        final list = snap.docs
-            .map((d) => Category.fromFirestore(d.data(), d.id))
-            .toList();
-        final merged = _mergeMissingDefaultCategories(list);
-        final active = merged.where((c) => c.isActive).toList();
-        active.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-        return active;
-      });
-    } catch (_) {
-      final merged = _mergeMissingDefaultCategories([]);
-      final active = merged.where((c) => c.isActive).toList();
-      active.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-      return Stream.value(active);
+    late StreamController<List<Category>> controller;
+    StreamSubscription? sub;
+
+    void listenToSnapshots() {
+      try {
+        sub = _categories.snapshots().listen(
+          (snap) {
+            final list = snap.docs
+                .map((d) => Category.fromFirestore(d.data(), d.id))
+                .toList();
+            final merged = _mergeMissingDefaultCategories(list);
+            final active = merged.where((c) => c.isActive).toList();
+            active.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+            _cachedCategories = active;
+            if (!controller.isClosed) controller.add(active);
+          },
+          onError: (err, stack) {
+            debugPrint('[FIRESTORE STREAM] Categories stream error: $err');
+            if (_cachedCategories != null && _cachedCategories!.isNotEmpty) {
+              if (!controller.isClosed) controller.add(_cachedCategories!);
+            } else if (!controller.isClosed) {
+              final fallback = _mergeMissingDefaultCategories([])
+                  .where((c) => c.isActive)
+                  .toList()
+                ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+              controller.add(fallback);
+            }
+          },
+        );
+      } catch (e) {
+        debugPrint('[FIRESTORE STREAM] Categories listener init error: $e');
+        if (!controller.isClosed) {
+          controller.add(_cachedCategories ??
+              _mergeMissingDefaultCategories([])
+                  .where((c) => c.isActive)
+                  .toList());
+        }
+      }
     }
+
+    controller = StreamController<List<Category>>.broadcast(
+      onListen: () {
+        if (_cachedCategories != null && _cachedCategories!.isNotEmpty) {
+          controller.add(_cachedCategories!);
+        }
+        listenToSnapshots();
+      },
+      onCancel: () {
+        sub?.cancel();
+      },
+    );
+
+    return controller.stream;
   }
 
   /// Real-time stream of raw product documents.
@@ -133,34 +221,107 @@ class FirestoreProductRepository {
   /// packaging, emoji, stockQuantity, etc.) that are not part of the
   /// customer-facing [Product] model.
   Stream<List<Map<String, dynamic>>> streamRawProducts() {
-    try {
-      return _products.snapshots().map((snap) =>
-          _mergeMissingDefaultRawProducts(
-              snap.docs.map((d) => {...d.data(), 'id': d.id}).toList()));
-    } catch (_) {
-      return Stream.value(_mergeMissingDefaultRawProducts([]));
+    late StreamController<List<Map<String, dynamic>>> controller;
+    StreamSubscription? sub;
+
+    void listenToSnapshots() {
+      try {
+        sub = _products.snapshots().listen(
+          (snap) {
+            final raw = _mergeMissingDefaultRawProducts(
+                snap.docs.map((d) => {...d.data(), 'id': d.id}).toList());
+            _cachedRawProducts = raw;
+            if (!controller.isClosed) controller.add(raw);
+          },
+          onError: (err, stack) {
+            debugPrint('[FIRESTORE STREAM] Raw products stream error: $err');
+            if (_cachedRawProducts != null && _cachedRawProducts!.isNotEmpty) {
+              if (!controller.isClosed) controller.add(_cachedRawProducts!);
+            } else if (!controller.isClosed) {
+              controller.add(_mergeMissingDefaultRawProducts([]));
+            }
+          },
+        );
+      } catch (e) {
+        debugPrint('[FIRESTORE STREAM] Raw products init error: $e');
+        if (!controller.isClosed) {
+          controller
+              .add(_cachedRawProducts ?? _mergeMissingDefaultRawProducts([]));
+        }
+      }
     }
+
+    controller = StreamController<List<Map<String, dynamic>>>.broadcast(
+      onListen: () {
+        if (_cachedRawProducts != null && _cachedRawProducts!.isNotEmpty) {
+          controller.add(_cachedRawProducts!);
+        }
+        listenToSnapshots();
+      },
+      onCancel: () {
+        sub?.cancel();
+      },
+    );
+
+    return controller.stream;
   }
 
   /// Real-time stream of raw category documents (with `'id'` key), sorted by sortOrder.
   Stream<List<Map<String, dynamic>>> streamRawCategories() {
-    try {
-      return _categories.snapshots().map((snap) {
-        final list = snap.docs.map((d) => {...d.data(), 'id': d.id}).toList();
-        final merged = _mergeMissingDefaultRawCategories(list);
-        merged.sort((a, b) {
-          final sortA = (a['sortOrder'] as num?)?.toInt() ?? 0;
-          final sortB = (b['sortOrder'] as num?)?.toInt() ?? 0;
-          return sortA.compareTo(sortB);
-        });
-        return merged;
-      });
-    } catch (_) {
-      return Stream.value(_mergeMissingDefaultRawCategories([]));
+    late StreamController<List<Map<String, dynamic>>> controller;
+    StreamSubscription? sub;
+
+    void listenToSnapshots() {
+      try {
+        sub = _categories.snapshots().listen(
+          (snap) {
+            final list =
+                snap.docs.map((d) => {...d.data(), 'id': d.id}).toList();
+            final merged = _mergeMissingDefaultRawCategories(list);
+            merged.sort((a, b) {
+              final sortA = (a['sortOrder'] as num?)?.toInt() ?? 0;
+              final sortB = (b['sortOrder'] as num?)?.toInt() ?? 0;
+              return sortA.compareTo(sortB);
+            });
+            _cachedRawCategories = merged;
+            if (!controller.isClosed) controller.add(merged);
+          },
+          onError: (err, stack) {
+            debugPrint('[FIRESTORE STREAM] Raw categories stream error: $err');
+            if (_cachedRawCategories != null &&
+                _cachedRawCategories!.isNotEmpty) {
+              if (!controller.isClosed) controller.add(_cachedRawCategories!);
+            } else if (!controller.isClosed) {
+              controller.add(_mergeMissingDefaultRawCategories([]));
+            }
+          },
+        );
+      } catch (e) {
+        debugPrint('[FIRESTORE STREAM] Raw categories init error: $e');
+        if (!controller.isClosed) {
+          controller.add(
+              _cachedRawCategories ?? _mergeMissingDefaultRawCategories([]));
+        }
+      }
     }
+
+    controller = StreamController<List<Map<String, dynamic>>>.broadcast(
+      onListen: () {
+        if (_cachedRawCategories != null &&
+            _cachedRawCategories!.isNotEmpty) {
+          controller.add(_cachedRawCategories!);
+        }
+        listenToSnapshots();
+      },
+      onCancel: () {
+        sub?.cancel();
+      },
+    );
+
+    return controller.stream;
   }
 
-  // ─── One-time fetches ────────────────────────────────────────────────────
+  // â”€â”€â”€ One-time fetches â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /// One-time fetch of all products (useful with a [FutureBuilder]).
   Future<List<Product>> fetchProducts() async {
@@ -181,7 +342,7 @@ class FirestoreProductRepository {
     return active;
   }
 
-  // ─── Writes ──────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Writes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /// Writes (or overwrites) a product document.
   Future<void> setProduct(Product product) =>
@@ -202,7 +363,7 @@ class FirestoreProductRepository {
   Future<void> setCategoryRaw(String id, Map<String, dynamic> data) =>
       _categories.doc(id).set(data, SetOptions(merge: true));
 
-  // ─── Deletes ─────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Deletes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /// Deletes a product document by [id].
   Future<void> deleteProduct(String id) => _products.doc(id).delete();
@@ -210,7 +371,7 @@ class FirestoreProductRepository {
   /// Deletes a category document by [id].
   Future<void> deleteCategory(String id) => _categories.doc(id).delete();
 
-  // ─── Default seeding ─────────────────────────────────────────────────────
+  // â”€â”€â”€ Default seeding â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   static Future<void>? _activeSeedFuture;
 
@@ -294,12 +455,12 @@ class FirestoreProductRepository {
   }
 }
 
-// ─── Default seed data ───────────────────────────────────────────────────────
+// â”€â”€â”€ Default seed data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //
 // Maps are kept outside the class to keep the repository file focused on
 // Firestore access.  Every document uses deterministic IDs so the seed is
 // naturally idempotent even without the config-gate check.
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const Map<String, Map<String, dynamic>> _defaultCategories = {
   'cat_milk': {
@@ -312,7 +473,7 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'name': 'Milk',
     'description': '100% Pure & Fresh',
     'productCount': 1,
-    'emoji': '🥛',
+    'emoji': 'ðŸ¥›',
     'isActive': true,
     'sortOrder': 0,
     'subscriptionEnabled': true,
@@ -327,7 +488,7 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'name': 'Paneer',
     'description': 'Soft & Delicious',
     'productCount': 1,
-    'emoji': '🧀',
+    'emoji': 'ðŸ§€',
     'isActive': true,
     'sortOrder': 1,
     'subscriptionEnabled': true,
@@ -342,7 +503,7 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'name': 'Pure Ghee',
     'description': 'Premium Quality',
     'productCount': 1,
-    'emoji': '🍯',
+    'emoji': 'ðŸ¯',
     'isActive': true,
     'sortOrder': 2,
     'subscriptionEnabled': true,
@@ -357,7 +518,7 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'name': 'Lassi',
     'description': 'Refreshing & Tasty',
     'productCount': 1,
-    'emoji': '🥛',
+    'emoji': 'ðŸ¥›',
     'isActive': true,
     'sortOrder': 3,
     'subscriptionEnabled': true,
@@ -372,7 +533,7 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'name': 'Makhan',
     'description': 'Thick & Healthy',
     'productCount': 1,
-    'emoji': '🧈',
+    'emoji': 'ðŸ§ˆ',
     'isActive': true,
     'sortOrder': 4,
     'subscriptionEnabled': true,
@@ -387,7 +548,7 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'name': 'Uple',
     'description': 'Organic Uple',
     'productCount': 1,
-    'emoji': '🟤',
+    'emoji': 'ðŸŸ¤',
     'isActive': true,
     'sortOrder': 5,
     'subscriptionEnabled': false,
@@ -402,7 +563,7 @@ const Map<String, Map<String, dynamic>> _defaultCategories = {
     'name': 'Water',
     'description': 'Pure 20L Water Bottle',
     'productCount': 1,
-    'emoji': '💧',
+    'emoji': 'ðŸ’§',
     'isActive': true,
     'sortOrder': 6,
     'subscriptionEnabled': false,
@@ -428,7 +589,7 @@ const Map<String, Map<String, dynamic>> _defaultProducts = {
     'subscriptionEnabled': true,
     'fatContent': '3.5% Fat',
     'packaging': 'Fresh Pouch',
-    'emoji': '🥛',
+    'emoji': 'ðŸ¥›',
     'stockQuantity': 100,
     'ordersCount': 0,
     'totalRevenue': 0.0,
@@ -452,7 +613,7 @@ const Map<String, Map<String, dynamic>> _defaultProducts = {
     'subscriptionEnabled': true,
     'fatContent': '',
     'packaging': 'Fresh Pack',
-    'emoji': '🧀',
+    'emoji': 'ðŸ§€',
     'stockQuantity': 80,
     'ordersCount': 0,
     'totalRevenue': 0.0,
@@ -476,7 +637,7 @@ const Map<String, Map<String, dynamic>> _defaultProducts = {
     'subscriptionEnabled': true,
     'fatContent': '',
     'packaging': 'Glass Jar',
-    'emoji': '🍯',
+    'emoji': 'ðŸ¯',
     'stockQuantity': 50,
     'ordersCount': 0,
     'totalRevenue': 0.0,
@@ -499,7 +660,7 @@ const Map<String, Map<String, dynamic>> _defaultProducts = {
     'subscriptionEnabled': true,
     'fatContent': '',
     'packaging': 'Fresh Bottle',
-    'emoji': '🥛',
+    'emoji': 'ðŸ¥›',
     'stockQuantity': 60,
     'ordersCount': 0,
     'totalRevenue': 0.0,
@@ -522,7 +683,7 @@ const Map<String, Map<String, dynamic>> _defaultProducts = {
     'subscriptionEnabled': true,
     'fatContent': '',
     'packaging': 'Fresh Pack',
-    'emoji': '🧈',
+    'emoji': 'ðŸ§ˆ',
     'stockQuantity': 70,
     'ordersCount': 0,
     'totalRevenue': 0.0,
@@ -545,7 +706,7 @@ const Map<String, Map<String, dynamic>> _defaultProducts = {
     'subscriptionEnabled': false,
     'fatContent': '',
     'packaging': 'Eco Pack',
-    'emoji': '🟤',
+    'emoji': 'ðŸŸ¤',
     'stockQuantity': 120,
     'ordersCount': 0,
     'totalRevenue': 0.0,
@@ -568,7 +729,7 @@ const Map<String, Map<String, dynamic>> _defaultProducts = {
     'subscriptionEnabled': false,
     'fatContent': '',
     'packaging': 'Bottle',
-    'emoji': '💧',
+    'emoji': 'ðŸ’§',
     'stockQuantity': 90,
     'ordersCount': 0,
     'totalRevenue': 0.0,

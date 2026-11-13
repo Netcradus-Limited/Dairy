@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:dairy_app/models/address.dart';
 import 'package:dairy_app/models/order.dart';
@@ -42,6 +43,23 @@ class _MockLocationService extends LocationService {
   Stream<Position> getPositionStream() => positionController.stream;
 
   @override
+  Future<Position?> getCurrentPositionAlreadyPermitted() async => null;
+
+  @override
+  Future<AndroidLocationPermissionState> getPermissionSnapshot() async {
+    final fg = permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse;
+    return AndroidLocationPermissionState(
+      sdkInt: 34,
+      fineGranted: fg,
+      coarseGranted: fg,
+      foregroundGranted: fg,
+      backgroundGranted: permission == LocationPermission.always,
+      notificationGranted: true,
+    );
+  }
+
+  @override
   Future<Position?> getCurrentPosition() async => null;
 
   void dispose() {
@@ -71,6 +89,9 @@ void main() {
   const customerId = 'cust_999';
 
   setUp(() async {
+    SharedPreferences.setMockInitialValues({
+      'delivery_bg_location_disclosure_agreed_$agent1Id': true,
+    });
     fakeFirestore = FakeFirebaseFirestore();
     orderService = OrderService(firestore: fakeFirestore);
     trackingService = DeliveryTrackingService(fakeFirestore);
@@ -93,6 +114,7 @@ void main() {
               name: 'Agent One',
               phone: '9876543210',
               role: 'delivery',
+              isRoleServerVerified: true,
             ),
           ),
         ),
@@ -394,7 +416,7 @@ void main() {
       mockLocation.permission = LocationPermission.always;
 
       final liveNotifier = container.read(agentLiveLocationProvider.notifier);
-      await liveNotifier.startTracking();
+      await liveNotifier.startTracking(explicitUserAction: true);
 
       expect(liveNotifier.state, isTrue);
       expect(container.read(gpsTrackingStatusProvider),

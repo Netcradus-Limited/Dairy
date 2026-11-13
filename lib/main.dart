@@ -20,14 +20,23 @@ void main() async {
   // Use path-based URL strategy so deep links like /terms-and-conditions
   // are visible to GoRouter instead of being discarded as base-path segments.
   usePathUrlStrategy();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  final firebaseOptions = DefaultFirebaseOptions.currentPlatform;
+  final app = await Firebase.initializeApp(options: firebaseOptions);
+  if (DefaultFirebaseOptions.isQaFirebase &&
+      app.options.projectId != 'sawariya-dairy-qa') {
+    throw StateError(
+      'QA build initialized unexpected Firebase project: ${app.options.projectId}',
+    );
+  }
   if (kDebugMode && kIsWeb) {
     setupSubscriptionWebBridge();
   }
 
-  // Register the background message handler as early as possible. It must not
-  // depend on the Riverpod container.
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  // Register the background message handler on native platforms.
+  // On Flutter Web, background messages are handled directly by web/firebase-messaging-sw.js.
+  if (!kIsWeb) {
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  }
 
   runApp(const ProviderScope(child: MyApp()));
 }

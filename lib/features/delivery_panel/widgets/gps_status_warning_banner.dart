@@ -3,14 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../models/delivery_boy_model.dart';
 import '../../../providers/delivery_live_location_provider.dart';
 import '../../../providers/delivery_provider.dart';
-import '../../../models/delivery_boy_model.dart';
 import '../../../services/location_service.dart';
-import 'delivery_location_disclosure_dialog.dart';
+import '../services/delivery_location_coordinator.dart';
 
 /// Clean, colorful, responsive, non-blocking warning banner displayed in the
-/// Delivery Panel when GPS hardware is turned off or location permissions are missing.
+/// Delivery Panel when GPS hardware is turned off, location permissions are
+/// missing, or Android 13+ notification visibility is restricted.
 class GpsStatusWarningBanner extends ConsumerStatefulWidget {
   const GpsStatusWarningBanner({super.key});
 
@@ -23,29 +24,53 @@ class _GpsStatusWarningBannerState
     extends ConsumerState<GpsStatusWarningBanner> {
   bool _dismissed = false;
   GpsTrackingStatus? _lastStatus;
+  bool _notificationDismissed = false;
+  bool _lastNotificationDenied = false;
 
   @override
   Widget build(BuildContext context) {
     final agent = ref.watch(deliveryAgentProvider);
     final isOnline = agent.status == DeliveryStatus.onDuty;
     final gpsStatus = ref.watch(gpsTrackingStatusProvider);
+    final isNotificationDenied =
+        ref.watch(notificationPermissionDeniedProvider);
 
-    // If status changes (e.g. from error to servicesDisabled), reset dismissal
+    // If status changes (e.g. from error to servicesDisabled), reset dismissal.
     if (_lastStatus != gpsStatus) {
       _lastStatus = gpsStatus;
       _dismissed = false;
     }
 
-    // Only show if the agent is on-duty and GPS has an active error/disabled state
-    if (!isOnline ||
-        _dismissed ||
-        gpsStatus == GpsTrackingStatus.active ||
-        gpsStatus == GpsTrackingStatus.idle) {
+    if (_lastNotificationDenied != isNotificationDenied) {
+      _lastNotificationDenied = isNotificationDenied;
+      if (isNotificationDenied) {
+        _notificationDismissed = false;
+      }
+    }
+
+    final showLocationBanner = isOnline &&
+        !_dismissed &&
+        gpsStatus != GpsTrackingStatus.active &&
+        gpsStatus != GpsTrackingStatus.idle;
+
+    final showNotificationBanner =
+        isOnline && isNotificationDenied && !_notificationDismissed;
+
+    if (!showLocationBanner && !showNotificationBanner) {
       return const SizedBox.shrink();
     }
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (showLocationBanner) _buildLocationBanner(context, gpsStatus),
+        if (showNotificationBanner) _buildNotificationBanner(context),
+      ],
+    );
+  }
 
+  Widget _buildLocationBanner(
+      BuildContext context, GpsTrackingStatus gpsStatus) {
     final String title;
     final String message;
     final String actionLabel;
@@ -78,6 +103,38 @@ class _GpsStatusWarningBannerState
         };
         break;
 
+      case GpsTrackingStatus.consentRequired:
+        title = 'Location Consent Required';
+        message =
+            'Your shift status is On Duty, but GPS sharing is paused until you review and confirm location access.';
+        actionLabel = 'Enable Tracking';
+        iconData = Icons.privacy_tip_outlined;
+        accentColor = const Color(0xFFD97706);
+        onAction = () async {
+          await DeliveryLocationCoordinator.enableTrackingWithConsent(
+            context,
+            ref,
+            forceBackgroundPrompt: true,
+          );
+        };
+        break;
+
+      case GpsTrackingStatus.foregroundOnly:
+        title = 'Background Tracking Unavailable';
+        message =
+            'Location updates run only while the app is open on screen. Choose "Allow all the time" in Settings for minimized or screen-locked tracking.';
+        actionLabel = 'Enable Always';
+        iconData = Icons.location_searching_rounded;
+        accentColor = const Color(0xFFD97706);
+        onAction = () async {
+          await DeliveryLocationCoordinator.enableTrackingWithConsent(
+            context,
+            ref,
+            forceBackgroundPrompt: true,
+          );
+        };
+        break;
+
       case GpsTrackingStatus.permissionDenied:
         title = 'Location Permission Required';
         message =
@@ -86,10 +143,11 @@ class _GpsStatusWarningBannerState
         iconData = Icons.near_me_disabled_rounded;
         accentColor = const Color(0xFFD97706);
         onAction = () async {
-          final agreed =
-              await DeliveryLocationDisclosureDialog.showIfNeeded(context);
-          if (!agreed) return;
-          await ref.read(agentLiveLocationProvider.notifier).startTracking();
+          await DeliveryLocationCoordinator.enableTrackingWithConsent(
+            context,
+            ref,
+            forceBackgroundPrompt: true,
+          );
         };
         break;
 
@@ -107,6 +165,53 @@ class _GpsStatusWarningBannerState
         break;
     }
 
+    return _buildBannerCard(
+      context: context,
+      title: title,
+      message: message,
+      actionLabel: actionLabel,
+      iconData: iconData,
+      accentColor: accentColor,
+      onAction: onAction,
+      onDismiss: () {
+        setState(() {
+          _dismissed = true;
+        });
+      },
+    );
+  }
+
+  Widget _buildNotificationBanner(BuildContext context) {
+    return _buildBannerCard(
+      context: context,
+      title: 'Tracking Active — Notification Hidden',
+      message:
+          'Location tracking is running, but notification-drawer visibility is restricted because notifications are denied. Enable Notifications in Android Settings (Apps > Sawariya Dairy > Notifications) to view the ongoing shift notice.',
+      actionLabel: 'Open Settings',
+      iconData: Icons.notifications_off_outlined,
+      accentColor: const Color(0xFFD97706),
+      onAction: () async {
+        await ref.read(locationServiceProvider).openNotificationSettings();
+      },
+      onDismiss: () {
+        setState(() {
+          _notificationDismissed = true;
+        });
+      },
+    );
+  }
+
+  Widget _buildBannerCard({
+    required BuildContext context,
+    required String title,
+    required String message,
+    required String actionLabel,
+    required IconData iconData,
+    required Color accentColor,
+    required VoidCallback onAction,
+    required VoidCallback onDismiss,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark
         ? (accentColor == const Color(0xFFDC2626)
             ? const Color(0xFF331111)
@@ -207,11 +312,7 @@ class _GpsStatusWarningBannerState
                 color: isDark ? Colors.white70 : AppColors.textSecondary,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                onPressed: () {
-                  setState(() {
-                    _dismissed = true;
-                  });
-                },
+                onPressed: onDismiss,
               ),
             ],
           );
@@ -233,11 +334,7 @@ class _GpsStatusWarningBannerState
                       padding: EdgeInsets.zero,
                       constraints:
                           const BoxConstraints(minWidth: 28, minHeight: 28),
-                      onPressed: () {
-                        setState(() {
-                          _dismissed = true;
-                        });
-                      },
+                      onPressed: onDismiss,
                     ),
                   ],
                 ),

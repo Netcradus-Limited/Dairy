@@ -150,16 +150,21 @@ class PinCodeService {
 
               for (final po in postOffices) {
                 if (po is Map<String, dynamic>) {
-                  if (po['District'] != null)
+                  if (po['District'] != null) {
                     returnedDistricts.add(po['District'].toString());
-                  if (po['Name'] != null)
+                  }
+                  if (po['Name'] != null) {
                     returnedNames.add(po['Name'].toString());
-                  if (po['Block'] != null)
+                  }
+                  if (po['Block'] != null) {
                     returnedBlocks.add(po['Block'].toString());
-                  if (po['Division'] != null)
+                  }
+                  if (po['Division'] != null) {
                     returnedDivisions.add(po['Division'].toString());
-                  if (po['State'] != null)
+                  }
+                  if (po['State'] != null) {
                     returnedStates.add(po['State'].toString());
+                  }
                 }
               }
 
@@ -317,16 +322,21 @@ class PinCodeService {
             if (f is Map<String, dynamic>) {
               final props = f['properties'];
               if (props is Map<String, dynamic>) {
-                if (props['city'] != null)
+                if (props['city'] != null) {
                   returnedCities.add(props['city'].toString());
-                if (props['name'] != null)
+                }
+                if (props['name'] != null) {
                   returnedCities.add(props['name'].toString());
-                if (props['county'] != null)
+                }
+                if (props['county'] != null) {
                   returnedCities.add(props['county'].toString());
-                if (props['district'] != null)
+                }
+                if (props['district'] != null) {
                   returnedCities.add(props['district'].toString());
-                if (props['state'] != null)
+                }
+                if (props['state'] != null) {
                   returnedStates.add(props['state'].toString());
+                }
               }
             }
           }

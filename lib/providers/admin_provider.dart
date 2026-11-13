@@ -158,7 +158,7 @@ class AdminProvider extends ChangeNotifier {
 
   double get estimatedMonthlySubscriptionRevenue => _subscriptions
       .where((s) => s.status == SubscriptionStatus.active)
-      .fold(0.0, (sum, s) => sum + s.monthlyCost);
+      .fold(0.0, (acc, s) => acc + s.monthlyCost);
 
   List<DairyPayment> get payments => _payments;
   bool get paymentsLoading => _paymentsLoading;
@@ -166,7 +166,7 @@ class AdminProvider extends ChangeNotifier {
 
   double get totalPaymentsAmount => _payments
       .where((p) => p.status == 'Success')
-      .fold(0.0, (sum, p) => sum + p.amount);
+      .fold(0.0, (acc, p) => acc + p.amount);
   int get totalPaymentsCount => _payments.length;
   int get successfulPaymentsCount =>
       _payments.where((p) => p.status == 'Success').length;
@@ -589,8 +589,7 @@ class AdminProvider extends ChangeNotifier {
   }) async {
     final cleanOrderId = orderId.trim();
     final cleanAgentId = agentId.trim();
-    final effectiveAgentId =
-        cleanAgentId.isNotEmpty ? cleanAgentId : null;
+    final effectiveAgentId = cleanAgentId.isNotEmpty ? cleanAgentId : null;
 
     final resolvedAgentName = (agentName != null && agentName.trim().isNotEmpty)
         ? agentName.trim()
@@ -1481,8 +1480,10 @@ class AdminProvider extends ChangeNotifier {
         'vehicle': rider.vehicle,
         'vehicleNumber': rider.vehicleNumber,
         'assignedZone': rider.assignedZone,
-        'isOnline': rider.status.toLowerCase() == 'active' ? rider.isOnline : false,
-        'isOnDuty': rider.status.toLowerCase() == 'active' ? rider.isOnline : false,
+        'isOnline':
+            rider.status.toLowerCase() == 'active' ? rider.isOnline : false,
+        'isOnDuty':
+            rider.status.toLowerCase() == 'active' ? rider.isOnline : false,
         'status': rider.status,
         if (rider.rating != null) 'rating': rider.rating,
         if (rider.profileImageUrl != null) ...{
@@ -1692,7 +1693,7 @@ class AdminProvider extends ChangeNotifier {
           DairyCustomer(
             id: doc.id,
             name: name.isNotEmpty ? name : 'Customer',
-            phone: phone.isNotEmpty ? phone : '+91 99999 00000',
+            phone: phone.isNotEmpty ? phone : '',
             email: email.isNotEmpty
                 ? email
                 : '${doc.id.toLowerCase()}@sawariyadairy.com',

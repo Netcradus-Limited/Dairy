@@ -163,7 +163,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             // Send OTP Primary Button
             Container(
               width: double.infinity,
-              height: 48,
+              constraints: const BoxConstraints(minHeight: 48),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
                 gradient: const LinearGradient(
@@ -213,8 +213,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             const SizedBox(height: 14),
 
             // Register Link Footer
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Text(
                   "Don't have an account? ",

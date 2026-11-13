@@ -651,11 +651,13 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
         );
       } else {
         // Doc in delivery_agents doesn't exist yet; check pre-existing doc or users/{uid}
-        debugPrint('DeliveryNotifier: Doc in delivery_agents does not exist; checking existing delivery records & users/$uid');
+        debugPrint(
+            'DeliveryNotifier: Doc in delivery_agents does not exist; checking existing delivery records & users/$uid');
 
         // 1. Check if an existing pre-registered document in delivery_agents exists with this phone
         try {
-          final effectivePhone = authUser?.phoneNumber?.trim() ?? _currentUser.phone.trim();
+          final effectivePhone =
+              authUser?.phoneNumber?.trim() ?? _currentUser.phone.trim();
           final phoneVariants = PhoneAuthUtils.generateVariants(effectivePhone);
           if (phoneVariants.isNotEmpty) {
             final agentQuery = await firestore
@@ -666,34 +668,32 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
             if (agentQuery.docs.isNotEmpty) {
               final aDoc = agentQuery.docs.first;
               final aData = aDoc.data();
-              debugPrint('DeliveryNotifier: Found pre-existing delivery_agent doc ${aDoc.id}, auto-linking to $uid');
+              debugPrint(
+                  'DeliveryNotifier: Found pre-existing delivery_agent doc ${aDoc.id}, auto-linking to $uid');
               final aName = (aData['name'] as String?)?.trim() ?? '';
-              final aPhone = (aData['phone'] as String?)?.trim() ?? effectivePhone;
+              final aPhone =
+                  (aData['phone'] as String?)?.trim() ?? effectivePhone;
               final aEmail = (aData['email'] as String?)?.trim() ?? '';
-              final aVehicle = ((aData['vehicle'] ?? aData['vehicleType']) as String?)?.trim() ?? '';
-              final aVehicleNum = (aData['vehicleNumber'] as String?)?.trim() ?? '';
-              final aZone = ((aData['assignedZone'] ?? aData['zone']) as String?)?.trim() ?? '';
+              final aVehicle =
+                  ((aData['vehicle'] ?? aData['vehicleType']) as String?)
+                          ?.trim() ??
+                      '';
+              final aVehicleNum =
+                  (aData['vehicleNumber'] as String?)?.trim() ?? '';
+              final aZone =
+                  ((aData['assignedZone'] ?? aData['zone']) as String?)
+                          ?.trim() ??
+                      '';
               final double? aRating = (aData['rating'] as num?)?.toDouble();
-              final aImage = ((aData['profileImageUrl'] ?? aData['photoUrl'] ?? aData['photoURL']) as String?)?.trim();
+              final aImage = ((aData['profileImageUrl'] ??
+                      aData['photoUrl'] ??
+                      aData['photoURL']) as String?)
+                  ?.trim();
               final isPersistedOnline = (aDoc.id == uid) &&
                   (aData['isOnline'] == true || aData['isOnDuty'] == true);
 
-              await firestore.collection('delivery_agents').doc(uid).set({
-                'uid': uid,
-                'id': uid,
-                'role': 'delivery',
-                if (aName.isNotEmpty) 'name': aName,
-                if (aPhone.isNotEmpty) 'phone': aPhone,
-                if (aEmail.isNotEmpty) 'email': aEmail,
-                if (aVehicle.isNotEmpty) 'vehicle': aVehicle,
-                if (aVehicleNum.isNotEmpty) 'vehicleNumber': aVehicleNum,
-                if (aZone.isNotEmpty) 'assignedZone': aZone,
-                if (aRating != null) 'rating': aRating,
-                if (aImage != null && aImage.isNotEmpty) 'profileImageUrl': aImage,
-                'isOnline': isPersistedOnline,
-                'isOnDuty': isPersistedOnline,
-                'updatedAt': FieldValue.serverTimestamp(),
-              }, SetOptions(merge: true));
+              // ZERO-TRUST RULE (BUG-004): Direct client write omitted to enforce least-privilege Firestore rules.
+              // Agent state is populated directly from authoritative Firestore query.
 
               if (!mounted) return;
               state = DeliveryAgent(
@@ -704,10 +704,15 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
                 vehicle: aVehicle,
                 vehicleNumber: aVehicleNum,
                 assignedZone: aZone,
-                status: isPersistedOnline ? DeliveryStatus.onDuty : DeliveryStatus.offDuty,
-                totalDeliveriesToday: ((aData['totalDeliveriesToday'] ?? 0) as num).toInt(),
-                completedDeliveriesToday: ((aData['completedDeliveriesToday'] ?? 0) as num).toInt(),
-                earningsToday: ((aData['earningsToday'] ?? 0.0) as num).toDouble(),
+                status: isPersistedOnline
+                    ? DeliveryStatus.onDuty
+                    : DeliveryStatus.offDuty,
+                totalDeliveriesToday:
+                    ((aData['totalDeliveriesToday'] ?? 0) as num).toInt(),
+                completedDeliveriesToday:
+                    ((aData['completedDeliveriesToday'] ?? 0) as num).toInt(),
+                earningsToday:
+                    ((aData['earningsToday'] ?? 0.0) as num).toDouble(),
                 rating: aRating,
                 profileImageUrl: aImage,
                 isLoaded: true,
@@ -716,7 +721,8 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
             }
           }
         } catch (e) {
-          debugPrint('DeliveryNotifier: Error querying delivery_agents by phone: $e');
+          debugPrint(
+              'DeliveryNotifier: Error querying delivery_agents by phone: $e');
         }
 
         try {
@@ -767,24 +773,8 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
             debugPrint(
                 'DeliveryNotifier: Loaded profileImageUrl = $uProfileImage');
 
-            // Establish delivery_agents document so subsequent listeners work
-            try {
-              await firestore.collection('delivery_agents').doc(uid).set({
-                'uid': uid,
-                'id': uid,
-                'role': 'delivery',
-                if (cleanName.isNotEmpty) 'name': cleanName,
-                if (cleanPhone.isNotEmpty) 'phone': cleanPhone,
-                if (cleanVehicle.isNotEmpty) 'vehicle': cleanVehicle,
-                if (cleanVehicleNum.isNotEmpty) 'vehicleNumber': cleanVehicleNum,
-                if (cleanZone.isNotEmpty) 'assignedZone': cleanZone,
-                if (uRating != null) 'rating': uRating,
-                if (uProfileImage != null && uProfileImage.isNotEmpty) 'profileImageUrl': uProfileImage,
-                'isOnline': false,
-                'isOnDuty': false,
-                'updatedAt': FieldValue.serverTimestamp(),
-              }, SetOptions(merge: true));
-            } catch (_) {}
+            // ZERO-TRUST RULE (BUG-004): Direct client write to delivery_agents omitted
+            // to enforce least-privilege Firestore rules; state is hydrated in memory.
 
             if (!mounted) return;
             state = DeliveryAgent(
@@ -861,10 +851,15 @@ class DeliveryNotifier extends StateNotifier<DeliveryAgent> {
   }
 
   Future<void> toggleDuty() async {
+    final isOnline = state.status != DeliveryStatus.onDuty;
+    await setDuty(isOnline);
+  }
+
+  /// Sets duty status explicitly after permission & consent gates have completed.
+  Future<void> setDuty(bool isOnline) async {
     final uid = _effectiveUid;
     if (uid.isEmpty) return;
 
-    final isOnline = state.status != DeliveryStatus.onDuty;
     final newStatus = isOnline ? DeliveryStatus.onDuty : DeliveryStatus.offDuty;
 
     // Optimistically update local state

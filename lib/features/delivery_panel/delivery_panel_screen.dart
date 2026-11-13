@@ -23,7 +23,7 @@ import 'screens/delivery_history_redesigned_screen.dart';
 import 'screens/delivery_settings_redesigned_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide User;
 import 'widgets/delivery_agent_avatar.dart';
-import 'widgets/delivery_location_disclosure_dialog.dart';
+import 'services/delivery_location_coordinator.dart';
 import 'widgets/delivery_bottom_nav.dart';
 
 class _BottomNavItem {
@@ -49,7 +49,6 @@ class DeliveryPanelScreen extends ConsumerStatefulWidget {
 
 class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
     with WidgetsBindingObserver {
-
   static const List<_BottomNavItem> _navItems = [
     _BottomNavItem(
       icon: Icons.home_outlined,
@@ -127,6 +126,66 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(userProvider);
+
+    // Defense-in-depth: Ensure only authenticated delivery partners can render the delivery panel
+    if (!user.isDelivery) {
+      return Scaffold(
+        backgroundColor: AppColors.bgOf(context),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.gpp_bad_rounded,
+                  size: 64,
+                  color: AppColors.error,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Access Denied',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.error,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'You do not have delivery partner privileges to access the delivery panel.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    if (user.canAccessAdminPortal) {
+                      context.go('/admin');
+                    } else if (user.id.isNotEmpty) {
+                      context.go('/home');
+                    } else {
+                      context.go('/login');
+                    }
+                  },
+                  icon: const Icon(Icons.arrow_back),
+                  label: const Text('Return to Safe Screen'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.freshGreen,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     ref.listen<String>(lastTappedOrderIdProvider, (prev, next) {
       if (next.isNotEmpty && next != prev) {
         _handleTappedOrderId(next);
@@ -190,104 +249,104 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-          UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(
-              gradient: DeliveryTheme.headerGradient,
-            ),
-            accountName: Text(
-              agent.name.isNotEmpty ? agent.name : 'Delivery Partner',
-              style: GoogleFonts.plusJakartaSans(
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-                color: Colors.white,
-              ),
-            ),
-            accountEmail: Text(
-              agent.phone.isNotEmpty
-                  ? agent.phone
-                  : (FirebaseAuth.instance.currentUser?.phoneNumber ??
-                      'Sawariya Dairy Delivery Partner'),
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 12,
-                color: const Color(0xFFC8E6C9),
-              ),
-            ),
-            currentAccountPicture: Container(
-              padding: const EdgeInsets.all(2),
+            UserAccountsDrawerHeader(
               decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
+                gradient: DeliveryTheme.headerGradient,
               ),
-              child: DeliveryAgentAvatar(
-                radius: 34,
-                imageUrl: agent.profileImageUrl,
-                iconSize: 36,
+              accountName: Text(
+                agent.name.isNotEmpty ? agent.name : 'Delivery Partner',
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
+              accountEmail: Text(
+                agent.phone.isNotEmpty
+                    ? agent.phone
+                    : (FirebaseAuth.instance.currentUser?.phoneNumber ??
+                        'Sawariya Dairy Delivery Partner'),
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  color: const Color(0xFFC8E6C9),
+                ),
+              ),
+              currentAccountPicture: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: DeliveryAgentAvatar(
+                  radius: 34,
+                  imageUrl: agent.profileImageUrl,
+                  iconSize: 36,
+                ),
               ),
             ),
-          ),
-          ListTile(
-            leading:
-                const Icon(Icons.home_outlined, color: DeliveryTheme.primary),
-            title: Text('Home', style: GoogleFonts.plusJakartaSans()),
-            onTap: () {
-              Navigator.pop(context);
-              ref.read(deliveryPanelTabProvider.notifier).setTab(0);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.assignment_outlined,
-                color: DeliveryTheme.primary),
-            title: Text('My Orders', style: GoogleFonts.plusJakartaSans()),
-            onTap: () {
-              Navigator.pop(context);
-              ref.read(deliveryPanelTabProvider.notifier).setTab(1);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.location_on_outlined,
-                color: DeliveryTheme.primary),
-            title: Text('Map', style: GoogleFonts.plusJakartaSans()),
-            onTap: () {
-              Navigator.pop(context);
-              ref.read(deliveryPanelTabProvider.notifier).setTab(2);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.account_balance_wallet_outlined,
-                color: DeliveryTheme.primary),
-            title: Text('Earnings', style: GoogleFonts.plusJakartaSans()),
-            onTap: () {
-              Navigator.pop(context);
-              ref.read(deliveryPanelTabProvider.notifier).setTab(3);
-            },
-          ),
-          ListTile(
-            leading:
-                const Icon(Icons.history_rounded, color: DeliveryTheme.primary),
-            title:
-                Text('Delivery History', style: GoogleFonts.plusJakartaSans()),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const DeliveryHistoryRedesignedScreen(),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.settings_outlined,
-                color: DeliveryTheme.primary),
-            title: Text('Settings', style: GoogleFonts.plusJakartaSans()),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const DeliverySettingsRedesignedScreen(),
-                ),
-              );
-            },
-          ),
+            ListTile(
+              leading:
+                  const Icon(Icons.home_outlined, color: DeliveryTheme.primary),
+              title: Text('Home', style: GoogleFonts.plusJakartaSans()),
+              onTap: () {
+                Navigator.pop(context);
+                ref.read(deliveryPanelTabProvider.notifier).setTab(0);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.assignment_outlined,
+                  color: DeliveryTheme.primary),
+              title: Text('My Orders', style: GoogleFonts.plusJakartaSans()),
+              onTap: () {
+                Navigator.pop(context);
+                ref.read(deliveryPanelTabProvider.notifier).setTab(1);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.location_on_outlined,
+                  color: DeliveryTheme.primary),
+              title: Text('Map', style: GoogleFonts.plusJakartaSans()),
+              onTap: () {
+                Navigator.pop(context);
+                ref.read(deliveryPanelTabProvider.notifier).setTab(2);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.account_balance_wallet_outlined,
+                  color: DeliveryTheme.primary),
+              title: Text('Earnings', style: GoogleFonts.plusJakartaSans()),
+              onTap: () {
+                Navigator.pop(context);
+                ref.read(deliveryPanelTabProvider.notifier).setTab(3);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.history_rounded,
+                  color: DeliveryTheme.primary),
+              title: Text('Delivery History',
+                  style: GoogleFonts.plusJakartaSans()),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const DeliveryHistoryRedesignedScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings_outlined,
+                  color: DeliveryTheme.primary),
+              title: Text('Settings', style: GoogleFonts.plusJakartaSans()),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const DeliverySettingsRedesignedScreen(),
+                  ),
+                );
+              },
+            ),
             const Divider(),
             ListTile(
               leading: const Icon(Icons.logout_rounded,
@@ -655,12 +714,8 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
                 ? Icons.location_on_rounded
                 : Icons.location_off_rounded),
             onPressed: () async {
-              if (!sharing) {
-                final agreed =
-                    await DeliveryLocationDisclosureDialog.showIfNeeded(context);
-                if (!agreed) return;
-              }
-              ref.read(agentLiveLocationProvider.notifier).toggle();
+              await DeliveryLocationCoordinator.toggleTrackingWithConsent(
+                  context, ref);
             },
           ),
           Tooltip(
@@ -668,15 +723,12 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
             child: InkWell(
               borderRadius: BorderRadius.circular(20),
               onTap: () async {
-                if (!isOnline) {
-                  final agreed =
-                      await DeliveryLocationDisclosureDialog.showIfNeeded(context);
-                  if (!agreed) return;
-                }
-                ref.read(deliveryAgentProvider.notifier).toggleDuty();
+                await DeliveryLocationCoordinator.toggleDutyWithConsent(
+                    context, ref);
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: isOnline
                       ? const Color(0xFFE8F5E9)
@@ -693,7 +745,9 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
                       width: 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: isOnline ? const Color(0xFF43A047) : AppColors.error,
+                        color: isOnline
+                            ? const Color(0xFF43A047)
+                            : AppColors.error,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -703,7 +757,9 @@ class _DeliveryPanelScreenState extends ConsumerState<DeliveryPanelScreen>
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: isOnline ? const Color(0xFF43A047) : AppColors.error,
+                        color: isOnline
+                            ? const Color(0xFF43A047)
+                            : AppColors.error,
                       ),
                     ),
                   ],

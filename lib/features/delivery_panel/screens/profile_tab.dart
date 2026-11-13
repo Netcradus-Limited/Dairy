@@ -16,6 +16,7 @@ import '../../../providers/cart_provider.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../providers/user_provider.dart';
 import '../../../core/localization/app_language.dart';
+import '../services/delivery_location_coordinator.dart';
 
 /// Profile Tab - Delivery agent info, photo upload, online/offline toggle
 class ProfileTab extends ConsumerStatefulWidget {
@@ -912,8 +913,10 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
                 scale: isDesktop ? 1.0 : 0.9,
                 child: Switch(
                   value: isOnline,
-                  onChanged: (_) =>
-                      ref.read(deliveryAgentProvider.notifier).toggleDuty(),
+                  onChanged: (_) async {
+                    await DeliveryLocationCoordinator.toggleDutyWithConsent(
+                        context, ref);
+                  },
                   activeThumbColor: AppColors.success,
                   activeTrackColor: AppColors.success.withValues(alpha: 0.3),
                   inactiveTrackColor: AppColors.error.withValues(alpha: 0.3),

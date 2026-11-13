@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'connectivity/web_connectivity.dart';
+
 /// Callback type for verifying remote internet connectivity.
 typedef ConnectivityChecker = Future<bool> Function();
 
@@ -19,13 +21,19 @@ class NetworkConnectivityService {
 
   static Future<bool> _defaultChecker() async {
     try {
-      if (kIsWeb || Platform.environment.containsKey('FLUTTER_TEST'))
+      if (kIsWeb) {
+        // Query native browser online status via Window.navigator.onLine
+        return getBrowserOnlineStatus() ?? true;
+      }
+      if (Platform.environment.containsKey('FLUTTER_TEST')) {
         return true;
+      }
       final result = await InternetAddress.lookup('8.8.8.8')
           .timeout(const Duration(seconds: 3));
       return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
     } catch (_) {
       try {
+        if (kIsWeb) return true;
         final result = await InternetAddress.lookup('google.com')
             .timeout(const Duration(seconds: 3));
         return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
@@ -65,6 +73,7 @@ final networkConnectivityServiceProvider =
 class NetworkConnectivityNotifier extends StateNotifier<bool> {
   final NetworkConnectivityService _service;
   Timer? _timer;
+  StreamSubscription<bool>? _webConnectivitySub;
 
   NetworkConnectivityNotifier(this._service, [bool initial = true])
       : super(initial) {
@@ -74,6 +83,20 @@ class NetworkConnectivityNotifier extends StateNotifier<bool> {
   void _init() {
     // Probe initial connectivity asynchronously
     checkNow();
+
+    // On Flutter Web, listen to native browser online/offline DOM events
+    if (kIsWeb) {
+      final webStream = getBrowserConnectivityStream();
+      if (webStream != null) {
+        _webConnectivitySub = webStream.distinct().listen((isOnline) {
+          if (mounted && state != isOnline) {
+            debugPrint('[CONNECTIVITY] Browser online/offline event: isOnline=$isOnline');
+            state = isOnline;
+          }
+        });
+      }
+    }
+
     // Periodically verify connectivity
     _timer = Timer.periodic(_service.checkInterval, (_) => checkNow());
   }
@@ -96,6 +119,7 @@ class NetworkConnectivityNotifier extends StateNotifier<bool> {
 
   @override
   void dispose() {
+    _webConnectivitySub?.cancel();
     _timer?.cancel();
     super.dispose();
   }
