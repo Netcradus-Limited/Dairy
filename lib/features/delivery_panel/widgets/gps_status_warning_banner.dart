@@ -104,9 +104,9 @@ class _GpsStatusWarningBannerState
         break;
 
       case GpsTrackingStatus.consentRequired:
-        title = 'Location Consent Required';
+        title = 'Resume Location Sharing';
         message =
-            'Your shift status is On Duty, but GPS sharing is paused until you review and confirm location access.';
+            'Your shift status is On Duty, but GPS sharing is paused until you confirm location access for this session.';
         actionLabel = 'Enable Tracking';
         iconData = Icons.privacy_tip_outlined;
         accentColor = const Color(0xFFD97706);
@@ -114,23 +114,6 @@ class _GpsStatusWarningBannerState
           await DeliveryLocationCoordinator.enableTrackingWithConsent(
             context,
             ref,
-            forceBackgroundPrompt: true,
-          );
-        };
-        break;
-
-      case GpsTrackingStatus.foregroundOnly:
-        title = 'Background Tracking Unavailable';
-        message =
-            'Location updates run only while the app is open on screen. Choose "Allow all the time" in Settings for minimized or screen-locked tracking.';
-        actionLabel = 'Enable Always';
-        iconData = Icons.location_searching_rounded;
-        accentColor = const Color(0xFFD97706);
-        onAction = () async {
-          await DeliveryLocationCoordinator.enableTrackingWithConsent(
-            context,
-            ref,
-            forceBackgroundPrompt: true,
           );
         };
         break;
@@ -146,7 +129,6 @@ class _GpsStatusWarningBannerState
           await DeliveryLocationCoordinator.enableTrackingWithConsent(
             context,
             ref,
-            forceBackgroundPrompt: true,
           );
         };
         break;

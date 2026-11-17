@@ -1,5 +1,6 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -11,11 +12,16 @@ import '../../../providers/delivery_live_location_provider.dart';
 import '../../../providers/delivery_provider.dart';
 import '../../../providers/user_provider.dart';
 import '../../../services/location_service.dart';
-import '../widgets/delivery_location_disclosure_dialog.dart';
+import '../widgets/delivery_location_permission_dialogs.dart';
 
-/// Centralized controller enforcing Google Play-compliant sequential location
-/// disclosures, affirmative consent, and OS permissions across ALL mobile and
-/// desktop delivery-partner duty and tracking entry points.
+/// Centralized controller enforcing the sequential location rationale and OS
+/// permission flow across ALL mobile and desktop delivery-partner duty and
+/// tracking entry points.
+///
+/// The sequence is: GPS hardware check -> foreground location rationale ->
+/// foreground location permission -> notification permission -> start the
+/// location foreground service. There is no background-location step, because
+/// the app does not declare ACCESS_BACKGROUND_LOCATION.
 class DeliveryLocationCoordinator {
   const DeliveryLocationCoordinator._();
 
@@ -51,7 +57,6 @@ class DeliveryLocationCoordinator {
       context,
       ref,
       updateDutyState: true,
-      forceBackgroundPrompt: false,
     );
   }
 
@@ -59,14 +64,12 @@ class DeliveryLocationCoordinator {
   /// without turning duty off.
   static Future<void> enableTrackingWithConsent(
     BuildContext context,
-    WidgetRef ref, {
-    bool forceBackgroundPrompt = false,
-  }) async {
+    WidgetRef ref,
+  ) async {
     await _activateWithConsentFlow(
       context,
       ref,
       updateDutyState: false,
-      forceBackgroundPrompt: forceBackgroundPrompt,
     );
   }
 
@@ -84,7 +87,6 @@ class DeliveryLocationCoordinator {
       context,
       ref,
       updateDutyState: false,
-      forceBackgroundPrompt: true,
     );
   }
 
@@ -92,7 +94,6 @@ class DeliveryLocationCoordinator {
     BuildContext context,
     WidgetRef ref, {
     required bool updateDutyState,
-    required bool forceBackgroundPrompt,
   }) async {
     // Role guard: Only verified delivery partners may initiate background shift tracking.
     final currentUser = ref.read(userProvider);
@@ -102,6 +103,10 @@ class DeliveryLocationCoordinator {
 
     final uid = _resolveUid(ref);
     if (uid.isEmpty) return;
+
+    // One-time cleanup: delete background-location consent flags persisted by
+    // builds that still requested ACCESS_BACKGROUND_LOCATION.
+    unawaited(DeliveryPermissionPrefs.purgeLegacyBackgroundConsent(uid));
 
     final location = ref.read(locationServiceProvider);
 
@@ -179,11 +184,11 @@ class DeliveryLocationCoordinator {
     // ── STEP 2: Android 13+ Notification Permission (Persistent tracking notice) ──
     if (snapshot.notificationGranted) {
       ref.read(notificationPermissionDeniedProvider.notifier).state = false;
-      await DeliveryLocationDisclosureDialog.clearNotificationDeclinedForAgent(
+      await DeliveryPermissionPrefs.clearNotificationDeclinedForAgent(
           uid);
     } else {
       final alreadyDeclinedNotif =
-          await DeliveryLocationDisclosureDialog.hasDeclinedNotificationForAgent(
+          await DeliveryPermissionPrefs.hasDeclinedNotificationForAgent(
               uid);
       if (!alreadyDeclinedNotif) {
         final granted = await location.requestNotificationPermission();
@@ -191,10 +196,10 @@ class DeliveryLocationCoordinator {
         ref.read(notificationPermissionDeniedProvider.notifier).state =
             !granted;
         if (granted) {
-          await DeliveryLocationDisclosureDialog
+          await DeliveryPermissionPrefs
               .clearNotificationDeclinedForAgent(uid);
         } else {
-          await DeliveryLocationDisclosureDialog
+          await DeliveryPermissionPrefs
               .markNotificationDeclinedForAgent(uid);
         }
       } else {
@@ -202,73 +207,20 @@ class DeliveryLocationCoordinator {
       }
     }
 
-    // ── STEP 3 & STEP 4: Prominent Background Disclosure + Background Permission ──
-    bool useForegroundOnlyFallback = false;
-    final isAndroid =
-        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-
-    if (isAndroid) {
-      final hasConsented =
-          await DeliveryLocationDisclosureDialog.hasAcknowledgedForAgent(uid);
-      final hasDeclined =
-          await DeliveryLocationDisclosureDialog.hasDeclinedForAgent(uid);
-      if (!context.mounted) return;
-
-      if (!snapshot.backgroundGranted || !hasConsented) {
-        if (hasDeclined && !forceBackgroundPrompt) {
-          // User previously tapped "Not Now": degrade safely to foreground-only
-          // without nagging or silently requesting ACCESS_BACKGROUND_LOCATION.
-          useForegroundOnlyFallback = true;
-        } else {
-          final agreed = await DeliveryLocationDisclosureDialog.showIfNeeded(
-            context,
-            agentId: uid,
-            forceShow: forceBackgroundPrompt || !hasConsented,
-          );
-          if (!context.mounted) return;
-
-          if (!agreed) {
-            // Explicit "Not Now": Never call requestBackgroundLocationPermission!
-            useForegroundOnlyFallback = true;
-          } else if (!snapshot.backgroundGranted) {
-            // On Android 11+ (API 30+), guide user before launching system Location page.
-            if (snapshot.sdkInt >= 30) {
-              final proceedToSettings =
-                  await _showAndroid11AllowAllTheTimeGuide(context);
-              if (!context.mounted) return;
-              if (!proceedToSettings) {
-                useForegroundOnlyFallback = true;
-              } else {
-                final bgGranted =
-                    await location.requestBackgroundLocationPermission();
-                if (!context.mounted) return;
-                if (!bgGranted) {
-                  useForegroundOnlyFallback = true;
-                }
-              }
-            } else {
-              // Android 10 (API 29) standalone request
-              final bgGranted =
-                  await location.requestBackgroundLocationPermission();
-              if (!context.mounted) return;
-              if (!bgGranted) {
-                useForegroundOnlyFallback = true;
-              }
-            }
-          }
-        }
-      }
-    }
+    // No background-location step exists. Live tracking runs inside geolocator's
+    // `location` foreground service, started here while the delivery panel is
+    // on screen, which keeps GPS alive when the app is minimised or the screen
+    // is locked using foreground permission alone. The app neither declares nor
+    // requests ACCESS_BACKGROUND_LOCATION.
 
     // Activate duty & start stream ONLY after explicit consent and checks complete
     if (updateDutyState) {
       await ref.read(deliveryAgentProvider.notifier).setDuty(true);
     }
 
-    await ref.read(agentLiveLocationProvider.notifier).startTracking(
-          explicitUserAction: true,
-          foregroundOnlyFallback: useForegroundOnlyFallback,
-        );
+    await ref
+        .read(agentLiveLocationProvider.notifier)
+        .startTracking(explicitUserAction: true);
   }
 
   static Future<void> _showEnableGpsDialog(
@@ -343,42 +295,5 @@ class DeliveryLocationCoordinator {
         ],
       ),
     );
-  }
-
-  static Future<bool> _showAndroid11AllowAllTheTimeGuide(
-    BuildContext context,
-  ) async {
-    final res = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => PopScope(
-        canPop: false,
-        child: AlertDialog(
-          title: Text(
-            'Select "Allow all the time"',
-            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
-          ),
-          content: Text(
-            'On Android 11 and above, system location settings will open next. To keep delivery tracking working while minimized or screen-locked, choose "Allow all the time".\n\nIf you keep "Allow only while using the app", tracking will work in foreground-only mode.',
-            style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.4),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Use Foreground Only'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Continue to Settings'),
-            ),
-          ],
-        ),
-      ),
-    );
-    return res == true;
   }
 }

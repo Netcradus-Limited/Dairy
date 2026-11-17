@@ -76,26 +76,25 @@ class GeocodedAddress {
 /// Wraps device GPS, Photon OSM, BigDataCloud, and native platform geocoding
 /// to provide high-accuracy cross-platform (Web, Android, iOS, Desktop)
 /// location & address resolution without requiring paid API keys.
-/// Snapshot of Android/platform location & notification permissions.
+/// Snapshot of Android/platform foreground location & notification permissions.
+///
+/// The app does not declare or request ACCESS_BACKGROUND_LOCATION, so there is
+/// deliberately no background permission state to model here.
 class AndroidLocationPermissionState {
   final int sdkInt;
   final bool fineGranted;
   final bool coarseGranted;
   final bool foregroundGranted;
-  final bool backgroundGranted;
   final bool notificationGranted;
   final bool shouldShowForegroundRationale;
-  final bool shouldShowBackgroundRationale;
 
   const AndroidLocationPermissionState({
     required this.sdkInt,
     required this.fineGranted,
     required this.coarseGranted,
     required this.foregroundGranted,
-    required this.backgroundGranted,
     required this.notificationGranted,
     this.shouldShowForegroundRationale = false,
-    this.shouldShowBackgroundRationale = false,
   });
 
   factory AndroidLocationPermissionState.fromMap(Map<dynamic, dynamic> map) {
@@ -106,12 +105,9 @@ class AndroidLocationPermissionState {
       fineGranted: fine,
       coarseGranted: coarse,
       foregroundGranted: map['foregroundGranted'] == true || fine || coarse,
-      backgroundGranted: map['backgroundGranted'] == true,
       notificationGranted: map['notificationGranted'] != false,
       shouldShowForegroundRationale:
           map['shouldShowForegroundRationale'] == true,
-      shouldShowBackgroundRationale:
-          map['shouldShowBackgroundRationale'] == true,
     );
   }
 }
@@ -170,21 +166,18 @@ class LocationService {
     final perm = await checkPermission();
     final fgGranted = perm == LocationPermission.whileInUse ||
         perm == LocationPermission.always;
-    final bgGranted = !_isNativeAndroid
-        ? perm == LocationPermission.always
-        : perm == LocationPermission.always;
     return AndroidLocationPermissionState(
       sdkInt: 0,
       fineGranted: fgGranted,
       coarseGranted: fgGranted,
       foregroundGranted: fgGranted,
-      backgroundGranted: bgGranted,
       notificationGranted: true,
     );
   }
 
-  /// Requests ONLY foreground location permission (ACCESS_FINE_LOCATION /
-  /// ACCESS_COARSE_LOCATION). Never bundles ACCESS_BACKGROUND_LOCATION.
+  /// Requests foreground location permission (ACCESS_FINE_LOCATION /
+  /// ACCESS_COARSE_LOCATION). This is the only location permission the app
+  /// ever requests.
   Future<LocationResultStatus> requestForegroundLocationOnly() async {
     try {
       final isServiceEnabled = await isLocationServiceEnabled();
@@ -225,7 +218,9 @@ class LocationService {
         return LocationResultStatus.permissionDeniedForever;
       }
 
-      // Only request when status is denied so Geolocator does NOT escalate to background.
+      // Only request when status is denied. Geolocator cannot escalate to
+      // background here because ACCESS_BACKGROUND_LOCATION is absent from the
+      // manifest (see PermissionManager.getLocationPermissionsFromManifest).
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always) {
@@ -931,8 +926,11 @@ class LocationService {
   /// The service is started by [geolocator_android] internally and stopped
   /// automatically when [StreamSubscription.cancel] is called.
   ///
-  /// Requires [FOREGROUND_SERVICE], [FOREGROUND_SERVICE_LOCATION] (Android 14+),
-  /// and [ACCESS_BACKGROUND_LOCATION] (Android 10+) in AndroidManifest.xml.
+  /// Requires [FOREGROUND_SERVICE] and [FOREGROUND_SERVICE_LOCATION]
+  /// (Android 14+) in AndroidManifest.xml. ACCESS_BACKGROUND_LOCATION is NOT
+  /// required and is NOT declared: a `location`-typed foreground service that
+  /// is started while the app is visible keeps receiving GPS while the app is
+  /// minimised or the screen is locked, using foreground permission alone.
   ///
   /// The [distanceFilter] (20 m) and [intervalDuration] (10 s) are tuned for
   /// battery efficiency in background; precision is still sufficient for
@@ -953,6 +951,12 @@ class LocationService {
               'Your location is being shared for active delivery.',
           enableWakeLock: true,
           notificationChannelName: 'Delivery Location',
+          // Marks the notification as ongoing (FLAG_ONGOING_EVENT) so it is
+          // not swiped away casually while location is still being shared.
+          // Note: Android 13+ still lets users dismiss foreground-service
+          // notifications from the shade, so this reduces accidental
+          // dismissal but does not make the notification undismissable.
+          setOngoing: true,
         ),
       );
     }
@@ -968,55 +972,6 @@ class LocationService {
       accuracy: LocationAccuracy.high,
       distanceFilter: 20,
     );
-  }
-
-  /// Requests the background location permission on Android 10 and above
-  /// ([ACCESS_BACKGROUND_LOCATION], API level 29+).
-  ///
-  /// On Android 10+, location access while the app is in the background
-  /// requires this separate permission in addition to [ACCESS_FINE_LOCATION].
-  /// The user must explicitly choose "Allow all the time" in the system dialog.
-  ///
-  /// On non-Android platforms, or when the user has already granted the
-  /// "always" permission, this method returns `true` immediately.
-  ///
-  /// If the user denies (grants only "While in use"), the method returns
-  /// `false` and the caller degrades gracefully to foreground-only tracking.
-  ///
-  /// **Implementation note:** On Android 10+, calling
-  /// [Geolocator.requestPermission] a second time — after the user has already
-  /// granted "While in use" — presents the system’s "Allow all the time"
-  /// dialog. This is handled natively by [geolocator_android] without any
-  /// custom Kotlin code.
-  /// Requests standalone ACCESS_BACKGROUND_LOCATION on Android 10+.
-  /// Must ONLY be called AFTER foreground location is granted AND the delivery
-  /// partner has explicitly consented to the Prominent Disclosure dialog.
-  /// Never bundles foreground and background permissions together.
-  Future<bool> requestBackgroundLocationPermission() async {
-    if (!_isNativeAndroid) return true;
-    try {
-      final before = await getPermissionSnapshot();
-      if (!before.foregroundGranted) return false;
-      if (before.backgroundGranted) return true;
-
-      try {
-        final res = await _permissionChannel
-            .invokeMapMethod<dynamic, dynamic>('requestBackgroundLocationOnly');
-        if (res != null) {
-          final after = AndroidLocationPermissionState.fromMap(res);
-          return after.backgroundGranted;
-        }
-      } on MissingPluginException {
-        // On non-plugin test environments without native handler, fallback cleanly:
-        final permission = await Geolocator.checkPermission();
-        return permission == LocationPermission.always;
-      }
-      return false;
-    } catch (e) {
-      debugPrint(
-          'LocationService: requestBackgroundLocationPermission error: $e');
-      return false;
-    }
   }
 }
 

@@ -36,8 +36,6 @@ class _MockLocationService extends LocationService {
       permission == LocationPermission.always ||
       permission == LocationPermission.whileInUse;
 
-  @override
-  Future<bool> requestBackgroundLocationPermission() async => true;
 
   @override
   Stream<Position> getPositionStream() => positionController.stream;
@@ -54,7 +52,6 @@ class _MockLocationService extends LocationService {
       fineGranted: fg,
       coarseGranted: fg,
       foregroundGranted: fg,
-      backgroundGranted: permission == LocationPermission.always,
       notificationGranted: true,
     );
   }

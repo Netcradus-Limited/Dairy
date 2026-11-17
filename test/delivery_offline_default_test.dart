@@ -33,7 +33,6 @@ class _DesktopTestLocationService extends LocationService {
         fineGranted: true,
         coarseGranted: true,
         foregroundGranted: true,
-        backgroundGranted: true,
         notificationGranted: true,
       );
   @override

@@ -13,8 +13,6 @@ import 'package:dairy_app/providers/delivery_provider.dart';
 import 'package:dairy_app/services/delivery_tracking_service.dart';
 import 'package:dairy_app/services/earnings_service.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
-import 'package:dairy_app/services/earnings_service.dart';
-import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:dairy_app/services/network_connectivity_service.dart';
 
 class _MockUserNotifier extends StateNotifier<User> implements UserNotifier {

@@ -1,13 +1,9 @@
-import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:dairy_app/core/auth/app_role.dart';
 import 'package:dairy_app/models/user.dart';
-import 'package:dairy_app/models/product.dart';
-import 'package:dairy_app/models/category.dart';
 import 'package:dairy_app/providers/user_provider.dart';
 import 'package:dairy_app/repositories/firestore_product_repository.dart';
 import 'package:dairy_app/services/network_connectivity_service.dart';

@@ -60,7 +60,6 @@ class _TestUserNotifier extends StateNotifier<User> implements UserNotifier {
 class _FakeLocationService extends LocationService {
   final _controller = StreamController<Position>.broadcast();
   bool permissionGranted = true;
-  bool backgroundGranted = true;
 
   @override
   Future<bool> isLocationServiceEnabled() async => true;
@@ -72,15 +71,12 @@ class _FakeLocationService extends LocationService {
         fineGranted: permissionGranted,
         coarseGranted: permissionGranted,
         foregroundGranted: permissionGranted,
-        backgroundGranted: permissionGranted && backgroundGranted,
         notificationGranted: true,
       );
 
   @override
   Future<bool> requestLocationPermission() async => permissionGranted;
 
-  @override
-  Future<bool> requestBackgroundLocationPermission() async => backgroundGranted;
 
   @override
   Stream<Position> getPositionStream() => _controller.stream;
@@ -267,7 +263,7 @@ void main() {
       );
 
       expect(find.byType(BatteryOptimizationWarningBanner), findsOneWidget);
-      expect(find.text('Background Location Warning'), findsNothing);
+      expect(find.text('Delivery Tracking May Pause'), findsNothing);
       expect(find.text('Fix Battery Settings'), findsNothing);
     });
 
@@ -301,10 +297,10 @@ void main() {
         ),
       );
 
-      expect(find.text('Background Location Warning'), findsOneWidget);
+      expect(find.text('Delivery Tracking May Pause'), findsOneWidget);
       expect(
         find.textContaining(
-            'Battery optimization may limit background location'),
+            'Battery optimization may interrupt GPS updates'),
         findsOneWidget,
       );
       expect(find.text('Fix Battery Settings'), findsOneWidget);
@@ -319,7 +315,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Banner should disappear after dismissal
-      expect(find.text('Background Location Warning'), findsNothing);
+      expect(find.text('Delivery Tracking May Pause'), findsNothing);
       expect(container.read(batteryOptimizationProvider).isDismissed, isTrue);
     });
 
@@ -359,7 +355,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Background Location Warning'), findsOneWidget);
+      expect(find.text('Delivery Tracking May Pause'), findsOneWidget);
       expect(find.text('Fix Battery Settings'), findsOneWidget);
     });
   });

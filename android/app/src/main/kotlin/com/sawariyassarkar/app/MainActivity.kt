@@ -19,7 +19,6 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         private const val REQ_FOREGROUND_LOCATION = 4101
-        private const val REQ_BACKGROUND_LOCATION = 4102
         private const val REQ_POST_NOTIFICATIONS = 4103
     }
 
@@ -57,9 +56,6 @@ class MainActivity : FlutterActivity() {
                 "requestNotificationPermission" -> {
                     requestNotificationPermission(result)
                 }
-                "requestBackgroundLocationOnly" -> {
-                    requestBackgroundLocationOnly(result)
-                }
                 "openAppLocationSettings" -> {
                     result.success(openAppDetailsSettings())
                 }
@@ -78,15 +74,15 @@ class MainActivity : FlutterActivity() {
         return checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
     }
 
+    /// Foreground location + notification permission state.
+    ///
+    /// ACCESS_BACKGROUND_LOCATION is intentionally absent: tracking runs in a
+    /// location foreground service started while the app is visible, which
+    /// needs foreground permission only.
     private fun buildLocationPermissionState(): Map<String, Any> {
         val fineGranted = hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)
         val coarseGranted = hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
         val foregroundGranted = fineGranted || coarseGranted
-        val backgroundGranted = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            foregroundGranted
-        } else {
-            hasPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-        }
         val notificationGranted = if (Build.VERSION.SDK_INT >= 33) {
             hasPermission("android.permission.POST_NOTIFICATIONS")
         } else {
@@ -96,19 +92,14 @@ class MainActivity : FlutterActivity() {
             shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION) ||
                 shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)
         } else false
-        val shouldShowBgRationale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-        } else false
 
         return mapOf(
             "sdkInt" to Build.VERSION.SDK_INT,
             "fineGranted" to fineGranted,
             "coarseGranted" to coarseGranted,
             "foregroundGranted" to foregroundGranted,
-            "backgroundGranted" to backgroundGranted,
             "notificationGranted" to notificationGranted,
-            "shouldShowForegroundRationale" to shouldShowFgRationale,
-            "shouldShowBackgroundRationale" to shouldShowBgRationale
+            "shouldShowForegroundRationale" to shouldShowFgRationale
         )
     }
 
@@ -127,7 +118,8 @@ class MainActivity : FlutterActivity() {
             return
         }
         pendingLocationResult = result
-        // Strictly request foreground permissions only; never mix ACCESS_BACKGROUND_LOCATION here.
+        // Foreground permissions only. The app declares no background location
+        // permission, so no escalation is possible from here.
         requestPermissions(
             arrayOf(
                 Manifest.permission.ACCESS_FINE_LOCATION,
@@ -154,32 +146,9 @@ class MainActivity : FlutterActivity() {
         requestPermissions(arrayOf("android.permission.POST_NOTIFICATIONS"), REQ_POST_NOTIFICATIONS)
     }
 
-    private fun requestBackgroundLocationOnly(result: MethodChannel.Result) {
-        val state = buildLocationPermissionState()
-        if (state["foregroundGranted"] != true) {
-            // Background permission cannot be requested before foreground location is granted.
-            result.success(state)
-            return
-        }
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || state["backgroundGranted"] == true) {
-            result.success(state)
-            return
-        }
-        if (pendingLocationResult != null) {
-            result.error("PERMISSION_IN_PROGRESS", "A location permission request is already in progress.", null)
-            return
-        }
-        pendingLocationResult = result
-        // Request ACCESS_BACKGROUND_LOCATION completely standalone (required on Android 10 & 11+).
-        requestPermissions(
-            arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
-            REQ_BACKGROUND_LOCATION
-        )
-    }
-
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         when (requestCode) {
-            REQ_FOREGROUND_LOCATION, REQ_BACKGROUND_LOCATION -> {
+            REQ_FOREGROUND_LOCATION -> {
                 val cb = pendingLocationResult
                 pendingLocationResult = null
                 cb?.success(buildLocationPermissionState())

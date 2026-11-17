@@ -21,7 +21,6 @@ import 'package:dairy_app/services/location_service.dart';
 class _MockLocationService extends LocationService {
   bool serviceEnabled = true;
   LocationPermission permission = LocationPermission.always;
-  bool backgroundGranted = true;
   final StreamController<Position> positionController =
       StreamController<Position>.broadcast();
 
@@ -48,19 +47,15 @@ class _MockLocationService extends LocationService {
   Future<AndroidLocationPermissionState> getPermissionSnapshot() async {
     final fg = permission == LocationPermission.whileInUse ||
         permission == LocationPermission.always;
-    final bg = permission == LocationPermission.always && backgroundGranted;
     return AndroidLocationPermissionState(
       sdkInt: 34,
       fineGranted: fg,
       coarseGranted: fg,
       foregroundGranted: fg,
-      backgroundGranted: bg,
       notificationGranted: true,
     );
   }
 
-  @override
-  Future<bool> requestBackgroundLocationPermission() async => backgroundGranted;
 
   @override
   Future<bool> openLocationSettings() async {

@@ -309,7 +309,7 @@ class TermsAndConditionsScreen extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: _termsSections.map((sec) => _buildSectionItem(sec)).toList(),
+        children: termsSections.map((sec) => _buildSectionItem(sec)).toList(),
       ),
     );
   }
@@ -555,7 +555,7 @@ class TermsAndConditionsScreen extends StatelessWidget {
   /// Full 23-section plain text for reuse in LegalPoliciesScreen or exports.
   static String get termsText {
     final buffer = StringBuffer();
-    for (final sec in _termsSections) {
+    for (final sec in termsSections) {
       buffer.writeln('${sec.number}. ${sec.title.toUpperCase()}');
       buffer.writeln(sec.body);
       buffer.writeln();
@@ -564,7 +564,8 @@ class TermsAndConditionsScreen extends StatelessWidget {
   }
 
   /// The 23 structured sections matching all confirmed operational rules.
-  static const List<_TermsSection> _termsSections = [
+  /// Public so widget tests can assert that every section renders.
+  static const List<_TermsSection> termsSections = [
     _TermsSection(
       1,
       'Introduction',

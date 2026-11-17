@@ -1,24 +1,37 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Internet permission required by video_player / ExoPlayer -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Location permissions for real-time delivery agent GPS tracking -->
+    <!-- Foreground ("while in use") location only, for delivery-partner GPS
+         tracking and customer delivery-address selection. The app never
+         accesses location unless the user has actively started tracking from
+         within the app. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- Task 7: Background location — allows GPS updates when the app is minimized
-         or the screen is locked (Android 10+, API 29+). The user must grant
-         "Allow all the time" for true background tracking. -->
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-
-    <!-- Task 7: Required to start a foreground service. geolocator_android uses
-         this internally when foregroundNotificationConfig is set. -->
+    <!-- Required to start the location foreground service. geolocator_android
+         uses this internally when foregroundNotificationConfig is set. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
-    <!-- Task 7: Required for foreground services accessing location
+    <!-- Required for foreground services accessing location
          (Android 14+, API 34+, targetSdk >= 34). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <!-- ACCESS_BACKGROUND_LOCATION is deliberately NOT declared.
+         Delivery tracking runs exclusively inside geolocator's
+         GeolocatorLocationService, a foreground service with
+         android:foregroundServiceType="location" that is always started while
+         the app is visible, after an explicit in-app action by the delivery
+         partner. On Android 10+ such a service continues to receive GPS while
+         the app is minimised or the screen is locked using only
+         ACCESS_FINE_LOCATION, so background location permission is not needed.
+         The explicit removal below guarantees no third-party library can
+         reintroduce the permission through manifest merging. -->
+    <uses-permission
+        android:name="android.permission.ACCESS_BACKGROUND_LOCATION"
+        tools:node="remove" />
 
     <!-- Notifications (required for Android 13+ to show push alerts) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />

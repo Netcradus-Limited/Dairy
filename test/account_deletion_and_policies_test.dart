@@ -5,7 +5,7 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:dairy_app/services/account_deletion_service.dart';
 import 'package:dairy_app/features/profile/legal_policies_screen.dart';
 import 'package:dairy_app/features/profile/account_deletion_screen.dart';
-import 'package:dairy_app/features/delivery_panel/widgets/delivery_location_disclosure_dialog.dart';
+import 'package:dairy_app/features/delivery_panel/widgets/delivery_location_permission_dialogs.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -93,55 +93,114 @@ void main() {
     });
   });
 
-  group('Delivery Location Disclosure Dialog Tests', () {
-    testWidgets('Renders prominent background location disclosure points',
+  group('Delivery Location Rationale Dialog Tests', () {
+    testWidgets('Shows foreground-only location rationale with both choices',
         (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: DeliveryLocationDisclosureDialog(),
+            body: ForegroundLocationRationaleDialog(),
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Background Location'), findsOneWidget);
-      expect(find.text('Agree & Continue'), findsOneWidget);
+      expect(find.textContaining('Location Needed'), findsOneWidget);
+      expect(find.text('Continue'), findsOneWidget);
       expect(find.text('Not Now'), findsOneWidget);
+    });
 
-      // Verify rich text bullet points
-      expect(
-        find.byWidgetPredicate(
-          (w) =>
-              w is RichText &&
-              w.text.toPlainText().contains('Who can see your location:'),
+    testWidgets(
+        'Disclosure states sharing continues when minimised or screen-locked',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: ForegroundLocationRationaleDialog(),
+          ),
         ),
-        findsOneWidget,
       );
-      expect(
-        find.byWidgetPredicate(
-          (w) =>
-              w is RichText &&
-              w.text.toPlainText().contains('When tracking operates:'),
+      await tester.pumpAndSettle();
+
+      // The app keeps collecting location via a foreground service while the
+      // app is minimised or the screen is locked. The disclosure must say so,
+      // otherwise it understates real collection (Play User Data policy).
+      expect(find.textContaining('minimise the app or lock your screen'),
+          findsOneWidget);
+      expect(find.textContaining('On Duty'), findsWidgets);
+    });
+
+    testWidgets('Disclosure covers start trigger, notification and stop',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: ForegroundLocationRationaleDialog(),
+          ),
         ),
-        findsOneWidget,
       );
-      expect(
-        find.byWidgetPredicate(
-          (w) =>
-              w is RichText &&
-              w.text.toPlainText().contains('When tracking stops:'),
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('never starts on its own'), findsOneWidget);
+      expect(find.textContaining('ongoing notification'), findsOneWidget);
+      expect(find.textContaining('Sharing stops as soon as you go Offline'),
+          findsOneWidget);
+      expect(find.textContaining('Tap Continue'), findsOneWidget);
+      expect(find.textContaining('Tap Not Now'), findsOneWidget);
+    });
+
+    testWidgets('Disclosure never claims collection only while app is open',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: ForegroundLocationRationaleDialog(),
+          ),
         ),
-        findsOneWidget,
       );
-      expect(
-        find.byWidgetPredicate(
-          (w) =>
-              w is RichText &&
-              w.text.toPlainText().contains('Customer privacy:'),
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('while you are using the'), findsNothing);
+      expect(find.textContaining('only while the app is open'), findsNothing);
+      expect(find.textContaining('non-dismissible'), findsNothing);
+      expect(find.textContaining('permanent notification'), findsNothing);
+    });
+
+    testWidgets('Disclosure renders without overflow on a small phone',
+        (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: ForegroundLocationRationaleDialog(),
+          ),
         ),
-        findsOneWidget,
       );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Continue'), findsOneWidget);
+      expect(find.text('Not Now'), findsOneWidget);
+    });
+
+    testWidgets('Rationale never mentions background or always-on location',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: ForegroundLocationRationaleDialog(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Background'), findsNothing);
+      expect(find.textContaining('background'), findsNothing);
+      expect(find.textContaining('all the time'), findsNothing);
     });
   });
 

@@ -66,11 +66,13 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<!-- Location permissions: Customer address auto-detect & Delivery agent shift tracking -->
+	<!-- Location permission: customer delivery-address auto-detect and
+	     delivery-partner route tracking. "When in use" only: the app has no
+	     UIBackgroundModes location entry and never requests always-on
+	     authorisation, matching the Android build, which does not declare
+	     ACCESS_BACKGROUND_LOCATION. -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Sawariya Dairy uses your location to auto-detect your delivery address for orders, and to enable live route tracking while delivery staff are on duty.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Sawariya Dairy uses background location exclusively for delivery staff on duty to share real-time order tracking with customers.</string>
+	<string>Sawariya Dairy uses your location to auto-detect your delivery address for orders, and to show live route tracking while you are using the app on an active delivery.</string>
 	<!-- Camera and Photo Library permissions for avatar and catalog image uploads -->
 	<key>NSCameraUsageDescription</key>
 	<string>Sawariya Dairy requires camera access to allow you to take and upload a profile photo and document delivery verification.</string>

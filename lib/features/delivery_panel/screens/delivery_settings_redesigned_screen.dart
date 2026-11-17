@@ -111,8 +111,8 @@ class _DeliverySettingsRedesignedScreenState
           children: [
             Text(
               isUnrestricted
-                  ? 'Battery optimization is already disabled. Background GPS tracking runs reliably during deliveries.'
-                  : 'Battery optimization may restrict background GPS tracking when the app is minimized. We recommend disabling it in Android Settings.',
+                  ? 'Battery optimization is already disabled. GPS tracking runs reliably during deliveries.'
+                  : 'Battery optimization may interrupt GPS updates while the app is minimized during a shift. We recommend disabling it in Android Settings.',
               style: GoogleFonts.plusJakartaSans(fontSize: 13),
             ),
           ],
@@ -249,11 +249,7 @@ class _DeliverySettingsRedesignedScreenState
                           onChanged: (val) async {
                             if (val) {
                               await DeliveryLocationCoordinator
-                                  .enableTrackingWithConsent(
-                                context,
-                                ref,
-                                forceBackgroundPrompt: true,
-                              );
+                                  .enableTrackingWithConsent(context, ref);
                             } else {
                               ref
                                   .read(agentLiveLocationProvider.notifier)
@@ -280,7 +276,7 @@ class _DeliverySettingsRedesignedScreenState
                           title: 'Privacy Policy',
                           onTap: () => _showInfoDialog(
                             'Privacy Policy',
-                            'Sawariya Dairy collects foreground and background location from delivery partners only after explicit consent and while toggled On Duty / Online (including between consecutive deliveries), even when minimized or screen-locked, to coordinate dispatch and show live delivery ETAs to assigned customers. Tracking stops when you go Offline, take a break, log out, or close the app/shift.',
+                            'Sawariya Dairy shares your location only while you are On Duty and have started tracking in the app. An ongoing notification stays in your notification area the whole time location is being shared, and sharing continues if you minimise the app or lock the screen during a shift. Location is used to coordinate dispatch and show live delivery ETAs to your assigned customers. It stops as soon as you go Offline, log out, or stop tracking. Sawariya Dairy never collects your location when the app is closed or when you are off duty.',
                             route: '/privacy-policy',
                           ),
                         ),

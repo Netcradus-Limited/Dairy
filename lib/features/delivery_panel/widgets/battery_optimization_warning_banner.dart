@@ -56,7 +56,7 @@ class BatteryOptimizationWarningBanner extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Background Location Warning',
+                'Delivery Tracking May Pause',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
@@ -67,7 +67,7 @@ class BatteryOptimizationWarningBanner extends ConsumerWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                'Battery optimization may limit background location. For reliable delivery tracking, allow unrestricted background usage for Sawariya Dairy.',
+                'Battery optimization may interrupt GPS updates while the app is minimized during a shift. For reliable delivery tracking, allow unrestricted battery usage for Sawariya Dairy.',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 11.5,
                   height: 1.35,

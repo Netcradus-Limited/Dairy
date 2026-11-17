@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
-import '../features/delivery_panel/widgets/delivery_location_disclosure_dialog.dart';
+import '../features/delivery_panel/widgets/delivery_location_permission_dialogs.dart';
 import '../models/delivery_boy_model.dart';
 import '../services/delivery_tracking_service.dart';
 import '../services/location_service.dart';
@@ -15,17 +15,16 @@ import 'delivery_provider.dart';
 
 /// Represents the granular health and availability state of device GPS tracking.
 enum GpsTrackingStatus {
-  /// Actively streaming valid high-accuracy positions with full background capability.
+  /// Actively streaming high-accuracy positions through the location
+  /// foreground service (continues while minimised / screen-locked).
   active,
-
-  /// Actively streaming while app is in foreground only (background location declined or set to "While using").
-  foregroundOnly,
 
   /// Inactive / off-duty / idle.
   idle,
 
-  /// Persisted on-duty state restored on cold start or background consent not yet confirmed.
-  /// Never triggers OS permission dialogs silently; awaits explicit user confirmation.
+  /// Persisted on-duty state restored on cold start, before the partner has
+  /// re-confirmed tracking in this session. Never triggers OS permission
+  /// dialogs silently; awaits explicit user confirmation.
   consentRequired,
 
   /// Device hardware location services (GPS) are toggled off.
@@ -87,7 +86,6 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
   // Compliance guard: Tracks whether the agent explicitly activated tracking
   // in THIS app session (never derived from persisted Firestore `isOnline`).
   bool _explicitSessionTrackingAuthorized = false;
-  bool _foregroundOnlyFallback = false;
   int _trackingGeneration = 0;
 
   AgentLiveLocationNotifier(this._ref) : super(false) {
@@ -156,7 +154,6 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
 
     await startTracking(
       explicitUserAction: true,
-      foregroundOnlyFallback: _foregroundOnlyFallback,
     );
   }
 
@@ -166,11 +163,9 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
   /// This method NEVER invokes OS runtime permission dialogs directly.
   Future<void> startTracking({
     bool explicitUserAction = false,
-    bool foregroundOnlyFallback = false,
   }) async {
     if (explicitUserAction) {
       _explicitSessionTrackingAuthorized = true;
-      _foregroundOnlyFallback = foregroundOnlyFallback;
     }
 
     if (!_explicitSessionTrackingAuthorized) {
@@ -205,54 +200,17 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
       return;
     }
 
-    final isAndroid =
-        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-    final uid = _resolveAgentUid();
-    final hasUidConsent = uid.isEmpty
-        ? false
-        : await DeliveryLocationDisclosureDialog.hasAcknowledgedForAgent(uid);
-    if (!mounted) return;
-
-    if (isAndroid && !snapshot.backgroundGranted) {
-      if (!_foregroundOnlyFallback) {
-        _ref
-            .read(gpsTrackingStatusProvider.notifier)
-            .setStatus(GpsTrackingStatus.consentRequired);
-        state = false;
-        return;
-      }
-      // Foreground-only fallback explicitly accepted or selected by user.
-      _startPositionStream(location, isForegroundOnly: true);
-      return;
-    }
-
-    if (isAndroid && snapshot.backgroundGranted && !hasUidConsent) {
-      // Even if OS already had "Always" granted externally, require explicit
-      // in-app disclosure acknowledgment bound to this account UID first.
-      if (!_foregroundOnlyFallback) {
-        _ref
-            .read(gpsTrackingStatusProvider.notifier)
-            .setStatus(GpsTrackingStatus.consentRequired);
-        state = false;
-        return;
-      }
-      _startPositionStream(location, isForegroundOnly: true);
-      return;
-    }
-
-    _startPositionStream(location, isForegroundOnly: false);
+    // Foreground permission is all that is required: the position stream runs
+    // inside geolocator's `location` foreground service, started here while the
+    // app is visible, so GPS continues when the app is minimised or locked.
+    _startPositionStream(location);
   }
 
-  void _startPositionStream(
-    LocationService location, {
-    required bool isForegroundOnly,
-  }) {
+  void _startPositionStream(LocationService location) {
     if (state && _subscription != null) {
-      _ref.read(gpsTrackingStatusProvider.notifier).setStatus(
-            isForegroundOnly
-                ? GpsTrackingStatus.foregroundOnly
-                : GpsTrackingStatus.active,
-          );
+      _ref
+          .read(gpsTrackingStatusProvider.notifier)
+          .setStatus(GpsTrackingStatus.active);
       return;
     }
 
@@ -261,11 +219,9 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
 
     final generation = ++_trackingGeneration;
     state = true;
-    _ref.read(gpsTrackingStatusProvider.notifier).setStatus(
-          isForegroundOnly
-              ? GpsTrackingStatus.foregroundOnly
-              : GpsTrackingStatus.active,
-        );
+    _ref
+        .read(gpsTrackingStatusProvider.notifier)
+        .setStatus(GpsTrackingStatus.active);
 
     unawaited(_writeCurrentPositionSilently(location, generation));
 
@@ -298,7 +254,6 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
     _subscription?.cancel();
     _subscription = null;
     _explicitSessionTrackingAuthorized = false;
-    _foregroundOnlyFallback = false;
     _lastWrittenLat = null;
     _lastWrittenLng = null;
     _pendingOfflineLat = null;
@@ -325,7 +280,7 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
         if (snap.notificationGranted) {
           _ref.read(notificationPermissionDeniedProvider.notifier).state =
               false;
-          unawaited(DeliveryLocationDisclosureDialog
+          unawaited(DeliveryPermissionPrefs
               .clearNotificationDeclinedForAgent(_resolveAgentUid()));
         }
       }
@@ -352,7 +307,7 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
     if (isAndroid) {
       if (snapshot.notificationGranted) {
         _ref.read(notificationPermissionDeniedProvider.notifier).state = false;
-        unawaited(DeliveryLocationDisclosureDialog
+        unawaited(DeliveryPermissionPrefs
             .clearNotificationDeclinedForAgent(_resolveAgentUid()));
       } else if (_explicitSessionTrackingAuthorized ||
           _ref.read(notificationPermissionDeniedProvider)) {
@@ -365,7 +320,6 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
       _subscription?.cancel();
       _subscription = null;
       _explicitSessionTrackingAuthorized = false;
-      _foregroundOnlyFallback = false;
       state = false;
       final rawPerm = await location.checkPermission();
       if (!mounted) return;
@@ -378,13 +332,7 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
     }
 
     if (_explicitSessionTrackingAuthorized) {
-      if (isAndroid && snapshot.backgroundGranted) {
-        _foregroundOnlyFallback = false;
-      }
-      await startTracking(
-        explicitUserAction: true,
-        foregroundOnlyFallback: _foregroundOnlyFallback,
-      );
+      await startTracking(explicitUserAction: true);
     } else {
       await _evaluateColdStartOrHydratedDuty(_ref.read(deliveryAgentProvider));
     }
@@ -392,12 +340,9 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
 
   void _onPosition(Position position) {
     final currentStatus = _ref.read(gpsTrackingStatusProvider);
-    if (currentStatus != GpsTrackingStatus.active &&
-        currentStatus != GpsTrackingStatus.foregroundOnly) {
+    if (currentStatus != GpsTrackingStatus.active) {
       _ref.read(gpsTrackingStatusProvider.notifier).setStatus(
-            _foregroundOnlyFallback
-                ? GpsTrackingStatus.foregroundOnly
-                : GpsTrackingStatus.active,
+            GpsTrackingStatus.active,
           );
     }
     _write(position.latitude, position.longitude);
@@ -409,7 +354,6 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
     _subscription = null;
     // Require a fresh explicit user action if the OS or GPS stream errors out.
     _explicitSessionTrackingAuthorized = false;
-    _foregroundOnlyFallback = false;
     state = false;
     if (err is LocationServiceDisabledException) {
       _ref
@@ -435,7 +379,6 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
     // stream unexpectedly, revoke cached session authorization so resume/refresh
     // never silently restarts tracking without a fresh explicit user action.
     _explicitSessionTrackingAuthorized = false;
-    _foregroundOnlyFallback = false;
     state = false;
     final isOnline =
         _ref.read(deliveryAgentProvider).status == DeliveryStatus.onDuty;
@@ -495,7 +438,6 @@ class AgentLiveLocationNotifier extends StateNotifier<bool> {
     _subscription?.cancel();
     _subscription = null;
     _explicitSessionTrackingAuthorized = false;
-    _foregroundOnlyFallback = false;
     super.dispose();
   }
 

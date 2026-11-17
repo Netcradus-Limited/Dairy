@@ -19,11 +19,9 @@ import 'package:dairy_app/services/location_service.dart';
 class _FakeLocationService extends LocationService {
   final _controller = StreamController<Position>.broadcast();
   bool _permissionGranted = true;
-  bool _backgroundGranted = true;
   int subscriptionCount = 0;
 
   set permissionGranted(bool v) => _permissionGranted = v;
-  set backgroundGranted(bool v) => _backgroundGranted = v;
 
   /// Emits a GPS position into the stream.
   void emit(double lat, double lng) {
@@ -57,16 +55,11 @@ class _FakeLocationService extends LocationService {
         fineGranted: _permissionGranted,
         coarseGranted: _permissionGranted,
         foregroundGranted: _permissionGranted,
-        backgroundGranted: _permissionGranted && _backgroundGranted,
         notificationGranted: true,
       );
 
   @override
   Future<bool> requestLocationPermission() async => _permissionGranted;
-
-  @override
-  Future<bool> requestBackgroundLocationPermission() async =>
-      _backgroundGranted;
 
   @override
   Stream<Position> getPositionStream() {

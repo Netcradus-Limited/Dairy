@@ -1,8 +1,9 @@
-name: Build Android APK
+name: Build Android App Bundle
 
 on:
   push:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -36,8 +37,25 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # Errors and warnings remain fatal. Info-level lints are not fatal:
+      # the project carries pre-existing style infos (and the installed SDK
+      # emits deprecation infos), which would otherwise block every release.
       - name: Analyze project
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run location and delivery tests
+        run: |
+          flutter test \
+            test/background_location_compliance_test.dart \
+            test/account_deletion_and_policies_test.dart \
+            test/delivery_background_tracking_test.dart \
+            test/delivery_battery_optimization_test.dart \
+            test/delivery_gps_hardening_test.dart \
+            test/delivery_offline_default_test.dart \
+            test/delivery_panel_functional_regression_test.dart \
+            test/delivery_real_location_test.dart \
+            test/delivery_critical_fixes_test.dart \
+            test/dpdp_data_protection_test.dart
 
       - name: Patch Flutter 3.32.8 internal fileMode / toLowerCase errors
         run: |
@@ -53,12 +71,68 @@ jobs:
             sed -i 's/string\.toLowerCase()/string.lowercase()/g' "$UTILS_FILE" || true
           fi
 
-      - name: Build release APK
-        run: flutter build apk --release
+      - name: Build release Android App Bundle
+        run: flutter build appbundle --release
 
-      - name: Upload APK artifact
+      # Inspect the real artifact, not the source manifest. The build fails
+      # here if ACCESS_BACKGROUND_LOCATION ever reappears in the bundle, or if
+      # the foreground-location setup is missing.
+      - name: Verify AAB manifest with bundletool
+        run: |
+          set -euo pipefail
+          AAB=build/app/outputs/bundle/release/app-release.aab
+          test -f "$AAB" || { echo "::error::AAB not found at $AAB"; exit 1; }
+
+          BT_VERSION=1.17.1
+          curl -fsSL -o bundletool.jar \
+            "https://github.com/google/bundletool/releases/download/${BT_VERSION}/bundletool-all-${BT_VERSION}.jar"
+
+          java -jar bundletool.jar dump manifest --bundle="$AAB" > base-manifest.xml
+          echo "----- base manifest permissions -----"
+          grep -o 'android.permission.[A-Z_]*' base-manifest.xml | sort -u || true
+          echo "-------------------------------------"
+
+          if grep -q "ACCESS_BACKGROUND_LOCATION" base-manifest.xml; then
+            echo "::error::ACCESS_BACKGROUND_LOCATION is present in the AAB. Do not upload."
+            exit 1
+          fi
+          echo "OK: ACCESS_BACKGROUND_LOCATION absent."
+
+          for required in \
+            "android.permission.ACCESS_FINE_LOCATION" \
+            "android.permission.ACCESS_COARSE_LOCATION" \
+            "android.permission.FOREGROUND_SERVICE" \
+            "android.permission.FOREGROUND_SERVICE_LOCATION"; do
+            grep -q "$required" base-manifest.xml || {
+              echo "::error::Missing required permission: $required"; exit 1; }
+          done
+          echo "OK: foreground location permissions present."
+
+          grep -q 'GeolocatorLocationService' base-manifest.xml || {
+            echo "::error::Location foreground service missing from the AAB."; exit 1; }
+          grep -q 'foregroundServiceType="location"' base-manifest.xml \
+            || grep -q 'foregroundServiceType' base-manifest.xml \
+            || { echo "::error::foregroundServiceType not declared."; exit 1; }
+          echo "OK: location foreground service configured."
+
+          VC=$(java -jar bundletool.jar dump manifest --bundle="$AAB" \
+                 --xpath=/manifest/@android:versionCode | tr -d '[:space:]')
+          echo "versionCode = $VC"
+          if [ "$VC" != "7" ]; then
+            echo "::error::Expected versionCode 7, found $VC"; exit 1
+          fi
+          echo "OK: versionCode is 7."
+
+      - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: app-release-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+
+      - name: Upload AAB base manifest for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: aab-base-manifest
+          path: base-manifest.xml
           if-no-files-found: error
